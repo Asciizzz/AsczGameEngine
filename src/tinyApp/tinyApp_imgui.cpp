@@ -13,25 +13,25 @@
 
 using namespace tinyVk;
 
-// Hierarchy state tracking
-namespace Hierarchy {
+// State state tracking
+namespace State {
     static tinyHandle sceneHandle;
     static bool isActiveScene(tinyHandle h) { return sceneHandle == h; }
 
-    static std::unordered_set<uint64_t> expandedNodes;
+    static std::unordered_set<uint64_t> expanded;
 
-    static typeHandle selectedNode;
-    static typeHandle draggedNode;
+    static typeHandle selected;
+    static typeHandle dragged;
 
     // Note: tinyHandle is hashed by default
 
     static bool isExpanded(typeHandle th) {
-        return expandedNodes.find(th.hash()) != expandedNodes.end();
+        return expanded.find(th.hash()) != expanded.end();
     }
 
-    static void setExpanded(typeHandle th, bool expanded) {
-        if (expanded) expandedNodes.insert(th.hash());
-        else          expandedNodes.erase(th.hash());
+    static void setExpanded(typeHandle th, bool expand) {
+        if (expand) expanded.insert(th.hash());
+        else        expanded.erase(th.hash());
     }
 }
 
@@ -147,14 +147,14 @@ void tinyApp::initUI() {
 // ===== Misc =====
 
     // Set the active scene to main scene by default
-    Hierarchy::sceneHandle = project->mainSceneHandle;
+    State::sceneHandle = project->mainSceneHandle;
 
     // Init code editor
     CodeEditor::Init();
 }
 
 void tinyApp::updateActiveScene() {
-    curScene = project->scene(Hierarchy::sceneHandle);
+    curScene = project->scene(State::sceneHandle);
     sceneRef = curScene;
 
     curScene->setFStart({
@@ -335,29 +335,48 @@ private:
 // Node Tree Rendering Abstraction
 // ============================================================================
 
+struct HierarchyStyle {
+    // ImVec4 hoverColor = ImVec4(0.3f, 0.5f, 0.7f, 0.3f);
+    // ImVec4 selectColor = ImVec4(0.6f, 0.8f, 1.0f, 0.5f);
+    ImColor hoverColor = ImColor(50, 100, 150, 40);
+    ImColor selectColor = ImColor(50, 100, 200, 90);
+};
+
 template<
-    typename FxDiv, typename FxDivOpen, typename FxChildren,
+    typename FxDiv, typename FxDivOpen, typename FxSelected, typename FxChildren,
     typename FxLClick, typename FxRClick, typename FxDbClick, typename FxHover,
     typename FxDrag, typename FxDrop
 >
 static void RenderGenericNodeHierarchy(
     tinyHandle nodeHandle, int depth,
 
-    FxDiv&& fDiv, FxDivOpen&& fDivOpen, FxChildren&& fChildren,
+    FxDiv&& fDiv, FxDivOpen&& fDivOpen, FxSelected&& fSelected, FxChildren&& fChildren, 
     FxLClick&& fLClick, FxRClick&& fRClick, FxDbClick&& fDbClick, FxHover&& fHover,
-    FxDrag&& fDrag, FxDrop&& fDrop
+    FxDrag&& fDrag, FxDrop&& fDrop,
+
+    const HierarchyStyle& style = HierarchyStyle()
 ) {
     if (!nodeHandle.valid()) return;
 
     ImGui::PushID(static_cast<int>(nodeHandle.index));
     ImVec2 startPos = ImGui::GetCursorScreenPos();
+    
     ImGui::BeginGroup();
     fDiv(nodeHandle, depth);
     ImGui::EndGroup();
+    
     ImVec2 endPos = ImGui::GetCursorScreenPos();
     float height = endPos.y - startPos.y;
     ImGui::SetCursorScreenPos(startPos);
     ImGui::InvisibleButton("##drag", ImVec2(-1, height));
+    
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    if (ImGui::IsItemHovered()) {
+        drawList->AddRectFilled(startPos, ImVec2(startPos.x + ImGui::GetWindowWidth(), endPos.y), style.hoverColor);
+    } else if (fSelected(nodeHandle)) {
+        drawList->AddRectFilled(startPos, ImVec2(startPos.x + ImGui::GetWindowWidth(), endPos.y), style.selectColor);
+    }
+
     ImGui::SetCursorScreenPos(endPos);
     ImGui::PopID();
     
@@ -390,7 +409,7 @@ static void RenderGenericNodeHierarchy(
         for (const auto& child : children) {
             RenderGenericNodeHierarchy(
                 child, depth + 1,
-                fDiv, fDivOpen, fChildren,
+                fDiv, fDivOpen, fSelected, fChildren,
                 fLClick, fRClick, fDbClick, fHover,
                 fDrag, fDrop
             );
@@ -420,19 +439,25 @@ static void RenderSceneNodeHierarchy() {
                 return;
             }
 
+            typeHandle th = MAKE_TH(tinyNodeRT, h);
+
             std::string name = node->name;
 
             // Add the [+] or [-] prefix
-            bool isExpanded = Hierarchy::isExpanded(MAKE_TH(tinyNodeRT, h));
+            bool isExpanded = State::isExpanded(th);
             ImVec4 color = isExpanded
                 ? ImVec4(0.6f, 0.8f, 1.0f, 1.0f)
                 : ImVec4(1.0f, 0.8f, 0.4f, 1.0f);
 
-            ImGui::TextColored(color, "[]");
+            ImGui::TextColored(color, isExpanded ? "-" : "+");
             ImGui::SameLine();
 
-            // Node name in white
-            ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "%s", name.c_str());
+            // Node name in gray - white
+            bool isSelected = State::selected == th;
+            ImVec4 colorName = isSelected
+                ? ImVec4(0.9f, 0.9f, 0.5f, 1.0f)
+                : ImVec4(0.8f, 0.8f, 0.8f, 1.0f);
+            ImGui::TextColored(colorName, "%s", name.c_str());
 
             // Children count if > 0
             size_t childCount = node->childrenHandles.size();
@@ -443,7 +468,9 @@ static void RenderSceneNodeHierarchy() {
             }
         },
         // Div Open
-        [](tinyHandle h) -> bool { return Hierarchy::isExpanded(MAKE_TH(tinyNodeRT, h)); },
+        [](tinyHandle h) -> bool { return State::isExpanded(MAKE_TH(tinyNodeRT, h)); },
+        // Selected
+        [](tinyHandle h) -> bool { return State::selected == MAKE_TH(tinyNodeRT, h); },
         // Children
         [](tinyHandle h) -> std::vector<tinyHandle> {
             std::vector<tinyHandle> children = sceneRef->nodeChildren(h);
@@ -461,10 +488,10 @@ static void RenderSceneNodeHierarchy() {
         [](tinyHandle h) {
             typeHandle th = MAKE_TH(tinyNodeRT, h);
 
-            if (Hierarchy::selectedNode != th) Hierarchy::selectedNode = th;
+            if (State::selected != th) State::selected = th;
 
             // If this node was already selected, perform expansion toggle
-            else Hierarchy::setExpanded(th, !Hierarchy::isExpanded(th));
+            else State::setExpanded(th, !State::isExpanded(th));
         },
         // RClick - Always open context menu
         [](tinyHandle h) {
@@ -474,7 +501,7 @@ static void RenderSceneNodeHierarchy() {
                 if (ImGui::MenuItem("Add Child")) {
                     sceneRef->addNode("New Node", h);
                     // Auto-expand the parent node
-                    Hierarchy::setExpanded(MAKE_TH(tinyNodeRT, h), true);
+                    State::setExpanded(MAKE_TH(tinyNodeRT, h), true);
                 }
                 ImGui::Separator();
                 bool canDelete = h != sceneRef->rootHandle();
@@ -541,6 +568,9 @@ static void RenderSceneNodeHierarchy() {
                 Payload* data = (Payload*)payload->Data;
                 if (data->isType<tinyNodeRT>()) {
                     scene->reparentNode(data->handle(), h);
+
+                    // Auto-expand the parent node
+                    State::setExpanded(MAKE_TH(tinyNodeRT, h), true);
                 }
             }
         }
@@ -561,30 +591,26 @@ static void RenderFileNodeHierarchy() {
             }
 
             std::string name = node->name;
-
             tinyFS::TypeExt typeExt = fs.fTypeExt(h);
-
             bool isFolder = node->isFolder();
 
             if (isFolder) {
                 // Add the [+] or [-] prefix for folders
-                bool isExpanded = Hierarchy::isExpanded(MAKE_TH(tinyNodeFS, h));
+                bool isExpanded = State::isExpanded(MAKE_TH(tinyNodeFS, h));
                 ImVec4 color = isExpanded
                     ? ImVec4(0.6f, 0.8f, 1.0f, 1.0f)
                     : ImVec4(1.0f, 0.8f, 0.4f, 1.0f);
 
-                ImGui::TextColored(color, "[]");
+                ImGui::TextColored(color, isExpanded ? "-" : "+");
                 ImGui::SameLine();
             }
 
-
-            // File name (not extension) has slightly darker color
+            // File name
             ImVec4 nameColor = isFolder
                 ? ImVec4(1.0f, 1.0f, 1.0f, 1.0f)
                 : ImVec4(0.4f, 0.4f, 0.5f, 1.0f);
 
             ImGui::TextColored(nameColor, "%s", name.c_str());
-
 
             if (!typeExt.empty()) {
                 ImGui::SameLine();
@@ -601,7 +627,9 @@ static void RenderFileNodeHierarchy() {
             }
         },
         // Div Open
-        [](tinyHandle h) -> bool { return Hierarchy::isExpanded(MAKE_TH(tinyNodeFS, h)); },
+        [](tinyHandle h) -> bool { return State::isExpanded(MAKE_TH(tinyNodeFS, h)); },
+        // Selected
+        [](tinyHandle h) -> bool { return State::selected == MAKE_TH(tinyNodeFS, h); },
         // Children
         [&fs](tinyHandle h) -> std::vector<tinyHandle> {
             if (const tinyFS::Node* node = fs.fNode(h)) {
@@ -619,12 +647,12 @@ static void RenderFileNodeHierarchy() {
         // LClick
         [&fs](tinyHandle h) { 
             typeHandle th = MAKE_TH(tinyNodeFS, h);
-            Hierarchy::setExpanded(th, !Hierarchy::isExpanded(th));
+            State::setExpanded(th, !State::isExpanded(th));
 
             const tinyNodeFS* node = fs.fNode(h);
             if (!node || node->isFolder()) return;
 
-            Hierarchy::selectedNode = th;
+            State::selected = th;
         },
         // RClick
         [](tinyHandle h) { /* Do nothing for now */ },
@@ -637,7 +665,7 @@ static void RenderFileNodeHierarchy() {
             const tinyFS::Node* node = fs.fNode(h);
             if (!node) return;
 
-            Hierarchy::draggedNode = MAKE_TH(tinyNodeFS, h);
+            State::dragged = MAKE_TH(tinyNodeFS, h);
             Payload payload = Payload::make<tinyNodeFS>(h, node->name);
 
             ImGui::SetDragDropPayload("PAYLOAD", &payload, sizeof(payload));
@@ -651,10 +679,10 @@ static void RenderFileNodeHierarchy() {
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PAYLOAD")) {
                 Payload* data = (Payload*)payload->Data;
                 if (data->isType<tinyNodeFS>() && fs.fMove(data->handle(), h)) {
-                    Hierarchy::setExpanded(MAKE_TH(tinyNodeFS, h), true);
-                    Hierarchy::selectedNode = MAKE_TH(tinyNodeFS, data->handle());
+                    State::setExpanded(MAKE_TH(tinyNodeFS, h), true);
+                    State::selected = MAKE_TH(tinyNodeFS, data->handle());
                 }
-                Hierarchy::draggedNode = typeHandle();
+                State::dragged = typeHandle();
             }
         }
     );
@@ -1043,13 +1071,13 @@ static void RenderCOMP(const CompInfo& comp) {
 }
 
 static void RenderSceneNodeInspector(tinyProject* project) {
-    tinySceneRT* scene = project->scene(Hierarchy::sceneHandle);
+    tinySceneRT* scene = project->scene(State::sceneHandle);
     if (!scene) return;
 
-    typeHandle selectedNode = Hierarchy::selectedNode;
-    if (!selectedNode.isType<tinyNodeRT>()) return;
+    typeHandle selected = State::selected;
+    if (!selected.isType<tinyNodeRT>()) return;
 
-    tinyHandle handle = selectedNode.handle;
+    tinyHandle handle = selected.handle;
 
     const tinyNodeRT* node = scene->node(handle);
     if (!node) {
@@ -1115,10 +1143,10 @@ static void RenderSceneNodeInspector(tinyProject* project) {
 static void RenderFileInspector(tinyProject* project) {
     tinyFS& fs = project->fs();
 
-    typeHandle selectedNode = Hierarchy::selectedNode;
-    if (!selectedNode.isType<tinyNodeFS>()) return;
+    typeHandle selected = State::selected;
+    if (!selected.isType<tinyNodeFS>()) return;
 
-    tinyHandle fHandle = selectedNode.handle;
+    tinyHandle fHandle = selected.handle;
     const tinyFS::Node* node = fs.fNode(fHandle);
     if (!node) {
         ImGui::Text("Invalid file.");
@@ -1164,7 +1192,7 @@ static void RenderFileInspector(tinyProject* project) {
         // A button to open editor (overrides the editorSelection)
 
         if (ImGui::Button("Open in Editor", ImVec2(-1, 0))) {
-            Editor::selected = selectedNode;
+            Editor::selected = selected;
         }
     } else if (typeHdl.isType<tinyTextureVk>()) {
         tinyTextureVk* texture = fs.rGet<tinyTextureVk>(typeHdl.handle);
@@ -1498,8 +1526,8 @@ void tinyApp::renderUI() {
     }
 
     // ===== HIERARCHY WINDOW - Scene & File System =====
-    if (UIRef->Begin("Hierarchy", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse)) {
-        tinyHandle sceneHandle = Hierarchy::sceneHandle;
+    if (UIRef->Begin("State", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse)) {
+        tinyHandle sceneHandle = State::sceneHandle;
         tinyHandle sceneFHandle = fs.dataToFileHandle(MAKE_TH(tinySceneRT, sceneHandle));
         const char* sceneName = fs.fName(sceneFHandle);
 
