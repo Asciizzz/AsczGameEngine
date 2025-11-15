@@ -10,6 +10,7 @@
 #include <imgui.h>
 #include <TextEditor.h>
 #include <algorithm>
+#include <cstring>
 
 using namespace tinyVk;
 
@@ -22,6 +23,8 @@ namespace State {
 
     static typeHandle selected;
     static typeHandle dragged;
+    static typeHandle renamed;
+    static char renameBuffer[256];
 
     // Note: tinyHandle is hashed by default
 
@@ -385,7 +388,7 @@ static void RenderGenericNodeHierarchy(
         ImGui::EndPopup();
     }
     
-    if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) fDbClick(nodeHandle);
+    if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) fDbClick(nodeHandle);
     if (ImGui::IsItemHovered()) fHover(nodeHandle);
 
     if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
@@ -449,19 +452,28 @@ static void RenderSceneNodeHierarchy() {
             }
             ImGui::SameLine();
 
-            // Node name in gray - white
-            bool isSelected = State::selected == th;
-            ImVec4 colorName = isSelected
-                ? ImVec4(0.9f, 0.9f, 0.5f, 1.0f)
-                : ImVec4(0.8f, 0.8f, 0.8f, 1.0f);
-            ImGui::TextColored(colorName, "%s", name.c_str());
+            if (State::renamed == th) {
+                bool enter = ImGui::InputText("##rename", State::renameBuffer, sizeof(State::renameBuffer), ImGuiInputTextFlags_EnterReturnsTrue);
+                if (enter || ImGui::IsItemDeactivatedAfterEdit()) {
+                    // node->name = State::renameBuffer;
+                    scene->renameNode(h, State::renameBuffer);
+                    State::renamed = typeHandle();
+                }
+            } else {
+                // Node name in gray - white
+                bool isSelected = State::selected == th;
+                ImVec4 colorName = isSelected
+                    ? ImVec4(0.9f, 0.9f, 0.5f, 1.0f)
+                    : ImVec4(0.8f, 0.8f, 0.8f, 1.0f);
+                ImGui::TextColored(colorName, "%s", name.c_str());
 
-            // Children count if > 0
-            size_t childCount = node->childrenHandles.size();
-            if (childCount > 0) {
-                ImGui::SameLine();
-                ImVec4 infoColor = ImVec4(0.6f, 0.8f, 1.0f, 1.0f);
-                ImGui::TextColored(infoColor, "[%zu]", childCount);
+                // Children count if > 0
+                size_t childCount = node->childrenHandles.size();
+                if (childCount > 0) {
+                    ImGui::SameLine();
+                    ImVec4 infoColor = ImVec4(0.6f, 0.8f, 1.0f, 1.0f);
+                    ImGui::TextColored(infoColor, "[%zu]", childCount);
+                }
             }
         },
         // Div Open
@@ -525,9 +537,14 @@ static void RenderSceneNodeHierarchy() {
                 ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid Node!");
             }
         },
-        // DbClick - Count as a right click for now
-        [](tinyHandle h) {
-            ImGui::OpenPopup(("Context" + std::to_string(h.value)).c_str());
+        // DbClick - Start rename
+        [scene](tinyHandle h) {
+            if (State::renamed.valid()) return; // Rename in progress
+
+            if (const tinyNodeRT* node = scene->node(h)) {
+                strcpy(State::renameBuffer, node->name.c_str());
+                State::renamed = MAKE_TH(tinyNodeRT, h);
+            }
         },
         // Hover
         [scene](tinyHandle h) {
@@ -622,25 +639,32 @@ static void RenderFileNodeHierarchy() {
             }
             ImGui::SameLine();
 
-            // File name
-            ImVec4 nameColor = isFolder
-                ? ImVec4(1.0f, 1.0f, 1.0f, 1.0f)
-                : ImVec4(0.7f, 0.7f, 0.7f, 1.0f);
+            if (State::renamed == th) {
+                bool enter = ImGui::InputText("##rename", State::renameBuffer, sizeof(State::renameBuffer), ImGuiInputTextFlags_EnterReturnsTrue);
+                if (enter || ImGui::IsItemDeactivatedAfterEdit()) {
+                    fs.fRename(h, State::renameBuffer);
+                    State::renamed = typeHandle();
+                }
+            } else {
+                ImVec4 nameColor = isFolder
+                    ? ImVec4(1.0f, 1.0f, 1.0f, 1.0f)
+                    : ImVec4(0.7f, 0.7f, 0.7f, 1.0f);
 
-            ImGui::TextColored(nameColor, "%s", name.c_str());
+                ImGui::TextColored(nameColor, "%s", name.c_str());
 
-            if (!typeExt.empty()) {
-                ImGui::SameLine();
-                ImVec4 extColor = IMVEC4_EXT_COLOR(typeExt);
-                ImGui::TextColored(extColor, ".%s", typeExt.ext.c_str());
-            }
+                if (!typeExt.empty()) {
+                    ImGui::SameLine();
+                    ImVec4 extColor = IMVEC4_EXT_COLOR(typeExt);
+                    ImGui::TextColored(extColor, ".%s", typeExt.ext.c_str());
+                }
 
-            if (isFolder) {
-                ImGui::SameLine();
+                if (isFolder) {
+                    ImGui::SameLine();
 
-                size_t childCount = node->children.size();
-                ImVec4 infoColor = childCount > 0 ? ImVec4(0.6f, 0.8f, 1.0f, 1.0f) : ImVec4(0.7f, 0.7f, 0.7f, 1.0f);
-                ImGui::TextColored(infoColor, "[%zu]", childCount);
+                    size_t childCount = node->children.size();
+                    ImVec4 infoColor = childCount > 0 ? ImVec4(0.6f, 0.8f, 1.0f, 1.0f) : ImVec4(0.7f, 0.7f, 0.7f, 1.0f);
+                    ImGui::TextColored(infoColor, "[%zu]", childCount);
+                }
             }
         },
         // Div Open
@@ -716,8 +740,16 @@ static void RenderFileNodeHierarchy() {
             ImGui::Separator();
             if (ImGui::MenuItem("Delete", nullptr, nullptr, deletable)) fs.fRemove(h);
         },
-        // DbClick
-        [](tinyHandle h) { /* Do nothing for now */ },
+        // DbClick - Start rename
+        [&fs](tinyHandle h) {
+            // Rename in progress or root
+            if (State::renamed.valid() || h == fs.rootHandle()) return;
+
+            if (const tinyNodeFS* node = fs.fNode(h)) {
+                strcpy(State::renameBuffer, node->name.c_str());
+                State::renamed = MAKE_TH(tinyNodeFS, h);
+            }
+        },
         // Hover
         [&fs](tinyHandle h) {
             if (ImGui::BeginTooltip()) {
