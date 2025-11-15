@@ -1,12 +1,10 @@
+# Ignore all files and folders starting with "." in the root directory
+/.*
+!.git/
+
 build/
 AsczGame_Release/
 AsczGame_Debug/
-
-.vscode/
-.backup/
-.heavy/
-.backup/
-.guides/
 
 GovernmentData/
 US_SocialSecurity_Lists/
@@ -22,6 +20,8 @@ docs/
 
 backup_script.py
 AsczGame_Debug.exe
+
+
 
 # Custom binary files for my game
 *.ascz
