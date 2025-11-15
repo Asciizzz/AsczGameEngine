@@ -254,7 +254,7 @@ void Renderer::drawScene(tinyProject* project, tinySceneRT* activeScene, const P
         VkBuffer vrtxBuffer = rMesh->vrtxBuffer();
         VkBuffer indxBuffer = rMesh->indxBuffer();
         VkIndexType indxType = rMesh->indxType();
-        const auto& parts = rMesh->parts(); // Normally you'd bind the material, but because we haven't setup the bind descriptor, ignore it
+        const auto& parts = rMesh->parts();
 
         VkBuffer buffers[] = { vrtxBuffer };
         VkDeviceSize offsets[] = { 0 };
@@ -322,6 +322,62 @@ void Renderer::drawScene(tinyProject* project, tinySceneRT* activeScene, const P
     }
 }
 
+
+void Renderer::drawSceneMeshOnly(tinyProject* project, tinySceneRT* activeScene, const PipelineRaster* rPipeline) const {
+    if (!activeScene) return;
+
+    const tinySharedRes& sharedRes = activeScene->sharedRes();
+
+    VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
+
+    const tinyGlobal* global = project->global();
+    VkDescriptorSet glbSet = global->getDescSet();
+    uint32_t offset = currentFrame * global->alignedSize;
+
+    // Bind the pipeline and descriptor sets once
+    rPipeline->bindCmd(currentCmd);
+    rPipeline->bindSets(currentCmd, 0, &glbSet, 1, &offset, 1);
+
+    const auto& mapMESHR = activeScene->mapCache<tinyNodeRT::MESHRD>();
+
+    for (const auto& [nodeHandle, mr3dHandle] : mapMESHR) {
+        const tinyNodeRT* rtNode = activeScene->node(nodeHandle);
+
+        // Get mesh render component directly from runtime node
+        const auto* mr3DComp = activeScene->rtComp<tinyNodeRT::MESHRD>(nodeHandle);
+        if (!mr3DComp) continue; // No mesh render component
+
+        const auto* rMesh = mr3DComp->rMesh();
+        if (!rMesh) continue; // Mesh not found in registry
+
+        const auto* transform = rtNode->get<tinyNodeRT::TRFM3D>();
+        glm::mat4 transformMat = transform ? transform->global : glm::mat4(1.0f);
+
+        // Draw each individual submeshes
+        VkBuffer vrtxBuffer = rMesh->vrtxBuffer();
+        VkBuffer indxBuffer = rMesh->indxBuffer();
+        VkIndexType indxType = rMesh->indxType();
+        const auto& parts = rMesh->parts();
+
+        VkBuffer buffers[] = { vrtxBuffer };
+        VkDeviceSize offsets[] = { 0 };
+        vkCmdBindVertexBuffers(currentCmd, 0, 1, buffers, offsets);
+        vkCmdBindIndexBuffer(currentCmd, indxBuffer, 0, indxType);
+
+        for (size_t i = 0; i < parts.size(); ++i) {
+            uint32_t indxCount = parts[i].indxCount;
+            if (indxCount == 0) continue;
+
+            // Just draw, no need to bind material sets
+
+            // 1 offset only: model matrix
+            rPipeline->pushConstants(currentCmd, ShaderStage::Vertex, 0,  transformMat);
+
+            uint32_t indxOffset = parts[i].indxOffset;
+            vkCmdDrawIndexed(currentCmd, indxCount, 1, indxOffset, 0, 0);
+        }
+    }
+}
 
 // End frame: finalize command buffer, submit, and present
 void Renderer::endFrame(uint32_t imageIndex) {

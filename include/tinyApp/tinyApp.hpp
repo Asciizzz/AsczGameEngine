@@ -54,6 +54,8 @@ private:
     UniquePtr<tinyVk::PipelineRaster> pipelineRigged;
     UniquePtr<tinyVk::PipelineRaster> pipelineStatic;
 
+    UniquePtr<tinyVk::PipelineRaster> pipelineMeshOnly;
+
     UniquePtr<tinyProject> project; // New gigachad system
 
     tinySceneRT* curScene = nullptr;

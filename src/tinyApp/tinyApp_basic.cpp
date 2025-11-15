@@ -74,8 +74,7 @@ void tinyApp::initComponents() {
     skyCfg.withShaders("Shaders/bin/Sky/sky.vert.spv", "Shaders/bin/Sky/sky.frag.spv")
         .withCulling(CullMode::None)
         .withDepthTest(false, VK_COMPARE_OP_LESS)
-        .withDepthWrite(false)
-        .withBlending(BlendMode::None);
+        .withDepthWrite(false);
     // No vertex input needed for sky (fullscreen quad)
     
     pipelineSky = MakeUnique<PipelineRaster>(device, skyCfg);
@@ -99,11 +98,7 @@ void tinyApp::initComponents() {
     riggedCfg.pushConstantRanges = { riggedPushConstant };
     
     riggedCfg.withShaders("Shaders/bin/Rasterize/TestRigged.vert.spv", "Shaders/bin/Rasterize/TestSingle.frag.spv")
-        .withVertexInput({ vriggedBind }, { vriggedAttrs })
-        .withCulling(CullMode::Back)
-        .withDepthTest(true, VK_COMPARE_OP_LESS)
-        .withDepthWrite(true)
-        .withBlending(BlendMode::None);
+        .withVertexInput({ vriggedBind }, { vriggedAttrs });
 
     pipelineRigged = MakeUnique<PipelineRaster>(device, riggedCfg);
 
@@ -123,13 +118,28 @@ void tinyApp::initComponents() {
     staticCfg.pushConstantRanges = { staticPushConstant };
     
     staticCfg.withShaders("Shaders/bin/Rasterize/TestStatic.vert.spv", "Shaders/bin/Rasterize/TestSingle.frag.spv")
-        .withVertexInput({ vstaticBind }, { vstaticAttrs })
-        .withCulling(CullMode::Back)
-        .withDepthTest(true, VK_COMPARE_OP_LESS)
-        .withDepthWrite(true)
-        .withBlending(BlendMode::None);
+        .withVertexInput({ vstaticBind }, { vstaticAttrs });
     
     pipelineStatic = MakeUnique<PipelineRaster>(device, staticCfg);
+
+    // ===== Pipeline 4: Mesh Only =====
+
+    RasterCfg meshOnlyCfg;
+    meshOnlyCfg.renderPass = renderPass;
+    meshOnlyCfg.setLayouts = {
+        project->descSLayout_Global()
+    };
+    // Push constants for mesh only (80 bytes)
+    VkPushConstantRange meshOnlyPushConstant{};
+    meshOnlyPushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    meshOnlyPushConstant.offset = 0;
+    meshOnlyPushConstant.size = 64;
+    meshOnlyCfg.pushConstantRanges = { meshOnlyPushConstant };
+
+    meshOnlyCfg.withShaders("Shaders/bin/Rasterize/MeshOnly.vert.spv", "Shaders/bin/Rasterize/MeshOnly.frag.spv")
+        .withVertexInput({ vstaticBind }, { vstaticAttrs });
+
+    pipelineMeshOnly = MakeUnique<PipelineRaster>(device, meshOnlyCfg);
 
     // ===== Initialize UI System =====
     initUI();
@@ -159,11 +169,14 @@ bool tinyApp::checkWindowResize() {
     pipelineSky->cfg.renderPass = renderPass;
     pipelineRigged->cfg.renderPass = renderPass;
     pipelineStatic->cfg.renderPass = renderPass;
-    
+    pipelineMeshOnly->cfg.renderPass = renderPass;
+
     // Recreate pipelines
     pipelineSky->recreate();
     pipelineRigged->recreate();
     pipelineStatic->recreate();
+    pipelineMeshOnly->recreate();
+
     
     // Update UI render pass
     UIBackend->updateRenderPass(renderPass);
@@ -330,10 +343,16 @@ void tinyApp::mainLoop() {
 
             rendererRef.drawSky(project.get(), pipelineSky.get());
 
-            rendererRef.drawScene(
+            // rendererRef.drawScene(
+            //     project.get(), curScene,
+            //     pipelineRigged.get(),
+            //     pipelineStatic.get()
+            // );
+
+            // For the time being draw mesh only pipeline
+            rendererRef.drawSceneMeshOnly(
                 project.get(), curScene,
-                pipelineRigged.get(),
-                pipelineStatic.get()
+                pipelineMeshOnly.get()
             );
 
             // Render UI

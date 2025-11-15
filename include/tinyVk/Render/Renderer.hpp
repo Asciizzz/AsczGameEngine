@@ -55,6 +55,8 @@ public:
 
     void drawScene(tinyProject* project, tinySceneRT* activeScene, const PipelineRaster* plRigged, const PipelineRaster* plStatic) const;
 
+    void drawSceneMeshOnly(tinyProject* project, tinySceneRT* activeScene, const PipelineRaster* rPipeline) const;
+
     // Safe resource deletion with Vulkan synchronization
     void processPendingRemovals(tinyProject* project, tinySceneRT* activeScene);
 
