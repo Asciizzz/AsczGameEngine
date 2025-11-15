@@ -336,8 +336,6 @@ private:
 // ============================================================================
 
 struct HierarchyStyle {
-    // ImVec4 hoverColor = ImVec4(0.3f, 0.5f, 0.7f, 0.3f);
-    // ImVec4 selectColor = ImVec4(0.6f, 0.8f, 1.0f, 0.5f);
     ImColor hoverColor = ImColor(50, 100, 150, 40);
     ImColor selectColor = ImColor(50, 100, 200, 90);
 };
@@ -443,13 +441,15 @@ static void RenderSceneNodeHierarchy() {
 
             std::string name = node->name;
 
-            // Add the [+] or [-] prefix
-            bool isExpanded = State::isExpanded(th);
-            ImVec4 color = isExpanded
-                ? ImVec4(0.6f, 0.8f, 1.0f, 1.0f)
-                : ImVec4(1.0f, 0.8f, 0.4f, 1.0f);
+            bool hasChildren = !node->childrenHandles.empty();
+            bool isExpanded = State::isExpanded(th) && hasChildren;
 
-            ImGui::TextColored(color, isExpanded ? "-" : "+");
+            short state = hasChildren + isExpanded; // 0: no children, 1: collapsed, 2: expanded
+            switch (state) {
+                case 0: ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "o"); break;
+                case 1: ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.4f, 1.0f), "+"); break;
+                case 2: ImGui::TextColored(ImVec4(0.6f, 0.8f, 1.0f, 1.0f), "-"); break;
+            }
             ImGui::SameLine();
 
             // Node name in gray - white
@@ -563,15 +563,31 @@ static void RenderSceneNodeHierarchy() {
             ImGui::Text("Dragging: %s", payload.name);
         },
         // Drop
-        [scene](tinyHandle h) {
+        [scene, &fs](tinyHandle h) {
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PAYLOAD")) {
                 Payload* data = (Payload*)payload->Data;
+                
+                // Node = reparenting
                 if (data->isType<tinyNodeRT>()) {
                     scene->reparentNode(data->handle(), h);
 
                     // Auto-expand the parent node
                     State::setExpanded(MAKE_TH(tinyNodeRT, h), true);
                 }
+
+                // File = further handling
+                if (data->isType<tinyNodeFS>()) {
+                    typeHandle thFS = fs.fTypeHandle(data->handle());
+
+                    // Scene File = instantiate
+                    if (thFS.isType<tinySceneRT>() && thFS.handle != State::sceneHandle) {
+                        scene->addScene(thFS.handle, h);  
+                        State::setExpanded(MAKE_TH(tinyNodeRT, h), true);
+                    }
+
+                }
+
+                State::dragged = typeHandle();
             }
         }
     );
@@ -590,25 +606,27 @@ static void RenderFileNodeHierarchy() {
                 return;
             }
 
+            typeHandle th = MAKE_TH(tinyNodeFS, h);
+
             std::string name = node->name;
             tinyFS::TypeExt typeExt = fs.fTypeExt(h);
+
+
             bool isFolder = node->isFolder();
+            bool isExpanded = State::isExpanded(th) && isFolder;
 
-            if (isFolder) {
-                // Add the [+] or [-] prefix for folders
-                bool isExpanded = State::isExpanded(MAKE_TH(tinyNodeFS, h));
-                ImVec4 color = isExpanded
-                    ? ImVec4(0.6f, 0.8f, 1.0f, 1.0f)
-                    : ImVec4(1.0f, 0.8f, 0.4f, 1.0f);
-
-                ImGui::TextColored(color, isExpanded ? "-" : "+");
-                ImGui::SameLine();
+            short state = isFolder + isExpanded; // 0: is file, 1: collapsed, 2: expanded
+            switch (state) {
+                case 0: ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "o"); break;
+                case 1: ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.4f, 1.0f), "+"); break;
+                case 2: ImGui::TextColored(ImVec4(0.6f, 0.8f, 1.0f, 1.0f), "-"); break;
             }
+            ImGui::SameLine();
 
             // File name
             ImVec4 nameColor = isFolder
                 ? ImVec4(1.0f, 1.0f, 1.0f, 1.0f)
-                : ImVec4(0.4f, 0.4f, 0.5f, 1.0f);
+                : ImVec4(0.7f, 0.7f, 0.7f, 1.0f);
 
             ImGui::TextColored(nameColor, "%s", name.c_str());
 
