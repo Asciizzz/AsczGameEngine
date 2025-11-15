@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tinyExt/tinyFS.hpp"
+#include "tinyFS.hpp"
 
 #include "tinyData/tinyModel.hpp"
 #include "tinyData/tinyRT_Scene.hpp"

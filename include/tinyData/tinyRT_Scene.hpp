@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tinyExt/tinyFS.hpp"
+#include "tinyFS.hpp"
 
 #include "tinyData/tinyRT_MeshRender3D.hpp"
 #include "tinyData/tinyRT_Skeleton3D.hpp"

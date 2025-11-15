@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tinyExt/tinyRegistry.hpp"
+#include "tinyRegistry.hpp"
 #include "vulkan/vulkan.h"
 
 // Forward declarations

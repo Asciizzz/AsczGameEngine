@@ -7,7 +7,7 @@
 
 #include "Templates.hpp"
 
-#include "tinyExt/tinyPool.hpp"
+#include "tinyPool.hpp"
 
 namespace tinyRT {
 

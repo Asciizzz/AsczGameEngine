@@ -1,7 +1,7 @@
 #pragma once
 
 #include "tinyData/tinySkeleton.hpp"
-#include "tinyExt/tinyRegistry.hpp"
+#include "tinyRegistry.hpp"
 #include "tinyVk/Resource/DataBuffer.hpp"
 #include "tinyVk/Resource/Descriptor.hpp"
 

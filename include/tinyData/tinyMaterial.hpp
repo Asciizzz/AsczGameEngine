@@ -2,7 +2,7 @@
 
 #include <array>
 
-#include "tinyExt/tinyPool.hpp"
+#include "tinyPool.hpp"
 #include "tinyData/tinyTexture.hpp"
 
 #include "tinyVk/Resource/DataBuffer.hpp"
