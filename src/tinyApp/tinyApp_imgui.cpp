@@ -528,8 +528,10 @@ static void RenderSceneNodeHierarchy() {
                 ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid Node!");
             }
         },
-        // DbClick
-        [](tinyHandle h) { printf("Double clicked!"); },
+        // DbClick - Count as a right click for now
+        [](tinyHandle h) {
+            ImGui::OpenPopup(("Context" + std::to_string(h.value)).c_str());
+        },
         // Hover
         [scene](tinyHandle h) {
             if (ImGui::BeginTooltip()) {
@@ -720,7 +722,27 @@ static void RenderFileNodeHierarchy() {
         // DbClick
         [](tinyHandle h) { /* Do nothing for now */ },
         // Hover
-        [](tinyHandle h) { /* Do nothing for now */ },
+        [&fs](tinyHandle h) {
+            if (ImGui::BeginTooltip()) {
+                const tinyFS::Node* node = fs.fNode(h);
+                if (!node) {
+                    ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid Node!");
+                    ImGui::EndTooltip();
+                    return;
+                }
+
+                ImGui::Text("%s", node->name.c_str());
+                if (node->isFolder()) {
+                    ImGui::Separator();
+                    ImGui::Text("Folder (%zu items)", node->children.size());
+                } else {
+                    tinyFS::TypeExt typeExt = fs.fTypeExt(h);
+                    ImGui::SameLine();
+                    ImGui::TextColored(IMVEC4_EXT_COLOR(typeExt), ".%s", typeExt.c_str());
+                }
+                ImGui::EndTooltip();
+            }
+        },
         // Drag
         [&fs](tinyHandle h) {
             const tinyFS::Node* node = fs.fNode(h);
@@ -827,7 +849,7 @@ static void RenderMESHRD(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
         [meshVk]() { return meshVk != nullptr; },
         [&fs, meshRD]() {
             if (ImGui::BeginDragDropTarget()) {
-                if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_NODE")) {
+                if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PAYLOAD")) {
                     Payload* data = (Payload*)payload->Data;
                     if (!data->isType<tinyNodeFS>()) { ImGui::EndDragDropTarget(); return; }
                     tinyHandle fHandle = data->handle();
@@ -863,7 +885,7 @@ static void RenderMESHRD(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
         [skeleCWrap]() { return skeleCWrap.skel3D != nullptr; },
         [&fs, scene, meshRD]() {
             if (ImGui::BeginDragDropTarget()) {
-                if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_NODE")) {
+                if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PAYLOAD")) {
                     Payload* data = (Payload*)payload->Data;
                     if (!data->isType<tinyNodeRT>()) { ImGui::EndDragDropTarget(); return; }
                     tinyHandle nodeHandle = data->handle();
@@ -949,7 +971,7 @@ static void RenderSCRIPT(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
         [&]() { return scriptPtr != nullptr; },
         [&fs, script]() {
             if (ImGui::BeginDragDropTarget()) {
-                if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_NODE")) {
+                if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PAYLOAD")) {
                     Payload* data = (Payload*)payload->Data;
                     if (!data->isType<tinyNodeFS>()) { ImGui::EndDragDropTarget(); return; }
                     
@@ -1054,7 +1076,7 @@ static void RenderSCRIPT(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
                         [&]() { return val.valid(); },
                         [&fs, &val]() {
                             if (ImGui::BeginDragDropTarget()) {
-                                if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DRAG_NODE")) {
+                                if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PAYLOAD")) {
                                     Payload* data = (Payload*)payload->Data;
 
                                     // Scene node
