@@ -2,7 +2,6 @@
 
 layout(push_constant) uniform PushConstant {
     mat4 model;
-    uvec4 props1;
 } pConst;
 
 layout(set = 0, binding = 0) uniform GlobalUBO {

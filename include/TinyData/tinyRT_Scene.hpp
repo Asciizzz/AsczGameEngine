@@ -97,7 +97,7 @@ public:
     bool isClean() const { return isClean_; }
     void cleanse();
 
-    bool addScene(tinyHandle fromHandle, tinyHandle parentHandle = tinyHandle());
+    tinyHandle addScene(tinyHandle fromHandle, tinyHandle parentHandle = tinyHandle());
 
     // --------- Runtime registry access (public) ---------
 

@@ -429,7 +429,7 @@ static inline int scene_addScene(lua_State* L) {
     
     // Call the existing C++ addScene function and get the returned node handle
     tinyHandle newNodeHandle = (*scenePtr)->addScene(sceneHandle->handle, parentNHandle);
-    
+
     // Check if the returned node is valid
     if (!newNodeHandle.valid() || !(*scenePtr)->node(newNodeHandle)) {
         lua_pushnil(L);

@@ -288,9 +288,11 @@ void Scene::cleanse() {
     isClean_ = true;
 }
 
-bool Scene::addScene(tinyHandle fromHandle, tinyHandle parentHandle) {
+tinyHandle Scene::addScene(tinyHandle fromHandle, tinyHandle parentHandle) {
     const Scene* from = sharedRes_.fsGet<Scene>(fromHandle);
-    if (!from || from->nodes_.count() == 0) return false;
+    if (!from || from->nodes_.count() == 0) return tinyHandle();
+
+    tinyHandle newRootHandle;
 
     parentHandle = parentHandle.valid() ? parentHandle : rootHandle();
 
@@ -302,6 +304,10 @@ bool Scene::addScene(tinyHandle fromHandle, tinyHandle parentHandle) {
 
         tinyHandle toNodeHandle = addNodeRaw(fromNode->name);
         from_to_map[fromHandle] = toNodeHandle;
+
+        if (fromHandle == from->rootHandle()) {
+            newRootHandle = toNodeHandle;
+        }
 
         tinyNodeRT* toNode = nodes_.get(toNodeHandle);
         toNode->setParent(toParentHandle);
@@ -369,7 +375,7 @@ bool Scene::addScene(tinyHandle fromHandle, tinyHandle parentHandle) {
         }
     }
 
-    return true;
+    return newRootHandle;
 }
 
 

@@ -343,17 +343,17 @@ void tinyApp::mainLoop() {
 
             rendererRef.drawSky(project.get(), pipelineSky.get());
 
-            // rendererRef.drawScene(
-            //     project.get(), curScene,
-            //     pipelineRigged.get(),
-            //     pipelineStatic.get()
-            // );
+            rendererRef.drawScene(
+                project.get(), curScene,
+                pipelineRigged.get(),
+                pipelineStatic.get()
+            );
 
             // For the time being draw mesh only pipeline
-            rendererRef.drawSceneMeshOnly(
-                project.get(), curScene,
-                pipelineMeshOnly.get()
-            );
+            // rendererRef.drawSceneMeshOnly(
+            //     project.get(), curScene,
+            //     pipelineMeshOnly.get()
+            // );
 
             // Render UI
             VkCommandBuffer currentCmd = rendererRef.getCurrentCommandBuffer();

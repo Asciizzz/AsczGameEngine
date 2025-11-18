@@ -87,21 +87,21 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
 
             // Remap the material's texture indices
 
-            // // Albedo texture
-            // tinyHandle albHandle = linkHandle(mMaterial.albIndx, glbTexRHandle);
-            // materialVk.setTexture(MTexSlot::Albedo, fs_->rGet<tinyTextureVk>(albHandle));
+            // Albedo texture
+            tinyHandle albHandle = linkHandle(mMaterial.albIndx, glbTexRHandle);
+            materialVk.setTexture(MTexSlot::Albedo, fs_->rGet<tinyTextureVk>(albHandle));
 
-            // // Normal texture
-            // tinyHandle nrmlHandle = linkHandle(mMaterial.nrmlIndx, glbTexRHandle);
-            // materialVk.setTexture(MTexSlot::Normal, fs_->rGet<tinyTextureVk>(nrmlHandle));
+            // Normal texture
+            tinyHandle nrmlHandle = linkHandle(mMaterial.nrmlIndx, glbTexRHandle);
+            materialVk.setTexture(MTexSlot::Normal, fs_->rGet<tinyTextureVk>(nrmlHandle));
 
-            // // Metallic texture
-            // tinyHandle metalHandle = linkHandle(mMaterial.metalIndx, glbTexRHandle);
-            // materialVk.setTexture(MTexSlot::MetalRough, fs_->rGet<tinyTextureVk>(metalHandle));
+            // Metallic texture
+            tinyHandle metalHandle = linkHandle(mMaterial.metalIndx, glbTexRHandle);
+            materialVk.setTexture(MTexSlot::MetalRough, fs_->rGet<tinyTextureVk>(metalHandle));
 
-            // // Emissive texture
-            // tinyHandle emisHandle = linkHandle(mMaterial.emisIndx, glbTexRHandle);
-            // materialVk.setTexture(MTexSlot::Emissive, fs_->rGet<tinyTextureVk>(emisHandle));
+            // Emissive texture
+            tinyHandle emisHandle = linkHandle(mMaterial.emisIndx, glbTexRHandle);
+            materialVk.setTexture(MTexSlot::Emissive, fs_->rGet<tinyTextureVk>(emisHandle));
 
             // Add material to fsRegistry
             tinyHandle fnHandle = fs_->addFile(fnMatFolder, mMaterial.name, std::move(materialVk));
@@ -414,7 +414,7 @@ void tinyProject::vkCreateDefault() {
     mainScene.setSharedRes(sharedRes_);
 
     tinyFS::Node::CFG sceneConfig;
-    sceneConfig.deletable = false; // Don't you fucking delete the main scene
+    sceneConfig.deletable = false; // Don't you f*cking delete the main scene
 
     tinyHandle mainSceneFileHandle = fs_->addFile(fs_->rootHandle(), "Main Scene", std::move(mainScene), sceneConfig);
     typeHandle mainScenetypeHandle = fs_->fTypeHandle(mainSceneFileHandle);
