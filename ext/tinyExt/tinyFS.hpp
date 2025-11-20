@@ -96,6 +96,8 @@ public:
         tinyHandle h = fnodes_.emplace(std::move(file));
         p->children.push_back(h);
 
+        dataToFileMap_[dataHandle] = h;
+
         // Update path cache
         updatePathCache(h);
 
@@ -108,13 +110,13 @@ public:
     }
 
     // Remove node + all children + data
-    void remove(tinyHandle nodeHandle) {
+    void fRemove(tinyHandle nodeHandle) {
         Node* node = fnodes_.get(nodeHandle);
         if (!node) return;
 
         // Recursively remove children
         for (tinyHandle child : node->children) {
-            remove(child);
+            fRemove(child);
         }
 
         // Remove data if file
@@ -139,7 +141,7 @@ public:
     }
 
     // Move (with cycle protection)
-    bool move(tinyHandle nodeHandle, tinyHandle newParentHandle) {
+    bool fMove(tinyHandle nodeHandle, tinyHandle newParentHandle) {
         Node* node = fnodes_.get(nodeHandle);
         Node* newParent = fnodes_.get(newParentHandle);
         if (!node || !newParent || newParent->isFile()) return false;
@@ -168,7 +170,7 @@ public:
     }
 
     // Rename
-    void rename(tinyHandle nodeHandle, std::string newName) {
+    void fRename(tinyHandle nodeHandle, std::string newName) {
         Node* node = fnodes_.get(nodeHandle);
         if (!node) return;
 
@@ -176,6 +178,12 @@ public:
         node->name = std::move(newName);
 
         updatePathCacheRecursive(nodeHandle);
+    }
+
+    const std::string& fName(tinyHandle nodeHandle) const noexcept {
+        const Node* node = fnodes_.get(nodeHandle);
+        static const std::string empty;
+        return node ? node->name : empty;
     }
 
     template<typename T>
@@ -189,7 +197,7 @@ public:
         return const_cast<tinyFS*>(this)->data<T>(fileHandle);
     }
 
-    [[nodiscard]] tinyHandle fRHandle(tinyHandle fileHandle) const noexcept {
+    [[nodiscard]] tinyHandle fDataHandle(tinyHandle fileHandle) const noexcept {
         const Node* node = fnodes_.get(fileHandle);
         return node && node->isFile() ? node->data : tinyHandle();
     }
@@ -202,7 +210,7 @@ public:
         return dataHandle.tID();
     }
 
-    [[nodiscard]] const char* path(tinyHandle handle, const char* rootAlias = nullptr) const noexcept {
+    [[nodiscard]] const char* fPath(tinyHandle handle, const char* rootAlias = nullptr) const noexcept {
         auto it = pathCache_.find(handle);
         if (it == pathCache_.end()) return nullptr;
 
@@ -241,6 +249,11 @@ public:
         return typeInfo(tinyType::TypeID<T>());
     }
 
+    tinyHandle dataToFile(tinyHandle dataHandle) const noexcept {
+        auto it = dataToFileMap_.find(dataHandle);
+        return it != dataToFileMap_.end() ? it->second : tinyHandle();
+    }
+
     [[nodiscard]] const Node* fNode(tinyHandle h) const noexcept { return fnodes_.get(h); }
     [[nodiscard]] Node* fNode(tinyHandle h) noexcept { return fnodes_.get(h); }
 
@@ -271,17 +284,19 @@ public:
     }
 
 private:
-    tinyPool<Node>                                 fnodes_;
-    tinyRegistry                                   registry_;
-    tinyHandle                                     rootHandle_;
+    tinyPool<Node> fnodes_;
+    tinyRegistry   registry_;
+    tinyHandle     rootHandle_;
 
-    // Full path cache: file node → vector of ancestors (root first)
+    // Full path cache: file node -> vector of ancestors (root first)
     std::unordered_map<tinyHandle, std::vector<tinyHandle>> pathCache_;
 
-    // Type → extension + color
-    std::unordered_map<tinyType::ID, TypeInfo>     typeInfo_;
+    // Type Info
+    std::unordered_map<tinyType::ID, TypeInfo> typeInfo_;
 
-    // Resolve name conflicts: "file", "file (1)", "file (2)", etc.
+    // Data handle -> file node handle
+    std::unordered_map<tinyHandle, tinyHandle> dataToFileMap_;
+
     std::string resolveUniqueName(tinyHandle parent, std::string name, tinyHandle exclude = {}) const {
         const Node* p = fnodes_.get(parent);
         if (!p) return name;
