@@ -63,7 +63,7 @@ union tinyHandle {
     template<typename T>
     [[nodiscard]] constexpr bool is() const noexcept { return typeID == tinyType::TypeID<T>(); }
 
-    [[nodiscard]] constexpr tinyType::ID type() const noexcept { return typeID; }
+    [[nodiscard]] constexpr tinyType::ID tID() const noexcept { return typeID; }
     [[nodiscard]] constexpr uint32_t idx() const noexcept { return index; }
     [[nodiscard]] constexpr uint16_t ver() const noexcept { return version; }
     [[nodiscard]] constexpr uint64_t raw() const noexcept { return value; }

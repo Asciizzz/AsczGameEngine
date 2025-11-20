@@ -583,7 +583,7 @@ static void RenderSceneNodeHierarchy() {
 
                 // File = further handling
                 if (data->is<tinyNodeFS>()) {
-                    tinyHandle dataHandle = fs.fDataHandle(data->handle);
+                    tinyHandle dataHandle = fs.fRHandle(data->handle);
 
                     // Scene File = instantiate
                     if (dataHandle.is<tinySceneRT>() && dataHandle != State::sceneHandle) {
@@ -602,7 +602,6 @@ static void RenderSceneNodeHierarchy() {
 static void RenderFileNodeHierarchy() {
     tinyFS& fs = projRef->fs();
 
-    /*
     RenderGenericNodeHierarchy(
         fs.root(), 0,
         // Div
@@ -614,10 +613,12 @@ static void RenderFileNodeHierarchy() {
             }
 
             std::string name = node->name;
-            tinyFS::TypeExt typeExt = fs.fTypeExt(h);
+            tinyHandle dHandle = fs.fRHandle(h);
+
+            const tinyFS::TypeInfo* typeInfo = fs.typeInfo(dHandle.tID());
 
             bool isFolder = node->isFolder();
-            bool isExpanded = State::isExpanded(th) && isFolder;
+            bool isExpanded = State::isExpanded(h.raw()) && isFolder;
 
             short state = isFolder + isExpanded; // 0: is file, 1: collapsed, 2: expanded
             switch (state) {
@@ -627,11 +628,11 @@ static void RenderFileNodeHierarchy() {
             }
             ImGui::SameLine();
 
-            if (State::renamed == th) {
+            if (State::renamed == h) {
                 bool enter = ImGui::InputText("##rename", State::renameBuffer, sizeof(State::renameBuffer), ImGuiInputTextFlags_EnterReturnsTrue);
                 if (enter || ImGui::IsItemDeactivatedAfterEdit()) {
-                    fs.fRename(h, State::renameBuffer);
-                    State::renamed = typeHandle();
+                    fs.rename(h, State::renameBuffer);
+                    State::renamed = tinyHandle();
                 }
             } else {
                 ImVec4 nameColor = isFolder
@@ -640,10 +641,10 @@ static void RenderFileNodeHierarchy() {
 
                 ImGui::TextColored(nameColor, "%s", name.c_str());
 
-                if (!typeExt.empty()) {
+                if (!typeInfo->ext.empty()) {
                     ImGui::SameLine();
-                    ImVec4 extColor = IMVEC4_EXT_COLOR(typeExt);
-                    ImGui::TextColored(extColor, ".%s", typeExt.ext.c_str());
+                    ImVec4 extColor = IMVEC4_COLOR3(typeInfo->color, 1.0f);
+                    ImGui::TextColored(extColor, ".%s", typeInfo->c_str());
                 }
 
                 if (isFolder) {
@@ -656,17 +657,17 @@ static void RenderFileNodeHierarchy() {
             }
         },
         // Div Open
-        [](tinyHandle h) -> bool { return State::isExpanded(MAKE_TH(tinyNodeFS, h)); },
+        [](tinyHandle h) -> bool { return State::isExpanded(h); },
         // Selected
-        [](tinyHandle h) -> bool { return State::selected == MAKE_TH(tinyNodeFS, h); },
+        [](tinyHandle h) -> bool { return State::selected == h; },
         // Children
         [&fs](tinyHandle h) -> std::vector<tinyHandle> {
             if (const tinyFS::Node* node = fs.fNode(h)) {
                 std::vector<tinyHandle> children = node->children;
                 std::sort(children.begin(), children.end(), [&fs](tinyHandle a, tinyHandle b) {
-                    tinyFS::TypeExt typeA = fs.fTypeExt(a);
-                    tinyFS::TypeExt typeB = fs.fTypeExt(b);
-                    if (typeA.ext != typeB.ext) return typeA.ext < typeB.ext;
+                    tinyFS::TypeInfo* typeA = fs.typeInfo(fs.fRHandle(a).tID());
+                    tinyFS::TypeInfo* typeB = fs.typeInfo(fs.fRHandle(b).tID());
+                    if (typeA->ext != typeB->ext) return typeA->ext < typeB->ext;
                     return fs.fNode(a)->name < fs.fNode(b)->name;
                 });
                 return children;
@@ -675,13 +676,12 @@ static void RenderFileNodeHierarchy() {
         },
         // LClick
         [&fs](tinyHandle h) { 
-            typeHandle th = MAKE_TH(tinyNodeFS, h);
-            State::setExpanded(th, !State::isExpanded(th));
+            State::setExpanded(h, !State::isExpanded(h));
 
             const tinyNodeFS* node = fs.fNode(h);
             if (!node || node->isFolder()) return;
 
-            State::selected = th;
+            State::selected = h;
         },
         // RClick
         [&fs](tinyHandle h) {
@@ -691,50 +691,49 @@ static void RenderFileNodeHierarchy() {
                 return;
             }
 
-            State::selected = MAKE_TH(tinyNodeFS, h);
+            State::selected = h;
 
-            bool deletable = node->deletable();
             const char* name = node->name.c_str();
             ImGui::Text("%s", name);
 
             if (!node->isFolder()) { // Write colored extension
                 ImGui::SameLine();
-                tinyFS::TypeExt typeExt = fs.fTypeExt(h);
-                ImGui::TextColored(IMVEC4_EXT_COLOR(typeExt), ".%s", typeExt.ext.c_str());
+                tinyFS::TypeInfo* typeInfo = fs.typeInfo(fs.fRHandle(h).tID());
+                ImGui::TextColored(IMVEC4_COLOR3(typeInfo->color, 1.0f), ".%s", typeInfo->c_str());
             }
 
             ImGui::Separator();
 
-            typeHandle dataType = fs.fTypeHandle(h);
-            if (dataType.is<tinySceneRT>()) {
-                tinySceneRT* scene = fs.rGet<tinySceneRT>(dataType.handle);
-                if (RenderMenuItemToggle("Make Active", "Active", State::isActiveScene(dataType.handle))) {
-                    State::sceneHandle = dataType.handle;
+            tinyHandle dHandle = fs.fRHandle(h);
+            if (dHandle.is<tinySceneRT>()) {
+                tinySceneRT* scene = fs.registry().get<tinySceneRT>(dHandle);
+                if (RenderMenuItemToggle("Make Active", "Active", State::isActiveScene(dHandle))) {
+                    State::sceneHandle = dHandle;
                 }
                 if (RenderMenuItemToggle("Cleanse", "Cleansed", scene->isClean())) {
                     scene->cleanse();
                 }
             }
-            if (dataType.is<tinyScript>()) {
-                tinyScript* script = fs.rGet<tinyScript>(dataType.handle);
+            if (dHandle.is<tinyScript>()) {
+                tinyScript* script = fs.registry().get<tinyScript>(dHandle);
                 if (ImGui::MenuItem("Compile")) {
                     script->compile();
                 }
             }
             if (node->isFolder()) {
                 if (ImGui::MenuItem("Add Folder")) {
-                    fs.addFolder(h, "New Folder");
-                    State::setExpanded(MAKE_TH(tinyNodeFS, h), true);
+                    fs.createFolder(h, "New Folder");
+                    State::setExpanded(h, true);
                 }
             }
             ImGui::Separator();
-            if (ImGui::MenuItem("Rename", nullptr, nullptr, State::renamed == typeHandle())) {
+            if (ImGui::MenuItem("Rename", nullptr, nullptr, State::renamed == tinyHandle())) {
                 strcpy(State::renameBuffer, node->name.c_str());
-                State::renamed = MAKE_TH(tinyNodeFS, h);
+                State::renamed = h;
             }
 
             ImGui::Separator();
-            if (ImGui::MenuItem("Delete", nullptr, nullptr, deletable)) fs.fRemove(h);
+            if (ImGui::MenuItem("Delete", nullptr, nullptr)) fs.remove(h);
         },
         // DbClick - Do nothing for now
         [&fs](tinyHandle h) {
@@ -742,9 +741,9 @@ static void RenderFileNodeHierarchy() {
             const tinyFS::Node* node = fs.fNode(h);
             if (!node || node->isFolder()) return;
 
-            typeHandle dataType = fs.fTypeHandle(h);
-            if (dataType.is<tinySceneRT>()) {
-                State::sceneHandle = dataType.handle;
+            tinyHandle dHandle = fs.fRHandle(h);
+            if (dHandle.is<tinySceneRT>()) {
+                State::sceneHandle = dHandle;
             }
         },
         // Hover
@@ -762,9 +761,10 @@ static void RenderFileNodeHierarchy() {
                     ImGui::Separator();
                     ImGui::Text("Folder (%zu items)", node->children.size());
                 } else {
-                    tinyFS::TypeExt typeExt = fs.fTypeExt(h);
                     ImGui::SameLine();
-                    ImGui::TextColored(IMVEC4_EXT_COLOR(typeExt), ".%s", typeExt.c_str());
+
+                    tinyFS::TypeInfo* typeInfo = fs.typeInfo(fs.fRTypeID(h));
+                    ImGui::TextColored(IMVEC4_COLOR3(typeInfo->color, 1.0f), ".%s", typeInfo->c_str());
                 }
                 ImGui::EndTooltip();
             }
@@ -774,28 +774,28 @@ static void RenderFileNodeHierarchy() {
             const tinyFS::Node* node = fs.fNode(h);
             if (!node) return;
 
-            State::dragged = MAKE_TH(tinyNodeFS, h);
-            Payload payload = Payload::make<tinyNodeFS>(h, node->name);
+            State::dragged = h;
+            Payload payload = Payload::make(h, node->name);
 
             ImGui::SetDragDropPayload("PAYLOAD", &payload, sizeof(payload));
             ImGui::Text("Dragging: %s", node->name.c_str());
-            tinyFS::TypeExt typeExt = fs.fTypeExt(h);
             ImGui::Separator();
-            ImGui::TextColored(IMVEC4_EXT_COLOR(typeExt), "Type: %s", typeExt.c_str());
+
+            const tinyFS::TypeInfo* typeInfo = fs.typeInfo(fs.fRHandle(h).tID());
+            ImGui::TextColored(IMVEC4_COLOR3(typeInfo->color, 1.0f), "Type: .%s", typeInfo->c_str());
         },
         // Drop
         [&fs](tinyHandle h) {
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PAYLOAD")) {
                 Payload* data = (Payload*)payload->Data;
-                if (data->is<tinyNodeFS>() && fs.fMove(data->handle(), h)) {
-                    State::setExpanded(MAKE_TH(tinyNodeFS, h), true);
-                    State::selected = MAKE_TH(tinyNodeFS, data->handle());
+                if (data->is<tinyNodeFS>() && fs.move(data->handle, h)) {
+                    State::setExpanded(h, true);
+                    State::selected = data->handle;
                 }
-                State::dragged = typeHandle();
+                State::dragged = tinyHandle();
             }
         }
     );
-    */
 }
 
 // ============================================================================
@@ -1264,7 +1264,7 @@ static void RenderFileInspector(tinyProject* project) {
     }
 
     // typeHandle typeHdl = fs.fTypeHandle(fHandle);
-    tinyHandle dHandle = fs.fDataHandle(handle);
+    tinyHandle dHandle = fs.fRHandle(handle);
 
     ImGui::BeginGroup();
     ImGui::Text("%s", node->name.c_str());
@@ -1280,7 +1280,7 @@ static void RenderFileInspector(tinyProject* project) {
         ImGui::BeginTooltip();
 
         // ".root" + path + ".ext"
-        ImGui::Text("%s", fs.fPath(handle)); ImGui::SameLine();
+        ImGui::Text("%s", fs.path(handle)); ImGui::SameLine();
         // tinyFS::TypeExt typeExt = fs.fTypeExt(handle); 
         const auto* typeInfo = fs.typeInfo(handle);
         ImGui::TextColored(IMVEC4_COLOR3(typeInfo->color, 1.0), ".%s", typeInfo->c_str());
@@ -1299,7 +1299,7 @@ static void RenderFileInspector(tinyProject* project) {
         // Display all types of children in the format Type (with color): count
         std::map<tinyType::ID, int> typeCounts;
         for (const auto& childHdl : node->children) {
-            tinyHandle childDataHandle = fs.fDataHandle(childHdl);
+            tinyHandle childDataHandle = fs.fRHandle(childHdl);
             typeCounts[childDataHandle.typeID]++;
         }
         for (const auto& [typeID, count] : typeCounts) {
@@ -1352,7 +1352,7 @@ static void RenderScriptEditor() {
     const tinyFS::Node* node = fs.fNode(fHandle);
     if (!node) return;
 
-    tinyHandle dHandle = fs.fDataHandle(fHandle);
+    tinyHandle dHandle = fs.fRHandle(fHandle);
     if (!dHandle.is<tinyScript>()) return;
 
     tinyScript* script = fs.registry().get<tinyScript>(dHandle);

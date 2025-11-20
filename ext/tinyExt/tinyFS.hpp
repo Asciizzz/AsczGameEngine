@@ -179,22 +179,30 @@ public:
     }
 
     template<typename T>
-    [[nodiscard]] T* fData(tinyHandle fileHandle) noexcept {
+    [[nodiscard]] T* fRData(tinyHandle fileHandle) noexcept {
         Node* node = fnodes_.get(fileHandle);
         return node && node->isFile() ? registry_.get<T>(node->data) : nullptr;
     }
 
     template<typename T>
-    [[nodiscard]] const T* fData(tinyHandle fileHandle) const noexcept {
-        return const_cast<tinyFS*>(this)->fData<T>(fileHandle);
+    [[nodiscard]] const T* fRData(tinyHandle fileHandle) const noexcept {
+        return const_cast<tinyFS*>(this)->data<T>(fileHandle);
     }
 
-    [[nodiscard]] tinyHandle fDataHandle(tinyHandle fileHandle) const noexcept {
+    [[nodiscard]] tinyHandle fRHandle(tinyHandle fileHandle) const noexcept {
         const Node* node = fnodes_.get(fileHandle);
         return node && node->isFile() ? node->data : tinyHandle();
     }
 
-    [[nodiscard]] const char* fPath(tinyHandle handle, const char* rootAlias = nullptr) const noexcept {
+    [[nodiscard]] tinyType::ID fRTypeID(tinyHandle fileHandle) const noexcept {
+        const Node* node = fnodes_.get(fileHandle);
+        if (!node || !node->isFile()) return 0;
+
+        tinyHandle dataHandle = node->data;
+        return dataHandle.tID();
+    }
+
+    [[nodiscard]] const char* path(tinyHandle handle, const char* rootAlias = nullptr) const noexcept {
         auto it = pathCache_.find(handle);
         if (it == pathCache_.end()) return nullptr;
 

@@ -35,9 +35,21 @@ tinyProject::tinyProject(const tinyVk::Device* deviceVk) : deviceVk_(deviceVk) {
 }
 
 tinyProject::~tinyProject() {
-    // Cleanup everything first before destroying pools
     global_.reset();
     camera_.reset();
+
+    // Clear everything first
+    registry().clear<tinyVk::DataBuffer>();
+    registry().clear<tinyVk::DescSet>();
+    registry().clear<tinyMeshVk>();
+    registry().clear<tinyMaterialVk>();
+    registry().clear<tinyTextureVk>();
+    registry().clear<tinySceneRT>();
+
+    // Clear vulkan resources later
+    registry().clear<tinyVk::DescPool>();
+    registry().clear<tinyVk::DescSLayout>();
+
     fs_.reset();
 }
 
@@ -62,8 +74,8 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
             textureVk.createFrom(std::move(mTexture.texture), deviceVk_);
 
             tinyHandle fnHandle = fs_->createFile(fnTexFolder, mTexture.name, std::move(textureVk));
-            tinyHandle rHandle = fs_->fDataHandle(fnHandle);
-            glbTexRHandle.push_back(rHandle);
+            tinyHandle fRHandle = fs_->fRHandle(fnHandle);
+            glbTexRHandle.push_back(fRHandle);
         }
     }
 
@@ -102,8 +114,8 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
             materialVk.setTexture(MTexSlot::Emissive, registry().get<tinyTextureVk>(emisHandle));
 
             tinyHandle fnHandle = fs_->createFile(fnMatFolder, mMaterial.name, std::move(materialVk));
-            tinyHandle rHandle = fs_->fDataHandle(fnHandle);
-            glmMatRHandle.push_back(rHandle);
+            tinyHandle fRHandle = fs_->fRHandle(fnHandle);
+            glmMatRHandle.push_back(fRHandle);
         }
     }
 
@@ -124,8 +136,8 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
             meshVk.createFrom(std::move(mMesh.mesh));
 
             tinyHandle fnHandle = fs_->createFile(fnMeshFolder, mMesh.name, std::move(meshVk));
-            tinyHandle rHandle = fs_->fDataHandle(fnHandle);
-            glbMeshRHandle.push_back(rHandle);
+            tinyHandle fRHandle = fs_->fRHandle(fnHandle);
+            glbMeshRHandle.push_back(fRHandle);
         }
     }
 
@@ -137,8 +149,8 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
         for (auto& mSkeleton : model.skeletons) {
 
             tinyHandle fnHandle = fs_->createFile(fnSkeleFolder, mSkeleton.name, std::move(mSkeleton.skeleton));
-            tinyHandle rHandle = fs_->fDataHandle(fnHandle);
-            glbSkeleRHandle.push_back(rHandle);
+            tinyHandle fRHandle = fs_->fRHandle(fnHandle);
+            glbSkeleRHandle.push_back(fRHandle);
         }
     }
 
@@ -243,7 +255,7 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
 
     // Add scene to registry
     tinyHandle fnHandle = fs_->createFile(fnModelFolder, model.name, std::move(scene));
-    return fs_->fDataHandle(fnHandle); // Return the scene's registry handle
+    return fs_->fRHandle(fnHandle); // Return the scene's registry handle
 }
 
 void tinyProject::addSceneInstance(tinyHandle fromHandle, tinyHandle toHandle, tinyHandle parentHandle) {
@@ -408,5 +420,5 @@ void tinyProject::vkCreateDefault() {
 
     tinyHandle mainSceneFileHandle = fs_->createFile(fs_->root(), "Main Scene", std::move(mainScene));
 
-    mainSceneHandle = fs_->fDataHandle(mainSceneFileHandle);
+    mainSceneHandle = fs_->fRHandle(mainSceneFileHandle);
 }
