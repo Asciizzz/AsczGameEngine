@@ -1,12 +1,12 @@
 #pragma once
 
-#include "tinyHandle.hpp"
+#include "tinyType.hpp"
 
 #include <type_traits>
 #include <utility>
 #include <memory>
 #include <deque>
-#include <cstring> // for memset
+#include <cstring>
 
 // Compiler hints for branch prediction
 #if defined(__GNUC__) || defined(__clang__)

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "tinyVertex.hpp"
-#include "tinyHandle.hpp"
+#include "tinyType.hpp"
 
 #include "tinyVk/Resource/DataBuffer.hpp"
 #include "tinyVk/Resource/Descriptor.hpp"

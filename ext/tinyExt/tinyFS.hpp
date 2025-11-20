@@ -29,7 +29,7 @@ public:
             bool deletable = true;
         } cfg;
 
-        [[nodiscard]] std::type_index typeIndex() const noexcept { return tHandle.typeIndex; }
+        [[nodiscard]] tinyType::ID typeID() const noexcept { return tHandle.typeID; }
 
         [[nodiscard]] bool hidden() const noexcept { return cfg.hidden; }
         [[nodiscard]] bool deletable() const noexcept { return cfg.deletable; }
@@ -199,27 +199,36 @@ public:
         bool checkRmRule(const void* dataPtr) const noexcept { return rmRule ? rmRule->check(dataPtr) : true; }
     };
 
-    [[nodiscard]] TypeInfo* typeInfo(std::type_index typeIndx) noexcept { return ensureTypeInfo(typeIndx); }
-    template<typename T> [[nodiscard]] TypeInfo* typeInfo() noexcept { return ensureTypeInfo(std::type_index(typeid(T))); }
+    [[nodiscard]] TypeInfo* typeInfo(tinyType::ID typeID) noexcept { return ensureTypeInfo(typeID); }
+    template<typename T> [[nodiscard]] TypeInfo* typeInfo() noexcept { return ensureTypeInfo(tinyType::TypeID<T>()); }
 
-    [[nodiscard]] TypeExt typeExt(std::type_index typeIndx) const noexcept {
-        auto it = typeInfos_.find(typeIndx);
+    [[nodiscard]] const TypeInfo* typeInfo(tinyType::ID typeID) const noexcept {
+        auto it = typeInfos_.find(typeID);
+        return (it != typeInfos_.end()) ? &it->second : nullptr;
+    }
+    template<typename T>
+    [[nodiscard]] const TypeInfo* typeInfo() const noexcept {
+        return typeInfo(tinyType::TypeID<T>());
+    }
+
+    [[nodiscard]] TypeExt typeExt(tinyType::ID typeID) const noexcept {
+        auto it = typeInfos_.find(typeID);
         return (it != typeInfos_.end()) ? it->second.typeExt : TypeExt();
     }
 
     template<typename T>
     [[nodiscard]] TypeExt typeExt() const noexcept {
-        return typeExt(std::type_index(typeid(T)));
+        return typeExt(tinyType::TypeID<T>());
     }
 
-    [[nodiscard]] bool safeDelete(std::type_index typeIndex) const noexcept {
+    [[nodiscard]] bool safeDelete(tinyType::ID typeIndex) const noexcept {
         auto it = typeInfos_.find(typeIndex);
         return (it != typeInfos_.end()) ? it->second.safeDelete : false;
     }
 
     template<typename T>
     [[nodiscard]] bool safeDelete() const noexcept {
-        return safeDelete(std::type_index(typeid(T)));
+        return safeDelete(tinyType::TypeID<T>());
     }
 
 // -------------------- Name Resolution --------------------
@@ -346,7 +355,7 @@ public:
         const Node* node = fnodes_.get(fileHandle);
         if (!node) return nullptr;
 
-        auto it = typeInfos_.find(node->tHandle.typeIndex);
+        auto it = typeInfos_.find(node->typeID());
         return (it != typeInfos_.end()) ? &it->second : nullptr;
     }
 
@@ -354,7 +363,7 @@ public:
         const Node* node = fnodes_.get(fileHandle);
         if (!node) return TypeExt();
 
-        return typeExt(node->tHandle.typeIndex);
+        return typeExt(node->typeID());
     }
 
     template<typename T>
@@ -405,12 +414,12 @@ public:
 
     // Execute removal for a specific type - processes all queued removals for that type
 
-    void execRemove(std::type_index typeIndx) noexcept {
-        auto it = rmQueues_.find(typeIndx);
+    void execRemove(tinyType::ID typeID) noexcept {
+        auto it = rmQueues_.find(typeID);
         if (it == rmQueues_.end()) return;
 
         std::vector<RmQueueEntry>& queue = it->second;
-        TypeInfo* tInfo = typeInfo(typeIndx);
+        TypeInfo* tInfo = typeInfo(typeID);
 
         for (const auto& entry : queue) {
             void* dataPtr = registry_.get(entry.dataHandle);
@@ -423,22 +432,22 @@ public:
         queue.clear();
     }
 
-    template<typename T> void execRemove() noexcept { execRemove(std::type_index(typeid(T))); }
+    template<typename T> void execRemove() noexcept { execRemove(tinyType::TypeID<T>()); }
 
-    void execRemoveAll() noexcept { for (const auto& typeIndx : typeOrder_) execRemove(typeIndx); }
+    void execRemoveAll() noexcept { for (const auto& typeID : typeOrder_) execRemove(typeID); }
 
-    bool hasRmQueue(std::type_index typeIndx) const noexcept {
-        auto it = rmQueues_.find(typeIndx);
+    bool hasRmQueue(tinyType::ID typeID) const noexcept {
+        auto it = rmQueues_.find(typeID);
         return it != rmQueues_.end() && !it->second.empty();
     }
 
     template<typename T>
     bool hasRmQueue() const noexcept {
-        return hasRmQueue(std::type_index(typeid(T)));
+        return hasRmQueue(tinyType::TypeID<T>());
     }
 
     bool hasAnyRmQueue() const noexcept {
-        for (const auto& [typeIndx, queue] : rmQueues_) if (!queue.empty()) return true;
+        for (const auto& [typeID, queue] : rmQueues_) if (!queue.empty()) return true;
         return false;
     }
 
@@ -478,32 +487,32 @@ private:
     std::unordered_map<tinyHandle, std::vector<tinyHandle>> filePathCache_;
 
     // Removal queue: maps type_index -> vector of RmQueueEntry
-    std::unordered_map<std::type_index, std::vector<RmQueueEntry>> rmQueues_;
+    std::unordered_map<tinyType::ID, std::vector<RmQueueEntry>> rmQueues_;
 
 // -------------------- TypeInfo management --------------------
 
-    std::unordered_map<std::type_index, TypeInfo> typeInfos_;
-    std::vector<std::type_index> typeOrder_; // For priority-based operations
+    std::unordered_map<tinyType::ID, TypeInfo> typeInfos_;
+    std::vector<tinyType::ID> typeOrder_; // For priority-based operations
 
-    TypeInfo* ensureTypeInfo(std::type_index typeIndx) {
-        auto it = typeInfos_.find(typeIndx);
+    TypeInfo* ensureTypeInfo(tinyType::ID typeID) {
+        auto it = typeInfos_.find(typeID);
         if (it != typeInfos_.end()) return &it->second;
 
         TypeInfo typeInfo;
-        typeInfos_[typeIndx] = std::move(typeInfo);
+        typeInfos_[typeID] = std::move(typeInfo);
 
-        typeOrder_.push_back(typeIndx);
+        typeOrder_.push_back(typeID);
 
         // Sort typeOrder_ by priority (higher priority last)
         std::sort(typeOrder_.begin(), typeOrder_.end(),
-            [this](std::type_index a, std::type_index b) {
+            [this](tinyType::ID a, tinyType::ID b) {
                 const TypeInfo& infoA = typeInfos_.at(a);
                 const TypeInfo& infoB = typeInfos_.at(b);
                 return infoA.priority < infoB.priority;
             }
         );
 
-        return &typeInfos_[typeIndx];
+        return &typeInfos_[typeID];
     }
 
 // -------------------- Internal helpers --------------------
@@ -640,7 +649,7 @@ private:
         dataToFile_[child.tHandle] = h;
         cacheFilePath(h);
 
-        ensureTypeInfo(child.tHandle.typeIndex);
+        ensureTypeInfo(child.typeID());
 
         return h;
     }
@@ -694,18 +703,18 @@ private:
         }
 
         // Folder or safe type or instant delete
-        if (node->isFolder() || safeDelete(node->typeIndex())) {
+        if (node->isFolder() || safeDelete(node->typeID())) {
             fRemoveTrue(handle, node->tHandle);
         // Unsafe type queue for removal
         } else {
-            std::type_index typeIndx = node->typeIndex();
+            tinyType::ID typeID = node->typeID();
 
             RmQueueEntry entry;
             entry.fnodeHandle = handle;
             entry.rescueParent = rescueParent;
             entry.dataHandle = node->tHandle;
 
-            rmQueues_[typeIndx].push_back(entry);
+            rmQueues_[typeID].push_back(entry);
         }
 
         // Add to removal count

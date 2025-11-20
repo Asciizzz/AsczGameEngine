@@ -5,7 +5,8 @@
 #include <vector>
 #include <glm/glm.hpp>
 #include <unordered_map>
-#include "tinyHandle.hpp"
+
+#include "tinyType.hpp"
 
 extern "C" {
     #include "luacpp/lua.h"
