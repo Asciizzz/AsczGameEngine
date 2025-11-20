@@ -46,7 +46,7 @@ private:
     std::vector<Entry> logs_;
 };
 
-using tinyVar = std::variant<float, int, bool, glm::vec2, glm::vec3, glm::vec4, std::string, typeHandle>;
+using tinyVar = std::variant<float, int, bool, glm::vec2, glm::vec3, glm::vec4, std::string, tinyHandle>;
 using tinyVarsMap = std::unordered_map<std::string, tinyVar>;
 
 // Static script definition - shared across all instances

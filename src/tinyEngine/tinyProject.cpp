@@ -44,10 +44,10 @@ tinyProject::~tinyProject() {
 
 
 tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
-    parentFolder = parentFolder ? parentFolder : fs_->rootHandle();
+    parentFolder = parentFolder ? parentFolder : fs_->root();
 
     // Create a folder for the model in the specified parent
-    tinyHandle fnModelFolder = fs_->addFolder(parentFolder, model.name);
+    tinyHandle fnModelFolder = fs_->createFolder(parentFolder, model.name);
 
     // Note: fnHandle - handle to file node in tinyFS's fnodes
     //       tHandle - handle to the actual data in the registry (infused with Type info for tinyFS usage)
@@ -55,22 +55,21 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
     // Import textures to registry
     std::vector<tinyHandle> glbTexRHandle;
     if (!model.textures.empty()) {
-        tinyHandle fnTexFolder = fs_->addFolder(fnModelFolder, "Textures");
+        tinyHandle fnTexFolder = fs_->createFolder(fnModelFolder, "Textures");
 
         for (auto& mTexture : model.textures) {
             tinyTextureVk textureVk;
             textureVk.createFrom(std::move(mTexture.texture), deviceVk_);
 
-            tinyHandle fnHandle = fs_->addFile(fnTexFolder, mTexture.name, std::move(textureVk));
-            typeHandle tHandle = fs_->fTypeHandle(fnHandle);
-
-            glbTexRHandle.push_back(tHandle.handle);
+            tinyHandle fnHandle = fs_->createFile(fnTexFolder, mTexture.name, std::move(textureVk));
+            tinyHandle rHandle = fs_->fDataHandle(fnHandle);
+            glbTexRHandle.push_back(rHandle);
         }
     }
 
     std::vector<tinyHandle> glmMatRHandle;
     if (!model.materials.empty()) {
-        tinyHandle fnMatFolder = fs_->addFolder(fnModelFolder, "Materials");
+        tinyHandle fnMatFolder = fs_->createFolder(fnModelFolder, "Materials");
 
         for (const auto& mMaterial : model.materials) {
             tinyMaterialVk materialVk;
@@ -89,31 +88,28 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
 
             // Albedo texture
             tinyHandle albHandle = linkHandle(mMaterial.albIndx, glbTexRHandle);
-            materialVk.setTexture(MTexSlot::Albedo, fs_->rGet<tinyTextureVk>(albHandle));
+            materialVk.setTexture(MTexSlot::Albedo, registry().get<tinyTextureVk>(albHandle));
 
             // Normal texture
             tinyHandle nrmlHandle = linkHandle(mMaterial.nrmlIndx, glbTexRHandle);
-            materialVk.setTexture(MTexSlot::Normal, fs_->rGet<tinyTextureVk>(nrmlHandle));
-
+            materialVk.setTexture(MTexSlot::Normal, registry().get<tinyTextureVk>(nrmlHandle));
             // Metallic texture
             tinyHandle metalHandle = linkHandle(mMaterial.metalIndx, glbTexRHandle);
-            materialVk.setTexture(MTexSlot::MetalRough, fs_->rGet<tinyTextureVk>(metalHandle));
+            materialVk.setTexture(MTexSlot::MetalRough, registry().get<tinyTextureVk>(metalHandle));
 
             // Emissive texture
             tinyHandle emisHandle = linkHandle(mMaterial.emisIndx, glbTexRHandle);
-            materialVk.setTexture(MTexSlot::Emissive, fs_->rGet<tinyTextureVk>(emisHandle));
+            materialVk.setTexture(MTexSlot::Emissive, registry().get<tinyTextureVk>(emisHandle));
 
-            // Add material to fsRegistry
-            tinyHandle fnHandle = fs_->addFile(fnMatFolder, mMaterial.name, std::move(materialVk));
-            typeHandle tHandle = fs_->fTypeHandle(fnHandle);
-
-            glmMatRHandle.push_back(tHandle.handle);
+            tinyHandle fnHandle = fs_->createFile(fnMatFolder, mMaterial.name, std::move(materialVk));
+            tinyHandle rHandle = fs_->fDataHandle(fnHandle);
+            glmMatRHandle.push_back(rHandle);
         }
     }
 
     std::vector<tinyHandle> glbMeshRHandle;
     if (!model.meshes.empty()) {
-        tinyHandle fnMeshFolder = fs_->addFolder(fnModelFolder, "Meshes");
+        tinyHandle fnMeshFolder = fs_->createFolder(fnModelFolder, "Meshes");
 
         for (auto& mMesh : model.meshes) {
             // Remap material indices
@@ -127,10 +123,9 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
 
             meshVk.createFrom(std::move(mMesh.mesh));
 
-            tinyHandle fnHandle = fs_->addFile(fnMeshFolder, mMesh.name, std::move(meshVk));
-            typeHandle tHandle = fs_->fTypeHandle(fnHandle);
-
-            glbMeshRHandle.push_back(tHandle.handle);
+            tinyHandle fnHandle = fs_->createFile(fnMeshFolder, mMesh.name, std::move(meshVk));
+            tinyHandle rHandle = fs_->fDataHandle(fnHandle);
+            glbMeshRHandle.push_back(rHandle);
         }
     }
 
@@ -138,13 +133,12 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
     std::vector<tinyHandle> glbSkeleRHandle;
 
     if (!model.skeletons.empty()) {
-        tinyHandle fnSkeleFolder = fs_->addFolder(fnModelFolder, "Skeletons");
+        tinyHandle fnSkeleFolder = fs_->createFolder(fnModelFolder, "Skeletons");
         for (auto& mSkeleton : model.skeletons) {
 
-            tinyHandle fnHandle = fs_->addFile(fnSkeleFolder, mSkeleton.name, std::move(mSkeleton.skeleton));
-            typeHandle tHandle = fs_->fTypeHandle(fnHandle);
-
-            glbSkeleRHandle.push_back(tHandle.handle);
+            tinyHandle fnHandle = fs_->createFile(fnSkeleFolder, mSkeleton.name, std::move(mSkeleton.skeleton));
+            tinyHandle rHandle = fs_->fDataHandle(fnHandle);
+            glbSkeleRHandle.push_back(rHandle);
         }
     }
 
@@ -248,14 +242,14 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
     }
 
     // Add scene to registry
-    tinyHandle fnHandle = fs_->addFile(fnModelFolder, model.name, std::move(scene));
-    return fs_->fTypeHandle(fnHandle).handle; // Return the scene's registry handle
+    tinyHandle fnHandle = fs_->createFile(fnModelFolder, model.name, std::move(scene));
+    return fs_->fDataHandle(fnHandle); // Return the scene's registry handle
 }
 
 void tinyProject::addSceneInstance(tinyHandle fromHandle, tinyHandle toHandle, tinyHandle parentHandle) {
     if (fromHandle == toHandle) return; // Prevent self-copy
 
-    if (tinySceneRT* toScene = fs().rGet<tinySceneRT>(toHandle)) {
+    if (tinySceneRT* toScene = registry().get<tinySceneRT>(toHandle)) {
         toScene->addScene(fromHandle, parentHandle);
     }
 }
@@ -268,53 +262,52 @@ void tinyProject::setupFS() {
     // ------------------ Standard files ------------------
 
     tinyFS::TypeInfo* ascn = fs_->typeInfo<tinySceneRT>();
-    ascn->typeExt = tinyFS::TypeExt("ascn", 0.4f, 1.0f, 0.4f);
+    ascn->ext = "ascn";
+    ascn->color[0] = 102; ascn->color[1] = 255; ascn->color[2] = 102;
 
     tinyFS::TypeInfo* amat = fs_->typeInfo<tinyMaterialVk>();
-    amat->typeExt = tinyFS::TypeExt("amat", 1.0f, 0.4f, 1.0f);
+    amat->ext = "amat";
+    amat->color[0] = 255; amat->color[1] = 102; amat->color[2] = 255;
 
     tinyFS::TypeInfo* atex = fs_->typeInfo<tinyTextureVk>();
-    atex->typeExt = tinyFS::TypeExt("atex", 0.4f, 0.4f, 1.0f);
-    atex->priority = 1; // Material delete before texture
-
-    atex->setRmRule<tinyTextureVk>([](const tinyTextureVk& tex) -> bool {
-        return tex.useCount() == 0;
-    });
+    atex->ext = "atex";
+    atex->color[0] = 102; atex->color[1] = 102; atex->color[2] = 255;
 
     tinyFS::TypeInfo* amsh = fs_->typeInfo<tinyMeshVk>();
-    amsh->typeExt = tinyFS::TypeExt("amsh", 1.0f, 1.0f, 0.4f);
+    amsh->ext = "amsh";
+    amsh->color[0] = 255; amsh->color[1] = 255; amsh->color[2] = 102;
 
     tinyFS::TypeInfo* askl = fs_->typeInfo<tinySkeleton>();
-    askl->typeExt = tinyFS::TypeExt("askl", 0.4f, 1.0f, 1.0f);
-    askl->safeDelete = true; // Skeletons are just data, safe to delete
+    askl->ext = "askl";
+    askl->color[0] = 102; askl->color[1] = 255; askl->color[2] = 255;
 
     tinyFS::TypeInfo* ascr = fs_->typeInfo<tinyScript>();
-    ascr->typeExt = tinyFS::TypeExt("ascr", 0.8f, 0.8f, 0.2f);
-    ascr->priority = UINT8_MAX; // Late delete
+    ascr->ext = "ascr";
+    ascr->color[0] = 204; ascr->color[1] = 204; ascr->color[2] = 51;
 
     // ------------------- Special "files" -------------------
 
     // Resources that lives in the registry but not registered (pun intended)
     // as files in the filesystem
 
-    tinyFS::TypeInfo* descPool = fs_->typeInfo<tinyVk::DescPool>();
-    descPool->priority = UINT8_MAX; // Delete last
-    descPool->safeDelete = true;
+    // tinyFS::TypeInfo* descPool = fs_->typeInfo<tinyVk::DescPool>();
+    // descPool->priority = UINT8_MAX; // Delete last
+    // descPool->safeDelete = true;
 
-    tinyFS::TypeInfo* descLayout = fs_->typeInfo<tinyVk::DescSLayout>();
-    descLayout->priority = UINT8_MAX; // Delete last
-    descLayout->safeDelete = true;
+    // tinyFS::TypeInfo* descLayout = fs_->typeInfo<tinyVk::DescSLayout>();
+    // descLayout->priority = UINT8_MAX; // Delete last
+    // descLayout->safeDelete = true;
 
-    tinyFS::TypeInfo* descSet = fs_->typeInfo<tinyVk::DescSet>();
-    descSet->priority = UINT8_MAX - 1; // Delete before pool/layout
+    // tinyFS::TypeInfo* descSet = fs_->typeInfo<tinyVk::DescSet>();
+    // descSet->priority = UINT8_MAX - 1; // Delete before pool/layout
 
-    tinyFS::TypeInfo* dataBuffer = fs_->typeInfo<tinyVk::DataBuffer>();
-    dataBuffer->priority = UINT8_MAX - 2; // Delete before desc sets
+    // tinyFS::TypeInfo* dataBuffer = fs_->typeInfo<tinyVk::DataBuffer>();
+    // dataBuffer->priority = UINT8_MAX - 2; // Delete before desc sets
 
-    // ------------------ Other useful files ------------------
+    // // ------------------ Other useful files ------------------
     tinyFS::TypeInfo* atxt = fs_->typeInfo<tinyText>();
-    atxt->typeExt = tinyFS::TypeExt("txt", 0.6f, 0.6f, 0.6f);
-    atxt->safeDelete = true;
+    atxt->ext = "txt";
+    atxt->color[0] = 153; atxt->color[1] = 153; atxt->color[2] = 153;
 }
 
 
@@ -331,29 +324,29 @@ void tinyProject::vkCreateResources() {
     // Skin descriptors
     DescSLayout skinDescLayout;
     skinDescLayout.create(device, { {0, DescType::StorageBufferDynamic, 1, ShaderStage::Vertex, nullptr} });
-    sharedRes_.hSkinDescLayout = fsAdd<DescSLayout>(std::move(skinDescLayout));
+    sharedRes_.hSkinDescLayout = rAdd<DescSLayout>(std::move(skinDescLayout));
 
     DescPool skinDescPool;
     skinDescPool.create(device, { {DescType::StorageBufferDynamic, maxSkeletons} }, maxSkeletons);
-    sharedRes_.hSkinDescPool = fsAdd<DescPool>(std::move(skinDescPool));
+    sharedRes_.hSkinDescPool = rAdd<DescPool>(std::move(skinDescPool));
 
     // Material descriptors
     DescSLayout matDescLayout = tinyMaterialVk::createDescSetLayout(device);
     DescPool matDescPool = tinyMaterialVk::createDescPool(device, maxMaterials);
-    sharedRes_.hMatDescLayout = fsAdd<DescSLayout>(std::move(matDescLayout));
-    sharedRes_.hMatDescPool = fsAdd<DescPool>(std::move(matDescPool));
+    sharedRes_.hMatDescLayout = rAdd<DescSLayout>(std::move(matDescLayout));
+    sharedRes_.hMatDescPool = rAdd<DescPool>(std::move(matDescPool));
 
     // Mesh morph delta descriptors
     DescSLayout meshMrphDsDescLayout = tinyMeshVk::createMrphDescSetLayout(device, false);
     DescPool meshMrphDsDescPool = tinyMeshVk::createMrphDescPool(device, maxMeshes, false);
-    sharedRes_.hMrphDsDescLayout = fsAdd<DescSLayout>(std::move(meshMrphDsDescLayout));
-    sharedRes_.hMrphDsDescPool = fsAdd<DescPool>(std::move(meshMrphDsDescPool));
+    sharedRes_.hMrphDsDescLayout = rAdd<DescSLayout>(std::move(meshMrphDsDescLayout));
+    sharedRes_.hMrphDsDescPool = rAdd<DescPool>(std::move(meshMrphDsDescPool));
 
     // Mesh morph weight descriptors
     DescSLayout meshMrphWsDescLayout = tinyMeshVk::createMrphDescSetLayout(device);
     DescPool meshMrphWsDescPool = tinyMeshVk::createMrphDescPool(device, maxMeshes);
-    sharedRes_.hMrphWsDescLayout = fsAdd<DescSLayout>(std::move(meshMrphWsDescLayout));
-    sharedRes_.hMrphWsDescPool = fsAdd<DescPool>(std::move(meshMrphWsDescPool));
+    sharedRes_.hMrphWsDescLayout = rAdd<DescSLayout>(std::move(meshMrphWsDescLayout));
+    sharedRes_.hMrphWsDescPool = rAdd<DescPool>(std::move(meshMrphWsDescPool));
 }
 
 void tinyProject::vkCreateDefault() {
@@ -361,10 +354,10 @@ void tinyProject::vkCreateDefault() {
 //  ---------- Create default material and texture ----------
 
     tinyTextureVk defaultTextureVk0 = tinyTextureVk::aPixel(deviceVk_, 255, 255, 255, 255);
-    sharedRes_.hDefaultTextureVk0 = fsAdd<tinyTextureVk>(std::move(defaultTextureVk0));
+    sharedRes_.hDefaultTextureVk0 = rAdd<tinyTextureVk>(std::move(defaultTextureVk0));
 
     tinyTextureVk defaultTextureVk1 = tinyTextureVk::aPixel(deviceVk_, 0, 0, 0, 0);
-    sharedRes_.hDefaultTextureVk1 = fsAdd<tinyTextureVk>(std::move(defaultTextureVk1));
+    sharedRes_.hDefaultTextureVk1 = rAdd<tinyTextureVk>(std::move(defaultTextureVk1));
 
     tinyMaterialVk defaultMaterialVk;
     defaultMaterialVk.init(
@@ -375,7 +368,7 @@ void tinyProject::vkCreateDefault() {
         sharedRes_.matDescPool()
     );
 
-    sharedRes_.hDefaultMaterialVk = fsAdd<tinyMaterialVk>(std::move(defaultMaterialVk));
+    sharedRes_.hDefaultMaterialVk = rAdd<tinyMaterialVk>(std::move(defaultMaterialVk));
 
 //  -------------- Create dummy skin resources --------------
 
@@ -385,8 +378,8 @@ void tinyProject::vkCreateDefault() {
     dummySkinDescSet.allocate(deviceVk_->device, sharedRes_.skinDescPool(), sharedRes_.skinDescLayout());
     tinyRT_SKEL3D::vkWrite(deviceVk_, &dummySkinBuffer, &dummySkinDescSet, sharedRes_.maxFramesInFlight, 1);
 
-    fsAdd<DataBuffer>(std::move(dummySkinBuffer)); // No need to store handle
-    sharedRes_.hDummySkinDescSet = fsAdd<DescSet>(std::move(dummySkinDescSet));
+    rAdd<DataBuffer>(std::move(dummySkinBuffer)); // No need to store handle
+    sharedRes_.hDummySkinDescSet = rAdd<DescSet>(std::move(dummySkinDescSet));
 
 // -------------- Create dummy morph target resources --------------
 
@@ -399,11 +392,11 @@ void tinyProject::vkCreateDefault() {
     dummyMrphWsDescSet.allocate(deviceVk_->device, sharedRes_.mrphWsDescPool(), sharedRes_.mrphWsDescLayout());
     tinyRT_MESHRD::vkWrite(deviceVk_, &dummyMrphWsBuffer, &dummyMrphWsDescSet, sharedRes_.maxFramesInFlight, 1);
 
-    fsAdd<DataBuffer>(std::move(dummyMrphDsBuffer));
-    sharedRes_.hDummyMeshMrphDsDescSet = fsAdd<DescSet>(std::move(dummyMrphDsDescSet));
+    rAdd<DataBuffer>(std::move(dummyMrphDsBuffer));
+    sharedRes_.hDummyMeshMrphDsDescSet = rAdd<DescSet>(std::move(dummyMrphDsDescSet));
 
-    fsAdd<DataBuffer>(std::move(dummyMrphWsBuffer));
-    sharedRes_.hDummyMeshMrphWsDescSet = fsAdd<DescSet>(std::move(dummyMrphWsDescSet));
+    rAdd<DataBuffer>(std::move(dummyMrphWsBuffer));
+    sharedRes_.hDummyMeshMrphWsDescSet = rAdd<DescSet>(std::move(dummyMrphWsDescSet));
 
 // ------------------ Create Main Scene ------------------
 
@@ -413,11 +406,7 @@ void tinyProject::vkCreateDefault() {
     mainScene.addRoot("Root");
     mainScene.setSharedRes(sharedRes_);
 
-    tinyFS::Node::CFG sceneConfig;
-    sceneConfig.deletable = false; // Don't you f*cking delete the main scene
+    tinyHandle mainSceneFileHandle = fs_->createFile(fs_->root(), "Main Scene", std::move(mainScene));
 
-    tinyHandle mainSceneFileHandle = fs_->addFile(fs_->rootHandle(), "Main Scene", std::move(mainScene), sceneConfig);
-    typeHandle mainScenetypeHandle = fs_->fTypeHandle(mainSceneFileHandle);
-
-    mainSceneHandle = mainScenetypeHandle.handle; // Store the initial scene handle
+    mainSceneHandle = fs_->fDataHandle(mainSceneFileHandle);
 }

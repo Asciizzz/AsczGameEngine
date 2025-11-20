@@ -109,35 +109,6 @@ public:
         return rtRegistry_.get<T>(handle);
     }
 
-    template<typename T>
-    bool rtHasPendingRms() const {
-        return rtRegistry_.tHasPendingRms<T>();
-    }
-
-    template<typename T>
-    void rtFlushAllRms() {
-        rtRegistry_.tFlushAllRms<T>();
-    }
-
-    // Specific check
-    bool rtHasPendingVulkanRms() const {
-        return 
-            rtHasPendingRms<tinyRT_SKEL3D>() ||
-            rtHasPendingRms<tinyRT_MESHRD>();
-    }
-    void rtFlushAllVulkanRms() {
-        rtFlushAllRms<tinyRT_SKEL3D>();
-        rtFlushAllRms<tinyRT_MESHRD>();
-    }
-
-    bool rtHasPendingAudioRms() const {
-        return false; // Audio in development
-    }
-    void rtFlushAllAudioRms() {
-        // Audio in development
-    }
-
-
     // -------- Component management --------- 
 
     struct NWrap {
@@ -384,7 +355,7 @@ private:
 
     template<typename T>
     tinyHandle rtAdd(T&& data) {
-        return rtRegistry_.add<T>(std::forward<T>(data)).handle;
+        return rtRegistry_.add<T>(std::forward<T>(data));
     }
 
     // ---------- Scary removal function ---------- (spooky)
@@ -395,8 +366,9 @@ private:
 
     template<typename T>
     void rtRemove(const tinyHandle& handle) {
-        if constexpr (DeferredRm<T>::value) rtRegistry_.tQueueRm<T>(handle);
-        else                                rtRegistry_.tRemove<T>(handle);
+        // if constexpr (DeferredRm<T>::value) rtRegistry_.tQueueRm<T>(handle);
+        // else                                rtRegistry_.tRemove<T>(handle);
+        return;
     }
 };
 

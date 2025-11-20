@@ -2,262 +2,140 @@
 
 #include "tinyPool.hpp"
 
-#include <assert.h>
 #include <unordered_map>
+#include <memory>
+#include <cassert>
 
-class tinyRegistry { // For raw resource data
+class tinyRegistry {
     struct IPool {
         virtual ~IPool() noexcept = default;
-        virtual void* get(const tinyHandle& handle) noexcept = 0;
-        virtual void remove(const tinyHandle& handle) noexcept = 0;
-        virtual void queueRm(const tinyHandle& handle) noexcept = 0;
-        virtual void flushRm(uint32_t index) noexcept = 0;
-        virtual void flushAllRms() noexcept = 0;
-        virtual bool hasPendingRms() const noexcept = 0;
-        virtual std::vector<tinyHandle> pendingRms() const noexcept = 0;
+        virtual void* get(tinyHandle h) noexcept = 0;
+        virtual void remove(tinyHandle h) noexcept = 0;
         virtual void clear() noexcept = 0;
     };
 
     template<typename T>
-    struct PoolWrapper : public IPool {
+    struct PoolWrapper : IPool {
         tinyPool<T> pool;
 
-        void* get(const tinyHandle& handle) noexcept override { return pool.get(handle); }
-        void remove(const tinyHandle& handle) noexcept override { pool.remove(handle); }
-        void queueRm(const tinyHandle& handle) noexcept override { pool.queueRm(handle); }
-        void flushRm(uint32_t index) noexcept override { pool.flushRm(index); }
-        void flushAllRms() noexcept override { pool.flushAllRms(); }
-        bool hasPendingRms() const noexcept override { return pool.hasPendingRms(); }
-        std::vector<tinyHandle> pendingRms() const noexcept override { return pool.pendingRms(); }
-        void clear() noexcept override { pool.clear(); }
+        void* get(tinyHandle h) noexcept override {
+            return pool.get(h);
+        }
+        void remove(tinyHandle h) noexcept override {
+            pool.remove(h);
+        }
+        void clear() noexcept override {
+            pool.clear();
+        }
     };
 
-    std::unordered_map<tinyType::ID, std::unique_ptr<IPool>> pools;
+    std::unordered_map<tinyType::ID, std::unique_ptr<IPool>> pools_;
 
     template<typename T>
-    TINY_FORCE_INLINE PoolWrapper<T>* getWrapper() noexcept {
-        auto it = pools.find(tinyType::TypeID<T>());
-
-        if (TINY_UNLIKELY(it == pools.end())) return nullptr;
-        return static_cast<PoolWrapper<T>*>(it->second.get());
+    TINY_FORCE_INLINE PoolWrapper<T>* getPool() noexcept {
+        auto it = pools_.find(tinyType::TypeID<T>());
+        return it != pools_.end() ? static_cast<PoolWrapper<T>*>(it->second.get()) : nullptr;
     }
 
-    template<typename T>
-    TINY_FORCE_INLINE const PoolWrapper<T>* getWrapper() const noexcept {
-        auto it = pools.find(tinyType::TypeID<T>());
-        if (TINY_UNLIKELY(it == pools.end())) return nullptr;
-        return static_cast<const PoolWrapper<T>*>(it->second.get());
-    }
-
-    // Ensure pool exists for type T
     template<typename T>
     PoolWrapper<T>& ensurePool() {
-        auto tIndx = tinyType::TypeID<T>();
-        auto it = pools.find(tIndx);
-
-        if (it == pools.end()) { // Create new pool if not found
-            auto wrapper = std::make_unique<PoolWrapper<T>>();
-            auto* ptr = wrapper.get();
-            pools[tIndx] = std::move(wrapper);
-
-            return *ptr;
+        auto id = tinyType::TypeID<T>();
+        auto [it, inserted] = pools_.try_emplace(id);
+        if (inserted) {
+            it->second = std::make_unique<PoolWrapper<T>>();
         }
-
         return *static_cast<PoolWrapper<T>*>(it->second.get());
     }
 
 public:
     tinyRegistry() noexcept = default;
-
     tinyRegistry(const tinyRegistry&) = delete;
     tinyRegistry& operator=(const tinyRegistry&) = delete;
-
     tinyRegistry(tinyRegistry&&) noexcept = default;
     tinyRegistry& operator=(tinyRegistry&&) noexcept = default;
 
-    template<typename T>
-    [[nodiscard]] typeHandle add(T&& data) {
-        return typeHandle::make<T>(ensurePool<T>().pool.add(std::forward<T>(data)));
+    template<typename T, typename... Args>
+    [[nodiscard]] tinyHandle emplace(Args&&... args) {
+        return ensurePool<T>().pool.emplace(std::forward<Args>(args)...);
     }
 
     template<typename T>
-    [[nodiscard]] tinyPool<T>& make() {
-        return ensurePool<T>().pool;
+    [[nodiscard]] tinyHandle add(T&& obj) {
+        return emplace<T>(std::forward<T>(obj));
     }
-    
-    // Pre-allocate space for a specific type (performance optimization)
+
     template<typename T>
     void reserve(uint32_t capacity) {
-        ensurePool<T>().pool.alloc(capacity);
-    }
-
-    void tRemove(const typeHandle& th) noexcept {
-        auto it = pools.find(th.typeID);
-        if (it != pools.end()) {
-            IPool* pool = it->second.get();
-            pool->remove(th.handle);
-        }
+        ensurePool<T>().pool.reserve(capacity);
     }
 
     template<typename T>
-    void tRemove(const tinyHandle& handle) noexcept {
-        tRemove(typeHandle::make<T>(handle));
+    [[nodiscard]] TINY_FORCE_INLINE T* get(tinyHandle h) noexcept {
+        auto* pool = getPool<T>();
+        return pool ? pool->pool.get(h) : nullptr;
     }
 
-// For unsafe removal (vulkan resources for example)
-    void tQueueRm(const typeHandle& th) noexcept {
-        auto it = pools.find(th.typeID);
-        if (it != pools.end()) {
-            it->second->queueRm(th.handle);
-        }
-    }
     template<typename T>
-    void tQueueRm(const tinyHandle& handle) noexcept {
-        tQueueRm(typeHandle::make<T>(handle));
+    [[nodiscard]] TINY_FORCE_INLINE const T* get(tinyHandle h) const noexcept {
+        return const_cast<tinyRegistry*>(this)->get<T>(h);
     }
 
-    void tFlushRm(tinyType::ID typeID, uint32_t index) noexcept {
-        auto it = pools.find(typeID);
-        if (it != pools.end()) {
-            it->second->flushRm(index);
+    [[nodiscard]] TINY_FORCE_INLINE void* get(tinyHandle h) noexcept {
+        if (!h) return nullptr;
+        auto it = pools_.find(h.typeID);
+        return it != pools_.end() ? it->second->get(h) : nullptr;
+    }
+
+    void remove(tinyHandle h) noexcept {
+        if (!h) return;
+        auto it = pools_.find(h.typeID);
+        if (it != pools_.end()) {
+            it->second->remove(h);
         }
     }
+
+    // View raw pools
     template<typename T>
-    void tFlushRm(uint32_t index) noexcept {
-        tFlushRm(tinyType::TypeID<T>(), index);
+    [[nodiscard]] tinyPool<T>& view() {
+        return ensurePool<T>().pool;
     }
 
-    void tFlushAllRms(tinyType::ID typeID) noexcept {
-        auto it = pools.find(typeID);
-        if (it != pools.end()) {
-            it->second->flushAllRms();
-        }
-    }
     template<typename T>
-    void tFlushAllRms() noexcept {
-        tFlushAllRms(tinyType::TypeID<T>());
+    [[nodiscard]] const tinyPool<T>& view() const {
+        static tinyPool<T> empty;
+        auto it = pools_.find(tinyType::TypeID<T>());
+        return it != pools_.end()
+            ? static_cast<PoolWrapper<T>*>(it->second.get())->pool
+            : empty;
     }
 
-
-    bool tHasPendingRms(tinyType::ID typeID) const noexcept {
-        auto it = pools.find(typeID);
-        if (it == pools.end()) return false;
-
-        return it->second->hasPendingRms();
-    }
+    // Stats
     template<typename T>
-    bool tHasPendingRms() const noexcept {
-        return tHasPendingRms(tinyType::TypeID<T>());
+    [[nodiscard]] uint32_t count() const noexcept {
+        auto* p = getPool<T>();
+        return p ? p->pool.count() : 0;
     }
 
-    std::vector<tinyHandle> tPendingRms(tinyType::ID typeID) const noexcept {
-        auto it = pools.find(typeID);
-        if (it != pools.end()) {
-            return it->second->pendingRms();
-        }
-        return std::vector<tinyHandle>();
-    }
     template<typename T>
-    std::vector<tinyHandle> tPendingRms() const noexcept {
-        return tPendingRms(tinyType::TypeID<T>());
+    [[nodiscard]] uint32_t capacity() const noexcept {
+        auto* p = getPool<T>();
+        return p ? p->pool.capacity() : 0;
     }
 
-    // Every pool's pending removals check
-
-    void flushAllRms() {
-        for (auto& [typeIndx, poolPtr] : pools) {
-            poolPtr->flushAllRms();
-        }
+    // Nukes
+    void clearAll() noexcept {
+        pools_.clear();
     }
 
-    [[nodiscard]] bool hasPendingRms() const noexcept { 
-        for (const auto& [typeIndx, poolPtr] : pools) {
-            if (poolPtr->hasPendingRms()) return true;
-        }
-        return false;
-    }
-
-    // Literal nukes
     void clear(tinyType::ID typeID) noexcept {
-        auto it = pools.find(typeID);
-        if (it != pools.end()) it->second->clear();
+        pools_.erase(typeID);
     }
+
     template<typename T>
     void clear() noexcept {
         clear(tinyType::TypeID<T>());
     }
 
-// ------------------- Data Access ------------------
-
-    // Hot path: force inline for type-based access
-    template<typename T>
-    [[nodiscard]] TINY_FORCE_INLINE T* get(const tinyHandle& handle) noexcept {
-        auto* wrapper = getWrapper<T>();
-        return TINY_LIKELY(wrapper) ? wrapper->pool.get(handle) : nullptr;
-    }
-    template<typename T>
-    [[nodiscard]] TINY_FORCE_INLINE const T* get(const tinyHandle& handle) const noexcept {
-        return const_cast<tinyRegistry*>(this)->get<T>(handle);
-    }
-
-    [[nodiscard]] TINY_FORCE_INLINE void* get(const typeHandle& th) noexcept {
-        if (TINY_UNLIKELY(!th)) return nullptr;
-
-        auto it = pools.find(th.typeID);
-        return TINY_LIKELY(it != pools.end()) ? it->second->get(th.handle) : nullptr;
-    }
-    [[nodiscard]] TINY_FORCE_INLINE const void* get(const typeHandle& th) const noexcept {
-        return const_cast<tinyRegistry*>(this)->get(th);
-    }
-
-    template<typename T>
-    [[nodiscard]] TINY_FORCE_INLINE T* get(const typeHandle& th) noexcept {
-        return TINY_LIKELY(th.isType<T>()) ? static_cast<T*>(get(th)) : nullptr;
-    }
-    template<typename T>
-    [[nodiscard]] TINY_FORCE_INLINE const T* get(const typeHandle& th) const noexcept {
-        return const_cast<tinyRegistry*>(this)->get<T>(th);
-    }
-
-    [[nodiscard]] bool has(const typeHandle& th) const noexcept {
-        if (!th) return false;
-
-        auto it = pools.find(th.typeID);
-        if (it == pools.end()) return false;
-
-        return it->second->get(th.handle) != nullptr;
-    }
-    template<typename T>
-    [[nodiscard]] bool has(const tinyHandle& handle) const noexcept {
-        return has(typeHandle::make<T>(handle));
-    }
-
-    template<typename T>
-    [[nodiscard]] tinyPool<T>& view() {
-        return ensurePool<T>().pool;
-    }
-    template<typename T>
-    [[nodiscard]] const tinyPool<T>& view() const {
-        const auto* wrapper = getWrapper<T>();
-
-        // Cannot retrieve non-existing pool in const context
-        if (!wrapper) {
-            static tinyPool<T> empty; // or throw/assert
-            return empty;
-        }
-
-        return wrapper->pool;
-    }
-
-    template<typename T>
-    [[nodiscard]] uint32_t capacity() const noexcept {
-        auto* wrapper = getWrapper<T>();
-        return wrapper ? wrapper->pool.capacity() : 0;
-    }
-
-    template<typename T>
-    [[nodiscard]] uint32_t count() const noexcept {
-        auto* wrapper = getWrapper<T>();
-        return wrapper ? wrapper->pool.count() : 0;
-    }
+    [[nodiscard]] bool empty() const noexcept { return pools_.empty(); }
+    [[nodiscard]] size_t size() const noexcept { return pools_.size(); }
 };

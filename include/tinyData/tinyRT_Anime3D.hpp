@@ -153,7 +153,7 @@ struct Anime3D {
     }
 
     const std::deque<Clip>& all() const {
-        return clips.view();
+        return clips.data();
     }
 
     // Retrieve the list

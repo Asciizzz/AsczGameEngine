@@ -264,7 +264,7 @@ void tinyScript::cacheDefaultTable(const char* tableName, tinyVarsMap& outMap) {
                                     lua_pop(L_, 2);
                                     LuaHandle* luaHandle = static_cast<LuaHandle*>(lua_touserdata(L_, -1));
                                     if (luaHandle) {
-                                        outMap[key] = luaHandle->toTypeHandle();
+                                        outMap[key] = luaHandle->toTinyHandle();
                                     }
                                 } else {
                                     lua_pop(L_, 2);
@@ -393,14 +393,14 @@ namespace {
     }
 
     template<>
-    bool readLuaValue<typeHandle>(lua_State* L, int idx, typeHandle& out) {
+    bool readLuaValue<tinyHandle>(lua_State* L, int idx, tinyHandle& out) {
         if (lua_isuserdata(L, idx) && lua_getmetatable(L, idx)) {
             luaL_getmetatable(L, "Handle");
             bool eq = lua_rawequal(L, -1, -2);
             lua_pop(L, 2);
             if (eq) {
                 if (auto* h = static_cast<LuaHandle*>(lua_touserdata(L, idx)); h && h->valid()) {
-                    out = h->toTypeHandle();
+                    out = h->toTinyHandle();
                     return true;
                 }
             }
@@ -473,8 +473,8 @@ void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, floa
                     lua_pushstring(L_, val.c_str());
                     lua_setfield(L_, -2, key.c_str());
                 }
-                else if constexpr (std::is_same_v<T, typeHandle>) {
-                    pushLuaHandle(L_, LuaHandle::fromTypeHandle(val));
+                else if constexpr (std::is_same_v<T, tinyHandle>) {
+                    pushLuaHandle(L_, LuaHandle::fromTinyHandle(val));
                     lua_setfield(L_, -2, key.c_str());
                 }
             }, value);

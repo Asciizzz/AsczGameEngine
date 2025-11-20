@@ -436,41 +436,43 @@ void Renderer::endFrame(uint32_t imageIndex) {
 }
 
 void Renderer::processPendingRemovals(tinyProject* project, tinySceneRT* activeScene) {
-    tinyFS& fs = project->fs();
+    // tinyFS& fs = project->fs();
 
-    // Check if there are pending removals in tinyFS or scene
-    if (!fs.hasAnyRmQueue() && !activeScene->rtHasPendingVulkanRms()) return;
+    // // Check if there are pending removals in tinyFS or scene
+    // if (!fs.hasAnyRmQueue() && !activeScene->rtHasPendingVulkanRms()) return;
 
-    // Wait for ALL in-flight fences to ensure no resources are in use by GPU
-    // This is the safest approach - wait for all frames to complete
-    std::vector<VkFence> allFences;
-    for (size_t i = 0; i < maxFramesInFlight; ++i) {
-        if (inFlightFences[i] != VK_NULL_HANDLE) {
-            allFences.push_back(inFlightFences[i]);
-        }
-    }
+    // // Wait for ALL in-flight fences to ensure no resources are in use by GPU
+    // // This is the safest approach - wait for all frames to complete
+    // std::vector<VkFence> allFences;
+    // for (size_t i = 0; i < maxFramesInFlight; ++i) {
+    //     if (inFlightFences[i] != VK_NULL_HANDLE) {
+    //         allFences.push_back(inFlightFences[i]);
+    //     }
+    // }
     
-    if (!allFences.empty()) {
-        // Wait for all frames to complete with a reasonable timeout (1 second)
-        VkResult result = vkWaitForFences(deviceVk->device, 
-                                        static_cast<uint32_t>(allFences.size()), 
-                                        allFences.data(), 
-                                        VK_TRUE, 
-                                        1000000000); // 1 second timeout in nanoseconds
+    // if (!allFences.empty()) {
+    //     // Wait for all frames to complete with a reasonable timeout (1 second)
+    //     VkResult result = vkWaitForFences(deviceVk->device, 
+    //                                     static_cast<uint32_t>(allFences.size()), 
+    //                                     allFences.data(), 
+    //                                     VK_TRUE, 
+    //                                     1000000000); // 1 second timeout in nanoseconds
 
-        if (result == VK_TIMEOUT) {
-            // Log warning but continue - GPU might be hung, but we can't wait forever
-            printf("Warning: Timeout waiting for GPU to finish before deleting resources\n");
-        } else if (result != VK_SUCCESS) {
-            return; // Don't delete if we can't confirm GPU is done
-        }
-    }
+    //     if (result == VK_TIMEOUT) {
+    //         // Log warning but continue - GPU might be hung, but we can't wait forever
+    //         printf("Warning: Timeout waiting for GPU to finish before deleting resources\n");
+    //     } else if (result != VK_SUCCESS) {
+    //         return; // Don't delete if we can't confirm GPU is done
+    //     }
+    // }
     
-    // Remove materials first, then textures
-    fs.execRemove<tinyMaterialVk>();
-    fs.execRemove<tinyTextureVk>();
-    fs.execRemoveAll();
+    // // Remove materials first, then textures
+    // fs.execRemove<tinyMaterialVk>();
+    // fs.execRemove<tinyTextureVk>();
+    // fs.execRemoveAll();
 
-    // Scene still uses its own flushing mechanism (not tinyFS)
-    activeScene->rtFlushAllVulkanRms();
+    // // Scene still uses its own flushing mechanism (not tinyFS)
+    // activeScene->rtFlushAllVulkanRms();
+
+    // FOR THE TIME BEING IGNORE THE ABOVE AND DO NOTHING
 }

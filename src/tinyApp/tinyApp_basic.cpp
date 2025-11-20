@@ -224,7 +224,7 @@ void tinyApp::mainLoop() {
                 case SDL_DROPFILE: {
                     char* droppedFile = event.drop.file;
                     std::string ext = tinyFS::pExt(droppedFile);
-                    std::string name = tinyFS::pName(droppedFile, false); // Without extension
+                    std::string name = tinyFS::pName(droppedFile); // Without extension
 
                     if (ext == "glb" || ext == "gltf" || ext == "obj" || ext == "fbx") {
                         tinyModel model = tinyLoader::loadModel(droppedFile);
@@ -235,21 +235,21 @@ void tinyApp::mainLoop() {
                         tinyScript script;
                         script.code = tinyText::readFrom(droppedFile);
 
-                        project->fs().addFile(name, std::move(script));
+                        project->fs().createFile(name, std::move(script));
                     }
 
                     if (ext == "txt" || ext == "cfg" || ext == "ini" || ext == "log" || ext == "md") {
                         tinyText text;
                         text.str = tinyText::readFrom(droppedFile);
 
-                        project->fs().addFile(name, std::move(text));
+                        project->fs().createFile(name, std::move(text));
                     }
 
                     if (ext == "png" || ext == "jpg" || ext == "jpeg" || ext == "bmp") {
                         tinyTexture texture = tinyLoader::loadTexture(droppedFile);
                         tinyTextureVk texVk = tinyTextureVk(std::move(texture), deviceVk.get());
 
-                        project->fs().addFile(name, std::move(texVk));
+                        project->fs().createFile(name, std::move(texVk));
                     }
 
                 } break;

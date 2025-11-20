@@ -8,6 +8,8 @@
 #include <glm/gtx/euler_angles.hpp>
 #include <SDL2/SDL.h>
 
+#include <algorithm>
+
 extern "C" {
     #include "lua.h"
 }
@@ -240,29 +242,36 @@ static inline int vec4_tostring(lua_State* L) {
 // LuaHandle - Unified handle structure with type information
 struct LuaHandle {
     std::string type = "void";
-    tinyHandle handle;
+    uint32_t index = 0;
+    uint32_t version = 0;
 
     LuaHandle() = default;
-    LuaHandle(const std::string& t, tinyHandle h = tinyHandle()) : type(t), handle(h) {}
     LuaHandle(const std::string& t, uint32_t index, uint32_t version) 
-        : type(t), handle(index, version) {}
+        : type(t), index(index), version(version) {}
 
-    bool valid() const { return !type.empty() && handle; }
-
-    // Convert LuaHandle to typeHandle based on type string
-    typeHandle toTypeHandle() const {
-        if (type == "node") return typeHandle::make<tinyNodeRT>(handle); else
-        if (type == "script") return typeHandle::make<tinyScript>(handle); else
-        if (type == "scene") return typeHandle::make<tinySceneRT>(handle); else
-        return typeHandle::make<void>(handle);
+    bool operator==(const LuaHandle& other) const noexcept {
+        return type == other.type && index == other.index && version == other.version;
+    }
+    bool operator!=(const LuaHandle& other) const noexcept {
+        return !(*this == other);
     }
 
-    // Create LuaHandle from typeHandle
-    static LuaHandle fromTypeHandle(const typeHandle& th) {
-        if (th.isType<tinyNodeRT>()) return LuaHandle("node", th.handle); else
-        if (th.isType<tinyScript>()) return LuaHandle("script", th.handle); else
-        if (th.isType<tinySceneRT>()) return LuaHandle("scene", th.handle); else
-        return LuaHandle("resource", th.handle);
+    bool valid() const { return !type.empty() && index != 0; }
+
+    // Convert LuaHandle to tinyHandle based on type string
+    tinyHandle toTinyHandle() const {
+        if (type == "node") return tinyHandle::make<tinyNodeRT>(index, version); else
+        if (type == "script") return tinyHandle::make<tinyScript>(index, version); else
+        if (type == "scene") return tinyHandle::make<tinySceneRT>(index, version); else
+        return tinyHandle::make<void>(index, version);
+    }
+
+    // Create LuaHandle from tinyHandle
+    static LuaHandle fromTinyHandle(const tinyHandle& th) {
+        if (th.is<tinyNodeRT>()) return LuaHandle("node", th.idx(), th.ver()); else
+        if (th.is<tinyScript>()) return LuaHandle("script", th.idx(), th.ver()); else
+        if (th.is<tinySceneRT>()) return LuaHandle("scene", th.idx(), th.ver()); else
+        return LuaHandle("resource", th.idx(), th.ver());
     }
 };
 
@@ -300,9 +309,9 @@ static inline int lua_Handle(lua_State* L) {
     luaHandle.type = typeStr;
     
     if (numArgs >= 2) {
-        luaHandle.handle.index = luaL_checkinteger(L, 2);
+        luaHandle.index = luaL_checkinteger(L, 2);
         if (numArgs >= 3) {
-            luaHandle.handle.version = luaL_checkinteger(L, 3);
+            luaHandle.version = luaL_checkinteger(L, 3);
         }
     }
     
@@ -319,7 +328,7 @@ static inline int lua_handleEqual(lua_State* L) {
     LuaHandle* h1 = getLuaHandleFromUserdata(L, 1);
     LuaHandle* h2 = getLuaHandleFromUserdata(L, 2);
 
-    lua_pushboolean(L, h1 && h2 && h1->type == h2->type && h1->handle == h2->handle);
+    lua_pushboolean(L, h1 && h2 && *h1 == *h2);
     return 1;
 }
 
@@ -341,7 +350,7 @@ static inline int lua_handleGetIndex(lua_State* L) {
         lua_pushnil(L);
         return 1;
     }
-    lua_pushinteger(L, h->handle.index);
+    lua_pushinteger(L, h->index);
     return 1;
 }
 
@@ -352,7 +361,7 @@ static inline int lua_handleGetVersion(lua_State* L) {
         lua_pushnil(L);
         return 1;
     }
-    lua_pushinteger(L, h->handle.version);
+    lua_pushinteger(L, h->version);
     return 1;
 }
 
@@ -392,13 +401,15 @@ static inline int scene_node(lua_State* L) {
         lua_pushnil(L);
         return 1;
     }
+
+    tinyHandle th = luaHandle->toTinyHandle();
     
-    if (!luaHandle->handle || !(*scenePtr)->node(luaHandle->handle)) {
+    if (!th || !(*scenePtr)->node(th)) {
         lua_pushnil(L);
         return 1;
     }
-    
-    pushNode(L, luaHandle->handle);
+
+    pushNode(L, th);
     return 1;
 }
 
@@ -422,13 +433,13 @@ static inline int scene_addScene(lua_State* L) {
             lua_pushnil(L);
             return 1;
         }
-        
-        parentNHandle = parentHandle->handle;
+
+        parentNHandle = parentHandle->toTinyHandle();
     }
     // If no parent provided, it will default to root in the C++ function
     
     // Call the existing C++ addScene function and get the returned node handle
-    tinyHandle newNodeHandle = (*scenePtr)->addScene(sceneHandle->handle, parentNHandle);
+    tinyHandle newNodeHandle = (*scenePtr)->addScene(sceneHandle->toTinyHandle(), parentNHandle);
 
     // Check if the returned node is valid
     if (!newNodeHandle || !(*scenePtr)->node(newNodeHandle)) {
@@ -461,7 +472,7 @@ static inline int scene_delete(lua_State* L) {
     }
     
     // Call removeNode and return success
-    bool success = (*scenePtr)->removeNode(nodeHandle->handle, recursive);
+    bool success = (*scenePtr)->removeNode(nodeHandle->toTinyHandle(), recursive);
     lua_pushboolean(L, success);
     return 1;
 }
@@ -1183,7 +1194,7 @@ static inline int anim3d_get(lua_State* L) {
     if (comps.anim3D) {
         tinyHandle animHandle = comps.anim3D->getHandle(lua_tostring(L, 2));
         if (animHandle) {
-            pushLuaHandle(L, LuaHandle("animation", animHandle));
+            pushLuaHandle(L, LuaHandle("animation", animHandle.idx(), animHandle.ver()));
             return 1;
         }
     }
@@ -1199,7 +1210,7 @@ static inline int anim3d_current(lua_State* L) {
     if (comps.anim3D) {
         tinyHandle animHandle = comps.anim3D->curHandle();
         if (animHandle) {
-            pushLuaHandle(L, LuaHandle("animation", animHandle));
+            pushLuaHandle(L, LuaHandle("animation", animHandle.idx(), animHandle.ver()));
             return 1;
         }
     }
@@ -1223,7 +1234,7 @@ static inline int anim3d_play(lua_State* L) {
         if (luaHandle->type != "animation") {
             return luaL_error(L, "anim3d:play() expects animation handle, got '%s'", luaHandle->type.c_str());
         }
-        animHandle = luaHandle->handle;
+        animHandle = luaHandle->toTinyHandle();
     }
     
     bool restart = lua_isboolean(L, 3) ? lua_toboolean(L, 3) : true;
@@ -1277,7 +1288,7 @@ static inline int anim3d_getDuration(lua_State* L) {
     if (lua_gettop(L) >= 2 && !lua_isnil(L, 2)) {
         LuaHandle* luaHandle = getLuaHandleFromUserdata(L, 2);
         if (luaHandle && luaHandle->type == "animation") {
-            animHandle = luaHandle->handle;
+            animHandle = luaHandle->toTinyHandle();
         } else {
             animHandle = comps.anim3D->curHandle();
         }
@@ -1361,9 +1372,9 @@ static inline int script_getVar(lua_State* L) {
             else if constexpr (std::is_same_v<T, glm::vec3>) pushVec3(L, val);
             else if constexpr (std::is_same_v<T, glm::vec4>) pushVec4(L, val);
             else if constexpr (std::is_same_v<T, std::string>) lua_pushstring(L, val.c_str());
-            else if constexpr (std::is_same_v<T, typeHandle>) {
-                // Convert typeHandle back to LuaHandle
-                pushLuaHandle(L, LuaHandle::fromTypeHandle(val));
+            else if constexpr (std::is_same_v<T, tinyHandle>) {
+                // Convert tinyHandle back to LuaHandle
+                pushLuaHandle(L, LuaHandle::fromTinyHandle(val));
             }
         }, var);
         return 1;
@@ -1405,7 +1416,7 @@ static inline int script_setVar(lua_State* L) {
                 }
             }
             else if constexpr (std::is_same_v<T, std::string>) val = std::string(lua_tostring(L, 3));
-            else if constexpr (std::is_same_v<T, typeHandle>) {
+            else if constexpr (std::is_same_v<T, tinyHandle>) {
                 // The handle userdata comes from the calling Lua state (L)
                 // We need to safely extract it without throwing errors
                 if (lua_isuserdata(L, 3)) {
@@ -1416,7 +1427,7 @@ static inline int script_setVar(lua_State* L) {
                             // Valid Handle userdata, safe to cast
                             LuaHandle* luaHandle = static_cast<LuaHandle*>(lua_touserdata(L, 3));
                             if (luaHandle) {
-                                val = luaHandle->toTypeHandle();
+                                val = luaHandle->toTinyHandle();
                             }
                         }
                         lua_pop(L, 2);  // Pop both metatables
@@ -1478,7 +1489,7 @@ static inline int node_parentHandle(lua_State* L) {
     
     tinyHandle parentHandle = getSceneFromLua(L)->nodeParent(*handle);
     if (parentHandle) {
-        pushLuaHandle(L, LuaHandle("node", parentHandle));
+        pushLuaHandle(L, LuaHandle("node", parentHandle.idx(), parentHandle.ver()));
         return 1;
     }
     lua_pushnil(L);
@@ -1492,7 +1503,7 @@ static inline int node_childrenHandles(lua_State* L) {
     std::vector<tinyHandle> children = getSceneFromLua(L)->nodeChildren(*handle);
     lua_newtable(L);
     for (int i = 0; i < children.size(); i++) {
-        pushLuaHandle(L, LuaHandle("node", children[i]));
+        pushLuaHandle(L, LuaHandle("node", children[i].idx(), children[i].ver()));
         lua_rawseti(L, -2, i + 1);
     }
     return 1;
@@ -1533,7 +1544,7 @@ static inline int node_handle(lua_State* L) {
     }
     
     // Return the node's handle as a LuaHandle
-    pushLuaHandle(L, LuaHandle("node", *handle));
+    pushLuaHandle(L, LuaHandle("node", handle->idx(), handle->ver()));
     return 1;
 }
 
@@ -1586,8 +1597,10 @@ static inline int fs_get(lua_State* L) {
     // Handle different resource types based on handle type
     // "resource" is a generic type used when we can't determine the exact type
     if (luaHandle->type == "script" || luaHandle->type == "resource") {
+        tinyHandle th = luaHandle->toTinyHandle();
+
         // Try to get as script first (most common for generic "resource" type)
-        const tinyScript* script = registry->get<tinyScript>(luaHandle->handle);
+        const tinyScript* script = registry->get<tinyScript>(th);
         
         if (!script || !script->valid()) {
             lua_pushnil(L);
@@ -1596,7 +1609,7 @@ static inline int fs_get(lua_State* L) {
         
         // Push the script handle as a StaticScript userdata
         tinyHandle* ud = static_cast<tinyHandle*>(lua_newuserdata(L, sizeof(tinyHandle)));
-        *ud = luaHandle->handle;
+        *ud = th;
         luaL_getmetatable(L, "StaticScript");
         lua_setmetatable(L, -2);
         return 1;
@@ -2275,7 +2288,7 @@ static inline void registerNodeBindings(lua_State* L) {
             lua_pushstring(L, "Handle(invalid)");
             return 1;
         }
-        lua_pushfstring(L, "Handle(\"%s\", %d, %d)", h->type.c_str(), h->handle.index, h->handle.version);
+        lua_pushfstring(L, "Handle(\"%s\", %d, %d)", h->type.c_str(), h->index, h->version);
         return 1;
     });
     lua_setfield(L, -2, "__tostring");

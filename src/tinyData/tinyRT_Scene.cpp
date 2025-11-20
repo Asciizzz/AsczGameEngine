@@ -174,7 +174,8 @@ std::vector<tinyHandle> Scene::nodeChildren(tinyHandle nodeHandle) const {
 
 bool Scene::setNodeParent(tinyHandle nodeHandle, tinyHandle newParentHandle) {
     tinyNodeRT* node = nodes_.get(nodeHandle);
-    if (!node || !nodes_.valid(newParentHandle)) return false;
+    const tinyNodeRT* newParentNode = nodes_.get(newParentHandle);
+    if (!node || !newParentNode) return false;
 
     node->setParent(newParentHandle);
     return true;
@@ -184,9 +185,8 @@ bool Scene::setNodeChildren(tinyHandle nodeHandle, const std::vector<tinyHandle>
     tinyNodeRT* node = nodes_.get(nodeHandle);
     if (!node) return false;
 
-    // node->childrenHandles = newChildren;
     for (const tinyHandle& childHandle : newChildren) {
-        if (nodes_.valid(childHandle)) node->addChild(childHandle);
+        node->addChild(childHandle);
     }
     return true;
 }
@@ -201,12 +201,12 @@ tinyHandle handleFromMap(UnorderedMap<tinyHandle, tinyHandle>& map, tinyHandle h
 // Remap node handles in script variables
 void remapHandlesInScriptMap(UnorderedMap<tinyHandle, tinyHandle>& from_to_map, tinyVarsMap& value_map) {
     for (auto& [key, value] : value_map) {
-        if (!std::holds_alternative<typeHandle>(value)) continue;
+        if (!std::holds_alternative<tinyHandle>(value)) continue;
 
-        typeHandle& th = std::get<typeHandle>(value);
-        if (!th.isType<tinyNodeRT>()) continue;
+        tinyHandle& handle = std::get<tinyHandle>(value);
+        if (!handle.is<tinyNodeRT>()) continue;
 
-        th.handle = handleFromMap(from_to_map, th.handle);
+        handle = handleFromMap(from_to_map, handle);
     }
 };
 

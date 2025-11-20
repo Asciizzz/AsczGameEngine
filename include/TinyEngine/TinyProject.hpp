@@ -42,6 +42,9 @@ public:
     tinyFS& fs() { return *fs_; }
     const tinyFS& fs() const { return *fs_; }
 
+    tinyRegistry& registry() { return fs_->registry(); }
+    const tinyRegistry& registry() const { return fs_->registry(); }
+
     const tinySharedRes& sharedRes() const { return sharedRes_; }
     const tinyVk::Device* vkDevice() const { return deviceVk_; }
 
@@ -52,7 +55,7 @@ public:
 
     tinySceneRT* scene(tinyHandle& sceneHandle = tinyHandle()) {
         sceneHandle = sceneHandle ? sceneHandle : mainSceneHandle;
-        return fs_->rGet<tinySceneRT>(sceneHandle);
+        return registry().get<tinySceneRT>(sceneHandle);
     }
 
 private:
@@ -65,8 +68,8 @@ private:
     void setupFS();
 
     template<typename T>
-    tinyHandle fsAdd(T&& obj) {
-        return fs_->rAdd<T>(std::forward<T>(obj)).handle;
+    tinyHandle rAdd(T&& resource) {
+        return fs_->registry().emplace<T>(std::forward<T>(resource));
     }
 
 // -------------- Shared resources --------------
