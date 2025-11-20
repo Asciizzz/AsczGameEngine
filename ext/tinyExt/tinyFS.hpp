@@ -249,26 +249,25 @@ public:
     [[nodiscard]] tinyRegistry& registry() noexcept { return registry_; }
     [[nodiscard]] const tinyRegistry& registry() const noexcept { return registry_; }
 
-    // Some cool static functions
-
-    // Name (no extension, no path)
-    [[nodiscard]] static const char* pName(const char* path) noexcept {
-        const char* slash = strrchr(path, '/');
-        const char* start = slash ? slash + 1 : path;
-        const char* dot = strrchr(start, '.');
-        return dot ? std::string(start, dot - start).c_str() : start;
+    static std::string pName(const std::string& filepath, bool withExt = true) noexcept {
+        size_t pos = filepath.find_last_of("/\\");
+        std::string filename = (pos != std::string::npos) ? filepath.substr(pos + 1) : filepath;
+        
+        if (!withExt) {
+            size_t dotPos = filename.find_last_of('.');
+            if (dotPos != std::string::npos) {
+                filename = filename.substr(0, dotPos);
+            }
+        }
+        
+        return filename;
     }
 
-    // Extension (no dot)
-    [[nodiscard]] static const char* pExt(const char* path) noexcept {
-        const char* dot = strrchr(path, '.');
-        return dot ? dot + 1 : nullptr;
-    }
+    static std::string pExt(const std::string& filename) noexcept {
+        size_t pos = filename.find_last_of('.');
 
-    [[nodiscard]] static std::string pDir(const char* path) noexcept {
-        const char* slash = strrchr(path, '/');
-        if (!slash) return ".";
-        return std::string(path, slash - path);
+        if (pos == std::string::npos || pos == filename.size() - 1) return "";
+        return filename.substr(pos + 1);
     }
 
 private:

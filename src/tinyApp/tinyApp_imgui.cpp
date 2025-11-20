@@ -178,7 +178,7 @@ using CFunc = const Func<FX>;
 #define M_HOVERED ImGui::IsItemHovered() && !ImGui::IsMouseDragging(ImGuiMouseButton_Left) && !ImGui::IsMouseDragging(ImGuiMouseButton_Right)
 #define M_DBCLICKED(M_state) ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(M_state)
 
-#define IMVEC4_COLOR3(col, a) ImVec4(col[0], col[1], col[2], a)
+#define IMVEC4_COLOR3(col, a) ImVec4(col[0] / 255.0f, col[1] / 255.0f, col[2] / 255.0f, a)
 
 
 
