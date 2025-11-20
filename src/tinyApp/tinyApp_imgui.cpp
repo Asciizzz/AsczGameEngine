@@ -293,7 +293,7 @@ struct Splitter {
 
     float rSize(size_t index) const {
         if (index >= regionSizes.size()) return 0.01f;
-        float size = regionSizes[index] * directionSize - splitterSize * tinyUI::Theme.fontScale;
+        float size = regionSizes[index] * directionSize - splitterSize * tinyUI::Theme().fontScale;
         return size > 0.0f ? size : 0.01f;
     }
 
@@ -1623,7 +1623,7 @@ void tinyApp::renderUI() {
     // ===== THEME EDITOR WINDOW =====
     if (showThemeEditor) {
         if (tinyUI::Begin("Theme Editor", &showThemeEditor)) {
-            tinyUI::ThemeStruct& theme = tinyUI::Theme;
+            tinyUI::ThemeStruct& theme = tinyUI::Theme();
 
             if (ImGui::CollapsingHeader("Colors")) {
                 ImGui::ColorEdit4("Text", &theme.text.x);

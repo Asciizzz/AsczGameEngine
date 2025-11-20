@@ -30,9 +30,6 @@ struct IBackend {
     virtual const char* getName() const = 0;
 };
 
-// -----------------------------
-// Theme
-// -----------------------------
 struct ThemeStruct {
     ImVec4 windowBg = ImVec4(0.00f, 0.00f, 0.00f, 0.65f);
     ImVec4 childBg = ImVec4(0.10f, 0.10f, 0.10f, 1.00f);
@@ -101,18 +98,19 @@ struct ThemeStruct {
     }
 };
 
-// -----------------------------
-// Static variables in the namespace
-// -----------------------------
-inline IBackend* backend = nullptr;
-inline ThemeStruct Theme;
+namespace detail {
+    inline IBackend* backend = nullptr;
+    inline ThemeStruct Theme;
+}
 
-// -----------------------------
-// Initialization / Shutdown
-// -----------------------------
+inline ThemeStruct& Theme() {
+    return detail::Theme;
+}
+
+
 inline bool Init(IBackend* b, void* windowHandle = nullptr) {
     if (!b) return false;
-    backend = b;
+    detail::backend = b;
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -123,37 +121,31 @@ inline bool Init(IBackend* b, void* windowHandle = nullptr) {
 
     BackendInit info;
     info.windowHandle = windowHandle;
-    backend->init(info);
+    detail::backend->init(info);
 
-    Theme.apply();
+    detail::Theme.apply();
     return true;
 }
 
 inline void Shutdown() {
-    if (!backend) return;
-    backend->shutdown();
-    backend = nullptr;
+    if (!detail::backend) return;
+    detail::backend->shutdown();
+    detail::backend = nullptr;
     ImGui::DestroyContext();
 }
 
-// -----------------------------
-// Frame / Render
-// -----------------------------
 inline void NewFrame() {
-    if (!backend) return;
-    backend->newFrame();
+    if (!detail::backend) return;
+    detail::backend->newFrame();
     ImGui::NewFrame();
 }
 
 inline void Render() {
-    if (!backend) return;
+    if (!detail::backend) return;
     ImGui::Render();
-    backend->renderDrawData(ImGui::GetDrawData());
+    detail::backend->renderDrawData(ImGui::GetDrawData());
 }
 
-// -----------------------------
-// Window helpers
-// -----------------------------
 inline bool Begin(const char* name, bool* p_open = nullptr, ImGuiWindowFlags flags = 0) {
     bool result = ImGui::Begin(name, p_open, flags);
 
