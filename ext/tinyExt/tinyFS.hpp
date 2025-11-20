@@ -366,11 +366,7 @@ public:
         return typeExt(node->typeID());
     }
 
-    template<typename T>
-    [[nodiscard]] bool fIsType(tinyHandle fileHandle) const {
-        const Node* node = fnodes_.get(fileHandle);
-        return node ? node->isType<T>() : false;
-    }
+    
 
 // -------------------- Node access (highly limited) --------------------
 

@@ -493,58 +493,60 @@ static void RenderSceneNodeHierarchy() {
             });
             return children;
         },
-        // LClick - highlight the node
+        // LClick
         [](tinyHandle h) {
             typeHandle th = MAKE_TH(tinyNodeRT, h);
 
-            if (State::selected != th) State::selected = th;
-
-            // If this node was already selected, perform expansion toggle
-            else State::setExpanded(th, !State::isExpanded(th));
+            State::selected = th;
+            State::setExpanded(th, !State::isExpanded(th));
         },
-        // RClick - Always open context menu
+        // RClick
         [](tinyHandle h) {
-            if (const tinyNodeRT* node = sceneRef->node(h)) {
-                ImGui::Text("Node: %s", node->name.c_str());
-                ImGui::Separator();
-                if (ImGui::MenuItem("Add Child")) {
-                    sceneRef->addNode("New Node", h);
-                    // Auto-expand the parent node
-                    State::setExpanded(MAKE_TH(tinyNodeRT, h), true);
-                }
-                ImGui::Separator();
-                bool canDelete = h != sceneRef->rootHandle();
-                if (ImGui::MenuItem("Delete", nullptr, false, canDelete))  sceneRef->removeNode(h);
-                if (ImGui::MenuItem("Flatten", nullptr, false, canDelete)) sceneRef->flattenNode(h);
-                if (ImGui::MenuItem("Clear", nullptr, false, !node->childrenHandles.empty())) {
-                    std::vector<tinyHandle> children = node->childrenHandles;
-                    for (const auto& childHandle : children) sceneRef->removeNode(childHandle);
-                }
-                tinySceneRT::NWrap Wrap = sceneRef->Wrap(h);
-                if (tinyRT_ANIM3D* anim3D = Wrap.anim3D) {
-                    ImGui::Separator();
-                    for (auto& anime : anim3D->MAL()) {
-                        if (ImGui::MenuItem(anime.first.c_str())) {
-                            anim3D->play(anime.first, true);
-                        }
-                    }
-                }
-                if (tinyRT_SCRIPT* script = Wrap.script) {
-                    // Do nothing
-                }
-
-            } else {
+            const tinyNodeRT* node = sceneRef->node(h);
+            if (!node) {
                 ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid Node!");
             }
-        },
-        // DbClick - Start rename
-        [scene](tinyHandle h) {
-            if (State::renamed) return; // Rename in progress
 
-            if (const tinyNodeRT* node = scene->node(h)) {
+            State::selected = MAKE_TH(tinyNodeRT, h);
+
+            ImGui::Text("Node: %s", node->name.c_str());
+            ImGui::Separator();
+            if (ImGui::MenuItem("Add Child")) {
+                sceneRef->addNode("New Node", h);
+                // Auto-expand the parent node
+                State::setExpanded(MAKE_TH(tinyNodeRT, h), true);
+            }
+            ImGui::Separator();
+
+            if (ImGui::MenuItem("Rename")) {
                 strcpy(State::renameBuffer, node->name.c_str());
                 State::renamed = MAKE_TH(tinyNodeRT, h);
             }
+            ImGui::Separator();
+
+            bool canDelete = h != sceneRef->rootHandle();
+            if (ImGui::MenuItem("Delete", nullptr, false, canDelete))  sceneRef->removeNode(h);
+            if (ImGui::MenuItem("Flatten", nullptr, false, canDelete)) sceneRef->flattenNode(h);
+            if (ImGui::MenuItem("Clear", nullptr, false, !node->childrenHandles.empty())) {
+                std::vector<tinyHandle> children = node->childrenHandles;
+                for (const auto& childHandle : children) sceneRef->removeNode(childHandle);
+            }
+            tinySceneRT::NWrap Wrap = sceneRef->Wrap(h);
+            if (tinyRT_ANIM3D* anim3D = Wrap.anim3D) {
+                ImGui::Separator();
+                for (auto& anime : anim3D->MAL()) {
+                    if (ImGui::MenuItem(anime.first.c_str())) {
+                        anim3D->play(anime.first, true);
+                    }
+                }
+            }
+            if (tinyRT_SCRIPT* script = Wrap.script) {
+                // Do nothing
+            }
+        },
+        // DbClick - Do nothing for now
+        [scene](tinyHandle h) {
+
         },
         // Hover
         [scene](tinyHandle h) {
@@ -627,7 +629,6 @@ static void RenderFileNodeHierarchy() {
             std::string name = node->name;
             tinyFS::TypeExt typeExt = fs.fTypeExt(h);
 
-
             bool isFolder = node->isFolder();
             bool isExpanded = State::isExpanded(th) && isFolder;
 
@@ -703,6 +704,8 @@ static void RenderFileNodeHierarchy() {
                 return;
             }
 
+            State::selected = MAKE_TH(tinyNodeFS, h);
+
             bool deletable = node->deletable();
             const char* name = node->name.c_str();
             ImGui::Text("%s", name);
@@ -738,16 +741,23 @@ static void RenderFileNodeHierarchy() {
                 }
             }
             ImGui::Separator();
-            if (ImGui::MenuItem("Delete", nullptr, nullptr, deletable)) fs.fRemove(h);
-        },
-        // DbClick - Start rename
-        [&fs](tinyHandle h) {
-            // Rename in progress or root
-            if (State::renamed || h == fs.rootHandle()) return;
-
-            if (const tinyNodeFS* node = fs.fNode(h)) {
+            if (ImGui::MenuItem("Rename", nullptr, nullptr, State::renamed == typeHandle())) {
                 strcpy(State::renameBuffer, node->name.c_str());
                 State::renamed = MAKE_TH(tinyNodeFS, h);
+            }
+
+            ImGui::Separator();
+            if (ImGui::MenuItem("Delete", nullptr, nullptr, deletable)) fs.fRemove(h);
+        },
+        // DbClick - Do nothing for now
+        [&fs](tinyHandle h) {
+            // Double clicked scene file -> make active
+            const tinyFS::Node* node = fs.fNode(h);
+            if (!node || node->isFolder()) return;
+
+            typeHandle dataType = fs.fTypeHandle(h);
+            if (dataType.isType<tinySceneRT>()) {
+                State::sceneHandle = dataType.handle;
             }
         },
         // Hover
@@ -1289,6 +1299,28 @@ static void RenderFileInspector(tinyProject* project) {
     }
 
     ImGui::Separator();
+
+    if (node->isFolder()) {
+        // Display folder info
+        ImGui::Text("Folder (%zu items)", node->children.size());
+
+        ImGui::Indent();
+
+        // Display all types of children in the format Type (with color): count
+        std::map<tinyType::ID, int> typeCounts;
+        for (const auto& childHdl : node->children) {
+            typeHandle childTypeHdl = fs.fTypeHandle(childHdl);
+            typeCounts[childTypeHdl.typeID]++;
+        }
+        for (const auto& [typeID, count] : typeCounts) {
+            tinyFS::TypeExt ext = fs.typeExt(typeID);
+
+            const std::string& extStr = ext.ext.empty() ? "folder" : ext.ext;
+            ImGui::TextColored(IMVEC4_EXT_COLOR(ext), "%s: %d", extStr.c_str(), count);
+        }
+
+        return;
+    }
 
     if (typeHdl.isType<tinyScript>()) {
         tinyScript* script = fs.rGet<tinyScript>(typeHdl.handle);
