@@ -1284,7 +1284,7 @@ tinyModel tinyLoader::loadModelFromOBJ(const std::string& filePath) {
             tinyModel::Texture texEntry;
 
             texEntry.texture = loadTexture(texturePath);
-            if (texEntry.texture.valid()) {
+            if (texEntry.texture) {
                 // Extract just the filename for the texture name
                 std::string textureName = objMat.diffuse_texname;
                 size_t lastSlash = textureName.find_last_of("/\\");

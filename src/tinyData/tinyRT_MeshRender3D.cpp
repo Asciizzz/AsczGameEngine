@@ -1,4 +1,4 @@
-#include "tinyRT_MeshRender3D.hpp"
+#include "tinyData/tinyRT_MeshRender3D.hpp"
 
 using namespace tinyRT;
 using namespace tinyVk;
@@ -13,7 +13,7 @@ void MeshRender3D::init(const Device* deviceVk, const tinyPool<tinyMeshVk>* mesh
 }
 
 MeshRender3D& MeshRender3D::setMesh(tinyHandle meshHandle) {
-    if (!vkValid || !meshHandle.valid()) return *this;
+    if (!vkValid || !meshHandle) return *this;
 
     meshHandle_ = meshHandle;
     if (!rMesh()) return *this;
@@ -63,7 +63,7 @@ void MeshRender3D::vkWrite(const tinyVk::Device* deviceVk, tinyVk::DataBuffer* b
 
 
 MeshRender3D& MeshRender3D::setSkeleNode(tinyHandle skeleNodeHandle) {
-    skeleNodeHandle_ = skeleNodeHandle.valid() ? skeleNodeHandle : skeleNodeHandle_;
+    skeleNodeHandle_ = skeleNodeHandle ? skeleNodeHandle : skeleNodeHandle_;
     return *this;
 }
 

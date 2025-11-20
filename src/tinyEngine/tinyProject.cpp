@@ -8,7 +8,7 @@ using namespace tinyVk;
 // A quick function for range validation
 template<typename T>
 bool validHandle(tinyHandle handle, const std::vector<T>& vec) {
-    return handle.valid() && handle.index < vec.size();
+    return static_cast<bool>(handle) && handle.index < vec.size();
 }
 
 template<typename T>
@@ -44,8 +44,8 @@ tinyProject::~tinyProject() {
 
 
 tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
-    parentFolder = parentFolder.valid() ? parentFolder : fs_->rootHandle();
-    
+    parentFolder = parentFolder ? parentFolder : fs_->rootHandle();
+
     // Create a folder for the model in the specified parent
     tinyHandle fnModelFolder = fs_->addFolder(parentFolder, model.name);
 

@@ -200,7 +200,7 @@ public:
     }
 
     [[nodiscard]] TINY_FORCE_INLINE void* get(const typeHandle& th) noexcept {
-        if (TINY_UNLIKELY(!th.valid())) return nullptr;
+        if (TINY_UNLIKELY(!th)) return nullptr;
 
         auto it = pools.find(th.typeIndex);
         return TINY_LIKELY(it != pools.end()) ? it->second->get(th.handle) : nullptr;
@@ -219,7 +219,7 @@ public:
     }
 
     [[nodiscard]] bool has(const typeHandle& th) const noexcept {
-        if (!th.valid()) return false;
+        if (!th) return false;
 
         auto it = pools.find(th.typeIndex);
         if (it == pools.end()) return false;

@@ -19,7 +19,6 @@ struct tinyMorphTarget {
     std::vector<tinyMorph> deltas;
 };
 
-// Uniform mesh structure that holds raw data only
 struct tinyMesh {
     tinyMesh() noexcept = default;
 
@@ -116,6 +115,12 @@ struct tinyMesh {
     const std::vector<uint8_t>& indxData() const noexcept { return indxData_; }
     const std::vector<uint8_t>& mrphData() const noexcept { return mrphData_; }
 
+    void clearData() noexcept {
+        vrtxData_.clear();
+        indxData_.clear();
+        mrphData_.clear();
+    }
+
     size_t vrtxCount() const noexcept { return vrtxCount_; }
     size_t indxCount() const noexcept { return indxCount_; }
     size_t mrphCount() const noexcept { return mrphCount_; }
@@ -124,7 +129,7 @@ struct tinyMesh {
     std::vector<Part>& parts() noexcept { return parts_; }
     const std::vector<Part>& parts() const noexcept { return parts_; }
 
-    bool valid() const noexcept { return !vrtxData_.empty() && !indxData_.empty(); }
+    explicit operator bool() const noexcept { return !vrtxData_.empty() && !indxData_.empty(); }
 
     std::string& mrphName(size_t targetIndex) noexcept {
         static std::string emptyStr;
@@ -136,6 +141,7 @@ struct tinyMesh {
     }
 
 private:
+
     tinyVertex::Layout vrtxLayout_;
     std::vector<uint8_t> vrtxData_; // raw bytes
     size_t vrtxCount_ = 0;
@@ -231,6 +237,9 @@ struct tinyMeshVk {
                 mrphSize
             } })
             .updateDescSets(deviceVk_->device);
+
+        // Clear the cpu mesh data
+        mesh_.clearData();
 
         return true;
     }

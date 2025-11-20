@@ -39,7 +39,7 @@ public:
         [[nodiscard]] bool isFile() const noexcept { return type == Type::File; }
         [[nodiscard]] bool isFolder() const noexcept { return type == Type::Folder; }
 
-        [[nodiscard]] bool hasData() const noexcept { return tHandle.valid(); }
+        [[nodiscard]] bool hasData() const noexcept { return static_cast<bool>(tHandle); }
 
         [[nodiscard]] bool hasChild(tinyHandle childHandle) const noexcept {
             return std::find(children.begin(), children.end(), childHandle) != children.end();
@@ -272,7 +272,7 @@ public:
 // -------------------- Move with cycle prevention --------------------
 
     bool fMove(tinyHandle nodeHandle, tinyHandle parentHandle) {
-        parentHandle = parentHandle.valid() ? parentHandle : rootHandle_;
+        parentHandle = parentHandle ? parentHandle : rootHandle_;
         if (nodeHandle == parentHandle) return false; // Move to self
 
         Node* node = fnodes_.get(nodeHandle);
@@ -593,7 +593,7 @@ private:
         std::vector<tinyHandle> path;
 
         tinyHandle currentHandle = fileHandle;
-        while (currentHandle.valid()) {
+        while (currentHandle) {
             const Node* currentNode = fnodes_.get(currentHandle);
             if (!currentNode) break;
 

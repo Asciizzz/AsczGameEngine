@@ -7,7 +7,7 @@ using namespace tinyRT;
 
 template<typename T>
 bool validIndex(tinyHandle handle, const std::vector<T>& vec) {
-    return handle.valid() && handle.index < vec.size();
+    return static_cast<bool>(handle) && handle.index < vec.size();
 }
 
 // ----------------- Scene Management -----------------
@@ -26,7 +26,7 @@ tinyHandle Scene::addNode(const std::string& nodeName, tinyHandle parentHandle) 
     tinyNodeRT newNode(nodeName);
     newNode.add<tinyNodeRT::TRFM3D>();
 
-    if (!parentHandle.valid()) parentHandle = rootHandle();
+    if (!parentHandle) parentHandle = rootHandle();
     tinyNodeRT* parentNode = nodes_.get(parentHandle);
     if (!parentNode) return tinyHandle();
 
@@ -57,7 +57,7 @@ bool Scene::removeNode(tinyHandle nodeHandle, bool recursive) {
     }
 
     // Remove this node from its parent's children list
-    if (nodeToDelete->parentHandle.valid()) {
+    if (nodeToDelete->parentHandle) {
         tinyNodeRT* parentNode = nodes_.get(nodeToDelete->parentHandle);
         if (parentNode) parentNode->removeChild(nodeHandle);
     }
@@ -80,7 +80,7 @@ bool Scene::flattenNode(tinyHandle nodeHandle) {
 }
 
 bool Scene::reparentNode(tinyHandle nodeHandle, tinyHandle newParentHandle) {
-    if (!newParentHandle.valid()) newParentHandle = rootHandle();
+    if (!newParentHandle) newParentHandle = rootHandle();
 
     if (nodeHandle == rootHandle() || nodeHandle == newParentHandle) return false;
 
@@ -140,7 +140,7 @@ const char* Scene::nodeName(tinyHandle nodeHandle, bool fullPath) const {
         const tinyNodeRT* currentNode = nodes_.get(handle);
         if (!currentNode) return;
 
-        if (currentNode->parentHandle.valid()) {
+        if (currentNode->parentHandle) {
             buildPath(currentNode->parentHandle);
         }
         pathComponents.push_back(currentNode->name);
@@ -294,7 +294,7 @@ tinyHandle Scene::addScene(tinyHandle fromHandle, tinyHandle parentHandle) {
 
     tinyHandle newRootHandle;
 
-    parentHandle = parentHandle.valid() ? parentHandle : rootHandle();
+    parentHandle = parentHandle ? parentHandle : rootHandle();
 
     UnorderedMap<tinyHandle, tinyHandle> from_to_map;
 

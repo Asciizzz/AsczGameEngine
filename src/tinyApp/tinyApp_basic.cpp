@@ -2,7 +2,7 @@
 
 #include "tinyEngine/TinyLoader.hpp"
 
-#ifdef NDEBUG // Remember to set this to false
+#ifdef NDEBUG
 const bool enableValidationLayers = true;
 #else
 const bool enableValidationLayers = true;

@@ -1,9 +1,7 @@
 #pragma once
 
-#include "tinyMesh.hpp"
-#include "tinyRegistry.hpp"
-// #include "tinyVk/Resource/DataBuffer.hpp"
-// #include "tinyVk/Resource/Descriptor.hpp"
+#include "tinyData/tinyMesh.hpp"
+#include "tinyPool.hpp"
 
 namespace tinyVk {
     class DataBuffer;

@@ -51,7 +51,7 @@ public:
     tinyHandle mainSceneHandle;
 
     tinySceneRT* scene(tinyHandle& sceneHandle = tinyHandle()) {
-        sceneHandle = sceneHandle.valid() ? sceneHandle : mainSceneHandle;
+        sceneHandle = sceneHandle ? sceneHandle : mainSceneHandle;
         return fs_->rGet<tinySceneRT>(sceneHandle);
     }
 

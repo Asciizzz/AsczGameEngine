@@ -46,6 +46,7 @@ struct tinyTexture {
 
     const std::vector<uint8_t>& data() const noexcept { return data_; }
     const uint8_t* dataPtr() const noexcept { return data_.data(); }
+    void clearData() noexcept { data_.clear(); }
 
     WrapMode wrapMode() const noexcept { return wrapMode_; }
     VkSamplerAddressMode vkWrapMode() const noexcept {
@@ -59,7 +60,11 @@ struct tinyTexture {
 
     uint64_t hash() const noexcept { return hash_; }
 
-    bool valid() const noexcept {
+    // bool valid() const noexcept {
+    //     return !data_.empty() && width_ > 0 && height_ > 0 && channels_ > 0;
+    // }
+
+    explicit operator bool() const noexcept {
         return !data_.empty() && width_ > 0 && height_ > 0 && channels_ > 0;
     }
 
@@ -132,7 +137,7 @@ struct tinyTextureVk {
     bool create(const tinyVk::Device* deviceVk) {
         using namespace tinyVk;
 
-        if (!texture_.valid()) return false;
+        if (!texture_) return false;
 
         VkFormat textureFormat;
         switch (texture_.channels()) {
@@ -201,6 +206,9 @@ struct tinyTextureVk {
             .generateMipmapsImmediate(tempCmd.get(), deviceVk->pDevice);
 
         tempCmd.endAndSubmit(); // Kinda redundant with RAII but whatever
+
+        // Clear the original cpu texture data to save memory
+        texture_.clearData();
 
         return true;
     }

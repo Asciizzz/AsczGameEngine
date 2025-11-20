@@ -20,8 +20,8 @@ union tinyHandle {
     constexpr bool operator==(const tinyHandle& other) const noexcept { return value == other.value; }
     constexpr bool operator!=(const tinyHandle& other) const noexcept { return value != other.value; }
 
-    [[nodiscard]] constexpr bool valid() const noexcept { return value != UINT64_MAX && index != UINT32_MAX; }
-    [[nodiscard]] constexpr bool invalid() const noexcept { return !valid(); }
+    constexpr explicit operator bool() const noexcept { return value != UINT64_MAX; }
+
     constexpr void invalidate() noexcept { value = UINT64_MAX; }
 };
 
@@ -82,7 +82,11 @@ struct typeHandle {
         return !(*this == other);
     }
 
-    [[nodiscard]] bool valid() const noexcept { return handle.valid(); }
+    constexpr explicit operator bool() const noexcept {
+        return static_cast<bool>(handle) && typeIndex != std::type_index(typeid(void));
+    }
+
+    [[nodiscard]] bool hValid() const noexcept { return static_cast<bool>(handle); }
 
     template<typename T>
     [[nodiscard]] bool isType() const noexcept { return typeIndex == std::type_index(typeid(T)); }

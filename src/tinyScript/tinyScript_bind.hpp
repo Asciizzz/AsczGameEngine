@@ -247,7 +247,7 @@ struct LuaHandle {
     LuaHandle(const std::string& t, uint32_t index, uint32_t version) 
         : type(t), handle(index, version) {}
 
-    bool valid() const { return !type.empty() && handle.valid(); }
+    bool valid() const { return !type.empty() && handle; }
 
     // Convert LuaHandle to typeHandle based on type string
     typeHandle toTypeHandle() const {
@@ -393,7 +393,7 @@ static inline int scene_node(lua_State* L) {
         return 1;
     }
     
-    if (!luaHandle->handle.valid() || !(*scenePtr)->node(luaHandle->handle)) {
+    if (!luaHandle->handle || !(*scenePtr)->node(luaHandle->handle)) {
         lua_pushnil(L);
         return 1;
     }
@@ -431,7 +431,7 @@ static inline int scene_addScene(lua_State* L) {
     tinyHandle newNodeHandle = (*scenePtr)->addScene(sceneHandle->handle, parentNHandle);
 
     // Check if the returned node is valid
-    if (!newNodeHandle.valid() || !(*scenePtr)->node(newNodeHandle)) {
+    if (!newNodeHandle || !(*scenePtr)->node(newNodeHandle)) {
         lua_pushnil(L);
         return 1;
     }
@@ -1182,7 +1182,7 @@ static inline int anim3d_get(lua_State* L) {
     auto comps = getSceneFromLua(L)->Wrap(*handle);
     if (comps.anim3D) {
         tinyHandle animHandle = comps.anim3D->getHandle(lua_tostring(L, 2));
-        if (animHandle.valid()) {
+        if (animHandle) {
             pushLuaHandle(L, LuaHandle("animation", animHandle));
             return 1;
         }
@@ -1198,7 +1198,7 @@ static inline int anim3d_current(lua_State* L) {
     auto comps = getSceneFromLua(L)->Wrap(*handle);
     if (comps.anim3D) {
         tinyHandle animHandle = comps.anim3D->curHandle();
-        if (animHandle.valid()) {
+        if (animHandle) {
             pushLuaHandle(L, LuaHandle("animation", animHandle));
             return 1;
         }
@@ -1451,7 +1451,7 @@ static inline int node_parent(lua_State* L) {
     if (!handle) return 0;
     
     tinyHandle parentHandle = getSceneFromLua(L)->nodeParent(*handle);
-    if (parentHandle.valid()) {
+    if (parentHandle) {
         pushNode(L, parentHandle);
         return 1;
     }
@@ -1477,7 +1477,7 @@ static inline int node_parentHandle(lua_State* L) {
     if (!handle) return 0;
     
     tinyHandle parentHandle = getSceneFromLua(L)->nodeParent(*handle);
-    if (parentHandle.valid()) {
+    if (parentHandle) {
         pushLuaHandle(L, LuaHandle("node", parentHandle));
         return 1;
     }

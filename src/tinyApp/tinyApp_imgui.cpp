@@ -354,7 +354,7 @@ static void RenderGenericNodeHierarchy(
 
     const HierarchyStyle& style = HierarchyStyle()
 ) {
-    if (!nodeHandle.valid()) return;
+    if (!nodeHandle) return;
 
     ImGui::PushID(static_cast<int>(nodeHandle.index));
     ImVec2 startPos = ImGui::GetCursorScreenPos();
@@ -539,7 +539,7 @@ static void RenderSceneNodeHierarchy() {
         },
         // DbClick - Start rename
         [scene](tinyHandle h) {
-            if (State::renamed.valid()) return; // Rename in progress
+            if (State::renamed) return; // Rename in progress
 
             if (const tinyNodeRT* node = scene->node(h)) {
                 strcpy(State::renameBuffer, node->name.c_str());
@@ -743,7 +743,7 @@ static void RenderFileNodeHierarchy() {
         // DbClick - Start rename
         [&fs](tinyHandle h) {
             // Rename in progress or root
-            if (State::renamed.valid() || h == fs.rootHandle()) return;
+            if (State::renamed || h == fs.rootHandle()) return;
 
             if (const tinyNodeFS* node = fs.fNode(h)) {
                 strcpy(State::renameBuffer, node->name.c_str());
@@ -1102,7 +1102,7 @@ static void RenderSCRIPT(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
                             return ImVec4(0.6f, 0.4f, 0.9f, 1.0f);
                         },
                         ImVec4(0.2f, 0.2f, 0.2f, 1.0f),
-                        [&]() { return val.valid(); },
+                        [&]() { return static_cast<bool>(val); },
                         [&fs, &val]() {
                             if (ImGui::BeginDragDropTarget()) {
                                 if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PAYLOAD")) {
