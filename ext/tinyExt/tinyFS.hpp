@@ -12,10 +12,10 @@
 class tinyFS {
 public:
     struct Node {
-        std::string             name;       // File/folder name
-        tinyHandle              parent;     // Parent node handle
-        std::vector<tinyHandle> children;   // Ordered children
-        tinyHandle              data;       // Handle to actual data in registry (invalid = folder)
+        std::string             name;
+        tinyHandle              parent;
+        std::vector<tinyHandle> children;
+        tinyHandle              data;
 
         [[nodiscard]] bool isFile() const noexcept   { return data.valid(); }
         [[nodiscard]] bool isFolder() const noexcept { return !data.valid(); }
@@ -57,8 +57,6 @@ public:
         uint8_t     color[3] = {255, 255, 255};
         uint8_t     rmOrder = 0;    // Lower = removed first
 
-        /* Note: rmOrder is just local removal order between types, so repetition is allowed */
-
         [[nodiscard]] const char* c_str() const noexcept { return ext.c_str(); }
     };
 
@@ -72,6 +70,20 @@ public:
 
         // Ensure void type info exists
         typeInfo(tinyType::TypeID<void>());
+    }
+
+    ~tinyFS() {
+        std::vector<tinyType::ID> typeOrder;
+        for (const auto& [tID, tInfo] : typeInfo_) {
+            typeOrder.push_back(tID);
+        }
+        std::sort(typeOrder.begin(), typeOrder.end(), [&](tinyType::ID a, tinyType::ID b) {
+            return typeInfo_[a].rmOrder < typeInfo_[b].rmOrder;
+        });
+
+        for (tinyType::ID tID : typeOrder) {
+            registry_.clear(tID);
+        }
     }
 
     [[nodiscard]] tinyHandle root() const noexcept { return rootHandle_; }
@@ -175,7 +187,7 @@ public:
     }
 
     void rm(tinyHandle nodeHandle) {
-        if (!nodeHandle || nodeHandle == rootHandle_) return; // Cannot remove root
+        if (!nodeHandle) return;
 
         const Node* targetNode = fnodes_.get(nodeHandle);
         if (!targetNode) return;
@@ -213,7 +225,7 @@ public:
 
     // Remove this node only
     void rmRaw(tinyHandle nodeHandle) {
-        if (!nodeHandle || nodeHandle == rootHandle_) return;
+        if (!nodeHandle) return;
 
         const Node* node = fnodes_.get(nodeHandle);
         if (!node) return;

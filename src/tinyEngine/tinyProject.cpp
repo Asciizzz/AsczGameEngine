@@ -39,16 +39,16 @@ tinyProject::~tinyProject() {
     camera_.reset();
 
     // Clear everything first
-    r().clear<tinyVk::DataBuffer>();
-    r().clear<tinyVk::DescSet>();
-    r().clear<tinyMeshVk>();
-    r().clear<tinyMaterialVk>();
-    r().clear<tinyTextureVk>();
-    r().clear<tinySceneRT>();
+    // r().clear<tinyVk::DataBuffer>();
+    // r().clear<tinyVk::DescSet>();
+    // r().clear<tinyMeshVk>();
+    // r().clear<tinyMaterialVk>();
+    // r().clear<tinyTextureVk>();
+    // r().clear<tinySceneRT>();
 
-    // Clear vulkan resources later
-    r().clear<tinyVk::DescPool>();
-    r().clear<tinyVk::DescSLayout>();
+    // // Clear vulkan resources later
+    // r().clear<tinyVk::DescPool>();
+    // r().clear<tinyVk::DescSLayout>();
 
     fs_.reset();
 }
@@ -281,7 +281,7 @@ void tinyProject::setupFS() {
     amat->color[0] = 255; amat->color[1] = 102; amat->color[2] = 255;
 
     tinyFS::TypeInfo* atex = fs_->typeInfo<tinyTextureVk>();
-    atex->ext = "atex";
+    atex->ext = "atex"; atex->rmOrder = 1;
     atex->color[0] = 102; atex->color[1] = 102; atex->color[2] = 255;
 
     tinyFS::TypeInfo* amsh = fs_->typeInfo<tinyMeshVk>();
@@ -293,7 +293,7 @@ void tinyProject::setupFS() {
     askl->color[0] = 102; askl->color[1] = 255; askl->color[2] = 255;
 
     tinyFS::TypeInfo* ascr = fs_->typeInfo<tinyScript>();
-    ascr->ext = "ascr";
+    ascr->ext = "ascr"; ascr->rmOrder = 2;
     ascr->color[0] = 204; ascr->color[1] = 204; ascr->color[2] = 51;
 
     // ------------------- Special "files" -------------------
@@ -301,19 +301,17 @@ void tinyProject::setupFS() {
     // Resources that lives in the registry but not registered (pun intended)
     // as files in the filesystem
 
-    // tinyFS::TypeInfo* descPool = fs_->typeInfo<tinyVk::DescPool>();
-    // descPool->priority = UINT8_MAX; // Delete last
-    // descPool->safeDelete = true;
+    tinyFS::TypeInfo* descPool = fs_->typeInfo<tinyVk::DescPool>();
+    descPool->rmOrder = UINT8_MAX;
 
-    // tinyFS::TypeInfo* descLayout = fs_->typeInfo<tinyVk::DescSLayout>();
-    // descLayout->priority = UINT8_MAX; // Delete last
-    // descLayout->safeDelete = true;
+    tinyFS::TypeInfo* descLayout = fs_->typeInfo<tinyVk::DescSLayout>();
+    descLayout->rmOrder = UINT8_MAX;
 
-    // tinyFS::TypeInfo* descSet = fs_->typeInfo<tinyVk::DescSet>();
-    // descSet->priority = UINT8_MAX - 1; // Delete before pool/layout
+    tinyFS::TypeInfo* descSet = fs_->typeInfo<tinyVk::DescSet>();
+    descSet->rmOrder = UINT8_MAX - 1; // Delete before desc pools
 
-    // tinyFS::TypeInfo* dataBuffer = fs_->typeInfo<tinyVk::DataBuffer>();
-    // dataBuffer->priority = UINT8_MAX - 2; // Delete before desc sets
+    tinyFS::TypeInfo* dataBuffer = fs_->typeInfo<tinyVk::DataBuffer>();
+    dataBuffer->rmOrder = UINT8_MAX - 2; // Delete before desc sets
 
     // // ------------------ Other useful files ------------------
     tinyFS::TypeInfo* atxt = fs_->typeInfo<tinyText>();
@@ -356,9 +354,7 @@ void tinyProject::execDeferredRms(DeferRmType type) {
     auto it = deferredRms_.find(type);
     if (it == deferredRms_.end()) return;
 
-    for (tinyHandle h : it->second) {
-        fs_->rmRaw(h);
-    }
+    for (tinyHandle h : it->second) fs_->rmRaw(h);
 
     it->second.clear();
 }
