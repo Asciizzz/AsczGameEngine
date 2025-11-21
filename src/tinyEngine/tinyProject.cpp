@@ -39,16 +39,16 @@ tinyProject::~tinyProject() {
     camera_.reset();
 
     // Clear everything first
-    registry().clear<tinyVk::DataBuffer>();
-    registry().clear<tinyVk::DescSet>();
-    registry().clear<tinyMeshVk>();
-    registry().clear<tinyMaterialVk>();
-    registry().clear<tinyTextureVk>();
-    registry().clear<tinySceneRT>();
+    r().clear<tinyVk::DataBuffer>();
+    r().clear<tinyVk::DescSet>();
+    r().clear<tinyMeshVk>();
+    r().clear<tinyMaterialVk>();
+    r().clear<tinyTextureVk>();
+    r().clear<tinySceneRT>();
 
     // Clear vulkan resources later
-    registry().clear<tinyVk::DescPool>();
-    registry().clear<tinyVk::DescSLayout>();
+    r().clear<tinyVk::DescPool>();
+    r().clear<tinyVk::DescSLayout>();
 
     fs_.reset();
 }
@@ -100,18 +100,18 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
 
             // Albedo texture
             tinyHandle albHandle = linkHandle(mMaterial.albIndx, glbTexRHandle);
-            materialVk.setTexture(MTexSlot::Albedo, registry().get<tinyTextureVk>(albHandle));
+            materialVk.setTexture(MTexSlot::Albedo, r().get<tinyTextureVk>(albHandle));
 
             // Normal texture
             tinyHandle nrmlHandle = linkHandle(mMaterial.nrmlIndx, glbTexRHandle);
-            materialVk.setTexture(MTexSlot::Normal, registry().get<tinyTextureVk>(nrmlHandle));
+            materialVk.setTexture(MTexSlot::Normal, r().get<tinyTextureVk>(nrmlHandle));
             // Metallic texture
             tinyHandle metalHandle = linkHandle(mMaterial.metalIndx, glbTexRHandle);
-            materialVk.setTexture(MTexSlot::MetalRough, registry().get<tinyTextureVk>(metalHandle));
+            materialVk.setTexture(MTexSlot::MetalRough, r().get<tinyTextureVk>(metalHandle));
 
             // Emissive texture
             tinyHandle emisHandle = linkHandle(mMaterial.emisIndx, glbTexRHandle);
-            materialVk.setTexture(MTexSlot::Emissive, registry().get<tinyTextureVk>(emisHandle));
+            materialVk.setTexture(MTexSlot::Emissive, r().get<tinyTextureVk>(emisHandle));
 
             tinyHandle fnHandle = fs_->createFile(fnMatFolder, mMaterial.name, std::move(materialVk));
             tinyHandle fDataHandle = fs_->fDataHandle(fnHandle);
@@ -261,7 +261,7 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
 void tinyProject::addSceneInstance(tinyHandle fromHandle, tinyHandle toHandle, tinyHandle parentHandle) {
     if (fromHandle == toHandle) return; // Prevent self-copy
 
-    if (tinySceneRT* toScene = registry().get<tinySceneRT>(toHandle)) {
+    if (tinySceneRT* toScene = r().get<tinySceneRT>(toHandle)) {
         toScene->addScene(fromHandle, parentHandle);
     }
 }
@@ -274,27 +274,27 @@ void tinyProject::setupFS() {
     // ------------------ Standard files ------------------
 
     tinyFS::TypeInfo* ascn = fs_->typeInfo<tinySceneRT>();
-    ascn->ext = "ascn"; ascn->deferRm = true;
+    ascn->ext = "ascn";
     ascn->color[0] = 102; ascn->color[1] = 255; ascn->color[2] = 102;
 
     tinyFS::TypeInfo* amat = fs_->typeInfo<tinyMaterialVk>();
-    amat->ext = "amat"; amat->deferRm = true;
+    amat->ext = "amat";
     amat->color[0] = 255; amat->color[1] = 102; amat->color[2] = 255;
 
     tinyFS::TypeInfo* atex = fs_->typeInfo<tinyTextureVk>();
-    atex->ext = "atex"; atex->deferRm = true;
+    atex->ext = "atex";
     atex->color[0] = 102; atex->color[1] = 102; atex->color[2] = 255;
 
     tinyFS::TypeInfo* amsh = fs_->typeInfo<tinyMeshVk>();
-    amsh->ext = "amsh"; amsh->deferRm = true;
+    amsh->ext = "amsh";
     amsh->color[0] = 255; amsh->color[1] = 255; amsh->color[2] = 102;
 
     tinyFS::TypeInfo* askl = fs_->typeInfo<tinySkeleton>();
-    askl->ext = "askl"; askl->deferRm = false;
+    askl->ext = "askl";
     askl->color[0] = 102; askl->color[1] = 255; askl->color[2] = 255;
 
     tinyFS::TypeInfo* ascr = fs_->typeInfo<tinyScript>();
-    ascr->ext = "ascr"; ascr->deferRm = false;
+    ascr->ext = "ascr";
     ascr->color[0] = 204; ascr->color[1] = 204; ascr->color[2] = 51;
 
     // ------------------- Special "files" -------------------
@@ -318,7 +318,7 @@ void tinyProject::setupFS() {
 
     // // ------------------ Other useful files ------------------
     tinyFS::TypeInfo* atxt = fs_->typeInfo<tinyText>();
-    atxt->ext = "txt"; atxt->deferRm = false;
+    atxt->ext = "txt";
     atxt->color[0] = 153; atxt->color[1] = 153; atxt->color[2] = 153;
 }
 
@@ -328,35 +328,46 @@ void tinyProject::fRemove(tinyHandle fileHandle) {
     const tinyNodeFS* node = fs_->fNode(fileHandle);
     if (!node) return;
 
-    tinyHandle dataHandle = fs_->fDataHandle(fileHandle);
+    std::vector<tinyHandle> rmQueue = fs_->fQueue(fileHandle);
+    std::sort(rmQueue.begin(), rmQueue.end(), [&](tinyHandle a, tinyHandle b) {
+        const tinyFS::TypeInfo* tInfoA = fs().fTypeInfo(a);
+        const tinyFS::TypeInfo* tInfoB = fs().fTypeInfo(b);
+        uint8_t orderA = tInfoA ? tInfoA->rmOrder : 255;
+        uint8_t orderB = tInfoB ? tInfoB->rmOrder : 255;
 
-    if (dataHandle.is<tinyTextureVk>() ||
-        dataHandle.is<tinyMaterialVk>() ||
-        dataHandle.is<tinyMeshVk>()) {
+        return orderA < orderB;
+    });
 
-        printf("Scheduling Vulkan resource for pending removal...\n");
-        pendingRms[PendingRemovalType::Vulkan].push_back(fileHandle);
-    } else {
-        fs_->fRemove(fileHandle); // Raw removal
+    for (tinyHandle h : rmQueue) {
+        tinyHandle dHandle = fs_->fDataHandle(h);
+
+        if (dHandle.is<tinyMeshVk>() ||
+            dHandle.is<tinyMaterialVk>() ||
+            dHandle.is<tinyTextureVk>() ||
+            dHandle.is<tinySceneRT>())
+        {
+            deferredRms_[DeferRmType::Vulkan].push_back(h);
+        } else {
+            fs_->fRmRaw(h); // Remove this node immediately
+        }
     }
 }
 
-void tinyProject::execPendingRms(PendingRemovalType type) {
-    auto it = pendingRms.find(type);
-    if (it == pendingRms.end()) return;
+void tinyProject::execDeferredRms(DeferRmType type) {
+    auto it = deferredRms_.find(type);
+    if (it == deferredRms_.end()) return;
 
     for (tinyHandle h : it->second) {
-        fs_->fRemove(h);
+        fs_->fRmRaw(h);
     }
 
-    pendingRms.erase(it);
+    it->second.clear();
 }
 
-bool tinyProject::hasPendingRms(PendingRemovalType type) const {
-    auto it = pendingRms.find(type);
-    return it != pendingRms.end() && !it->second.empty();
+bool tinyProject::hasDeferredRms(DeferRmType type) const {
+    auto it = deferredRms_.find(type);
+    return it != deferredRms_.end() && !it->second.empty();
 }
-
 
 // ------------------ Vulkan Resource Creation ------------------
 
@@ -365,7 +376,7 @@ void tinyProject::vkCreateResources() {
 
     // Setup shared scene requirements
     sharedRes_.maxFramesInFlight = 2;
-    sharedRes_.fsRegistry = &fs().registry();
+    sharedRes_.fsRegistry = &fs().r();
     sharedRes_.deviceVk = deviceVk_;
 
     // Skin descriptors

@@ -42,8 +42,8 @@ public:
     tinyFS& fs() { return *fs_; }
     const tinyFS& fs() const { return *fs_; }
 
-    tinyRegistry& registry() { return fs_->registry(); }
-    const tinyRegistry& registry() const { return fs_->registry(); }
+    tinyRegistry& r() { return fs_->r(); }
+    const tinyRegistry& r() const { return fs_->r(); }
 
     const tinySharedRes& sharedRes() const { return sharedRes_; }
     const tinyVk::Device* vkDevice() const { return deviceVk_; }
@@ -55,23 +55,23 @@ public:
 
     tinySceneRT* scene(tinyHandle& sceneHandle = tinyHandle()) {
         sceneHandle = sceneHandle ? sceneHandle : mainSceneHandle;
-        return registry().get<tinySceneRT>(sceneHandle);
+        return r().get<tinySceneRT>(sceneHandle);
     }
 
     // File removal with special handling
-    enum class PendingRemovalType {
+    enum class DeferRmType {
         Vulkan, Audio
     };
 
     void fRemove(tinyHandle fileHandle);
-    void execPendingRms(PendingRemovalType type);
-    bool hasPendingRms(PendingRemovalType type) const;
+    void execDeferredRms(DeferRmType type);
+    bool hasDeferredRms(DeferRmType type) const;
 
 private:
     const tinyVk::Device* deviceVk_;
 
     // File removals that need special handling
-    UnorderedMap<PendingRemovalType, std::vector<tinyHandle>> pendingRms;
+    UnorderedMap<DeferRmType, std::vector<tinyHandle>> deferredRms_;
 
     UniquePtr<tinyGlobal> global_;
     UniquePtr<tinyCamera> camera_;
@@ -81,7 +81,7 @@ private:
 
     template<typename T>
     tinyHandle rAdd(T&& resource) {
-        return fs_->registry().emplace<T>(std::forward<T>(resource));
+        return r().emplace<T>(std::forward<T>(resource));
     }
 
 // -------------- Shared resources --------------

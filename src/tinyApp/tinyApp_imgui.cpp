@@ -706,7 +706,7 @@ static void RenderFileNodeHierarchy() {
 
             tinyHandle dHandle = fs.fDataHandle(h);
             if (dHandle.is<tinySceneRT>()) {
-                tinySceneRT* scene = fs.registry().get<tinySceneRT>(dHandle);
+                tinySceneRT* scene = fs.r().get<tinySceneRT>(dHandle);
                 if (RenderMenuItemToggle("Make Active", "Active", State::isActiveScene(dHandle))) {
                     State::sceneHandle = dHandle;
                 }
@@ -715,7 +715,7 @@ static void RenderFileNodeHierarchy() {
                 }
             }
             if (dHandle.is<tinyScript>()) {
-                tinyScript* script = fs.registry().get<tinyScript>(dHandle);
+                tinyScript* script = fs.r().get<tinyScript>(dHandle);
                 if (ImGui::MenuItem("Compile")) {
                     script->compile();
                 }
@@ -763,7 +763,7 @@ static void RenderFileNodeHierarchy() {
                 } else {
                     ImGui::SameLine();
 
-                    tinyFS::TypeInfo* typeInfo = fs.typeInfo(fs.fRTypeID(h));
+                    tinyFS::TypeInfo* typeInfo = fs.typeInfo(fs.fTypeID(h));
                     ImGui::TextColored(IMVEC4_COLOR3(typeInfo->color, 1.0f), ".%s", typeInfo->c_str());
                 }
                 ImGui::EndTooltip();
@@ -987,9 +987,9 @@ static void RenderSCRIPT(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
     if (!script) return;
 
     tinyHandle scriptHandle = script->scriptHandle();
-    tinyHandle scriptFHandle = fs.dataToFile(scriptHandle);
+    tinyHandle scriptFHandle = fs.rDataToFile(scriptHandle);
 
-    const tinyScript* scriptPtr = fs.registry().get<tinyScript>(scriptHandle);
+    const tinyScript* scriptPtr = fs.r().get<tinyScript>(scriptHandle);
 
     // Render the drag field for the script file
     RenderDragField(
@@ -1312,7 +1312,7 @@ static void RenderFileInspector(tinyProject* project) {
     }
 
     if (dHandle.is<tinyScript>()) {
-        tinyScript* script = fs.registry().get<tinyScript>(dHandle);
+        tinyScript* script = fs.r().get<tinyScript>(dHandle);
 
         // Log the version, and compilation status
         if (script->valid())
@@ -1328,7 +1328,7 @@ static void RenderFileInspector(tinyProject* project) {
             Editor::selected = handle;
         }
     } else if (dHandle.is<tinyTextureVk>()) {
-        tinyTextureVk* texture = fs.registry().get<tinyTextureVk>(dHandle);
+        tinyTextureVk* texture = fs.r().get<tinyTextureVk>(dHandle);
 
         Texture::Render(texture);
     }
@@ -1354,7 +1354,7 @@ static void RenderScriptEditor() {
     tinyHandle dHandle = fs.fDataHandle(fHandle);
     if (!dHandle.is<tinyScript>()) return;
 
-    tinyScript* script = fs.registry().get<tinyScript>(dHandle);
+    tinyScript* script = fs.r().get<tinyScript>(dHandle);
 
     if (script && !script->code.empty() && dHandle != CodeEditor::currentScriptHandle) {
         CodeEditor::currentScriptHandle = dHandle;
