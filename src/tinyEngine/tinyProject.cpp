@@ -37,19 +37,6 @@ tinyProject::tinyProject(const tinyVk::Device* deviceVk) : deviceVk_(deviceVk) {
 tinyProject::~tinyProject() {
     global_.reset();
     camera_.reset();
-
-    // Clear everything first
-    // r().clear<tinyVk::DataBuffer>();
-    // r().clear<tinyVk::DescSet>();
-    // r().clear<tinyMeshVk>();
-    // r().clear<tinyMaterialVk>();
-    // r().clear<tinyTextureVk>();
-    // r().clear<tinySceneRT>();
-
-    // // Clear vulkan resources later
-    // r().clear<tinyVk::DescPool>();
-    // r().clear<tinyVk::DescSLayout>();
-
     fs_.reset();
 }
 
@@ -58,11 +45,7 @@ tinyProject::~tinyProject() {
 tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
     parentFolder = parentFolder ? parentFolder : fs_->root();
 
-    // Create a folder for the model in the specified parent
     tinyHandle fnModelFolder = fs_->createFolder(model.name, parentFolder);
-
-    // Note: fnHandle - handle to file node in tinyFS's fnodes
-    //       tHandle - handle to the actual data in the registry (infused with Type info for tinyFS usage)
 
     // Import textures to registry
     std::vector<tinyHandle> glbTexRHandle;
