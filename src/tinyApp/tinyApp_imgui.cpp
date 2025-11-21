@@ -661,10 +661,10 @@ static void RenderFileNodeHierarchy() {
         // Selected
         [](tinyHandle h) -> bool { return State::selected == h; },
         // Children
-        [&fs](tinyHandle h) -> std::vector<tinyHandle> {
+        [&](tinyHandle h) -> std::vector<tinyHandle> {
             if (const tinyFS::Node* node = fs.fNode(h)) {
                 std::vector<tinyHandle> children = node->children;
-                std::sort(children.begin(), children.end(), [&fs](tinyHandle a, tinyHandle b) {
+                std::sort(children.begin(), children.end(), [&](tinyHandle a, tinyHandle b) {
                     tinyFS::TypeInfo* typeA = fs.typeInfo(fs.fDataHandle(a).tID());
                     tinyFS::TypeInfo* typeB = fs.typeInfo(fs.fDataHandle(b).tID());
                     if (typeA->ext != typeB->ext) return typeA->ext < typeB->ext;
@@ -675,7 +675,7 @@ static void RenderFileNodeHierarchy() {
             return std::vector<tinyHandle>();
         },
         // LClick
-        [&fs](tinyHandle h) { 
+        [&](tinyHandle h) { 
             State::setExpanded(h, !State::isExpanded(h));
 
             const tinyNodeFS* node = fs.fNode(h);
@@ -684,7 +684,7 @@ static void RenderFileNodeHierarchy() {
             State::selected = h;
         },
         // RClick
-        [&fs](tinyHandle h) {
+        [&](tinyHandle h) {
             const tinyFS::Node* node = fs.fNode(h);
             if (!node) {
                 ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid Node!");
@@ -733,7 +733,7 @@ static void RenderFileNodeHierarchy() {
             }
 
             ImGui::Separator();
-            if (ImGui::MenuItem("Delete", nullptr, nullptr)) fs.fRemove(h);
+            if (ImGui::MenuItem("Delete", nullptr, nullptr)) projRef->fRemove(h);
         },
         // DbClick - Do nothing for now
         [&fs](tinyHandle h) {

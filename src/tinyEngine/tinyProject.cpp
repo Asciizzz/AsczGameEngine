@@ -274,27 +274,27 @@ void tinyProject::setupFS() {
     // ------------------ Standard files ------------------
 
     tinyFS::TypeInfo* ascn = fs_->typeInfo<tinySceneRT>();
-    ascn->ext = "ascn";
+    ascn->ext = "ascn"; ascn->deferRm = true;
     ascn->color[0] = 102; ascn->color[1] = 255; ascn->color[2] = 102;
 
     tinyFS::TypeInfo* amat = fs_->typeInfo<tinyMaterialVk>();
-    amat->ext = "amat";
+    amat->ext = "amat"; amat->deferRm = true;
     amat->color[0] = 255; amat->color[1] = 102; amat->color[2] = 255;
 
     tinyFS::TypeInfo* atex = fs_->typeInfo<tinyTextureVk>();
-    atex->ext = "atex";
+    atex->ext = "atex"; atex->deferRm = true;
     atex->color[0] = 102; atex->color[1] = 102; atex->color[2] = 255;
 
     tinyFS::TypeInfo* amsh = fs_->typeInfo<tinyMeshVk>();
-    amsh->ext = "amsh";
+    amsh->ext = "amsh"; amsh->deferRm = true;
     amsh->color[0] = 255; amsh->color[1] = 255; amsh->color[2] = 102;
 
     tinyFS::TypeInfo* askl = fs_->typeInfo<tinySkeleton>();
-    askl->ext = "askl";
+    askl->ext = "askl"; askl->deferRm = false;
     askl->color[0] = 102; askl->color[1] = 255; askl->color[2] = 255;
 
     tinyFS::TypeInfo* ascr = fs_->typeInfo<tinyScript>();
-    ascr->ext = "ascr";
+    ascr->ext = "ascr"; ascr->deferRm = false;
     ascr->color[0] = 204; ascr->color[1] = 204; ascr->color[2] = 51;
 
     // ------------------- Special "files" -------------------
@@ -318,7 +318,7 @@ void tinyProject::setupFS() {
 
     // // ------------------ Other useful files ------------------
     tinyFS::TypeInfo* atxt = fs_->typeInfo<tinyText>();
-    atxt->ext = "txt";
+    atxt->ext = "txt"; atxt->deferRm = false;
     atxt->color[0] = 153; atxt->color[1] = 153; atxt->color[2] = 153;
 }
 
@@ -333,6 +333,8 @@ void tinyProject::fRemove(tinyHandle fileHandle) {
     if (dataHandle.is<tinyTextureVk>() ||
         dataHandle.is<tinyMaterialVk>() ||
         dataHandle.is<tinyMeshVk>()) {
+
+        printf("Scheduling Vulkan resource for pending removal...\n");
         pendingRms[PendingRemovalType::Vulkan].push_back(fileHandle);
     } else {
         fs_->fRemove(fileHandle); // Raw removal

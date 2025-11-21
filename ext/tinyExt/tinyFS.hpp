@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <unordered_set>
+#include <algorithm>
 #include <cstdint>
 
 class tinyFS {
@@ -30,12 +32,18 @@ public:
 
     private:
         friend class tinyFS;
-        tinyFS* fs_ = nullptr;  // Back-ref for child lookup (set on insert)
+        tinyFS* fs_ = nullptr;
     };
 
     struct TypeInfo {
-        std::string ext;           // e.g. "png", "obj", "wav"
-        uint8_t     color[3] = {255, 255, 255};  // RGB for editor icons
+        std::string ext;
+        uint8_t     color[3] = {255, 255, 255};
+
+        // Removal behavior
+        bool        deferRm = true;
+        uint8_t     rmOrder = 0;    // Lower = removed first
+
+        /* Note: rmOrder is just local removal order between types, so repetition is allowed */
 
         [[nodiscard]] const char* c_str() const noexcept { return ext.c_str(); }
     };
@@ -51,7 +59,8 @@ public:
 
     [[nodiscard]] tinyHandle root() const noexcept { return rootHandle_; }
 
-    // Create folder
+// ------------------------------- Node creation -------------------------------
+
     tinyHandle createFolder(tinyHandle parent, std::string name) {
         if (!parent) parent = rootHandle_;
         Node* p = fnodes_.get(parent);
@@ -70,7 +79,6 @@ public:
         return h;
     }
 
-    // Overload: Create folder at root
     tinyHandle createFolder(std::string name) {
         return createFolder(rootHandle_, std::move(name));
     }
@@ -84,8 +92,8 @@ public:
 
         name = resolveUniqueName(parent, std::move(name));
 
-        // Store data in registry
         tinyHandle dataHandle = registry_.emplace<T>(std::forward<T>(data));
+        typeInfo(dataHandle.tID()); // Ensure TypeInfo exists
 
         Node file;
         file.name = std::move(name);
@@ -96,51 +104,134 @@ public:
         tinyHandle h = fnodes_.emplace(std::move(file));
         p->children.push_back(h);
 
-        dataToFileMap_[dataHandle] = h;
+        dataToFile_[dataHandle] = h;
 
-        // Update path cache
         updatePathCache(h);
 
         return h;
     }
-    // Overload: Create file at root
+
     template<typename T>
     tinyHandle createFile(std::string name, T&& data) {
         return createFile(rootHandle_, std::move(name), std::forward<T>(data));
     }
 
-    // Remove node + all children + data
+// ------------------------------- Safe removal -------------------------------
+
     void fRemove(tinyHandle nodeHandle) {
-        Node* node = fnodes_.get(nodeHandle);
-        if (!node) return;
+        std::vector<tinyHandle> queue;
 
-        // Recursively remove children
-        for (tinyHandle child : node->children) {
-            fRemove(child);
-        }
+        std::function<void(tinyHandle)> addToQueue = [&](tinyHandle h) {
+            Node* node = fnodes_.get(h);
+            if (!node) return;
 
-        // Remove data if file
-        if (node->isFile()) {
-            registry_.remove(node->data);
-            pathCache_.erase(nodeHandle);
-        }
+            for (tinyHandle child : node->children) {
+                addToQueue(child);
+            }
 
-        // Remove from parent
-        if (node->parent) {
-            Node* parent = fnodes_.get(node->parent);
-            if (parent) {
+            queue.push_back(h);
+        };
+        addToQueue(nodeHandle);
+
+        // Sort queue based on removal order
+        std::sort(queue.begin(), queue.end(), [this](tinyHandle a, tinyHandle b) {
+            const Node* nodeA = fnodes_.get(a);
+            const Node* nodeB = fnodes_.get(b);
+            if (!nodeA || !nodeB) return false;
+
+            const TypeInfo* tInfoA = typeInfo(nodeA->data.tID());
+            const TypeInfo* tInfoB = typeInfo(nodeB->data.tID());
+            uint8_t orderA = tInfoA ? tInfoA->rmOrder : 255;
+            uint8_t orderB = tInfoB ? tInfoB->rmOrder : 255;
+
+            return orderA < orderB;
+        });
+
+        // Execute removals based on sorted order
+        for (tinyHandle h : queue) {
+            Node* node = fnodes_.get(h);
+            if (!node) continue;
+
+            if (node->isFile()) {
+                tinyHandle dataHandle = node->data;
+                const TypeInfo* tInfo = typeInfo(dataHandle.tID());
+
+                if (tInfo && tInfo->deferRm) deferredRms_.push_back(dataHandle);
+                else                         registry_.remove(dataHandle);
+
+                dataToFile_.erase(dataHandle);
+                pathCache_.erase(h);
+            }
+
+            if (Node* parent = fnodes_.get(node->parent)) {
                 parent->children.erase(
-                    std::remove(parent->children.begin(), parent->children.end(), nodeHandle),
+                    std::remove(parent->children.begin(), parent->children.end(), h),
                     parent->children.end()
                 );
             }
-        }
 
-        // Finally remove node
-        fnodes_.remove(nodeHandle);
+            fnodes_.remove(h);
+        }
     }
 
-    // Move (with cycle protection)
+    // 0 = remove all types
+    void execDeferredRms(tinyType::ID typeID = 0) {
+        for (auto it = deferredRms_.begin(); it != deferredRms_.end(); ) {
+            if (it->tID() == typeID || typeID != 0) {
+                registry_.remove(*it);
+                it = deferredRms_.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    }
+
+    template<typename T>
+    void execDeferredRms() {
+        execDeferredRms(tinyType::TypeID<T>());
+    }
+
+    bool hasDeferredRms(tinyType::ID typeID = 0) const noexcept {
+        for (const auto& handle : deferredRms_) {
+            if (handle.tID() == typeID || typeID == 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    template<typename T>
+    bool hasDeferredRms() const noexcept {
+        return hasDeferredRms(tinyType::TypeID<T>());
+    }
+
+    // Deferred removal by key
+
+    void setDeferredRmsKey(const char* key, std::vector<tinyType::ID> typeIDs) {
+        deferredRmsKeys_[key] = std::unordered_set<tinyType::ID>(typeIDs.begin(), typeIDs.end());
+    }
+    void clearDeferredRmsKey(const char* key) {
+        deferredRmsKeys_.erase(key);
+    }
+
+    void execDeferredRms(const char* key) {
+        auto it = deferredRmsKeys_.find(key);
+        if (it == deferredRmsKeys_.end()) return;
+
+        const auto& typeIDSet = it->second;
+
+        for (auto rit = deferredRms_.rbegin(); rit != deferredRms_.rend(); ) {
+            if (typeIDSet.find(rit->tID()) != typeIDSet.end()) {
+                registry_.remove(*rit);
+                rit = std::vector<tinyHandle>::reverse_iterator(deferredRms_.erase(std::next(rit).base()));
+            } else {
+                ++rit;
+            }
+        }
+    }
+
+// ------------------------------- Other operations -------------------------------
+
     bool fMove(tinyHandle nodeHandle, tinyHandle newParentHandle) {
         Node* node = fnodes_.get(nodeHandle);
         Node* newParent = fnodes_.get(newParentHandle);
@@ -148,7 +239,6 @@ public:
         if (nodeHandle == newParentHandle) return false;
         if (isDescendant(nodeHandle, newParentHandle)) return false;
 
-        // Remove from old parent
         if (node->parent) {
             Node* oldParent = fnodes_.get(node->parent);
             if (oldParent) {
@@ -159,17 +249,14 @@ public:
             }
         }
 
-        // Add to new parent
         node->parent = newParentHandle;
         newParent->children.push_back(nodeHandle);
 
-        // Update path cache
         updatePathCacheRecursive(nodeHandle);
 
         return true;
     }
 
-    // Rename
     void fRename(tinyHandle nodeHandle, std::string newName) {
         Node* node = fnodes_.get(nodeHandle);
         if (!node) return;
@@ -179,6 +266,8 @@ public:
 
         updatePathCacheRecursive(nodeHandle);
     }
+
+// ------------------------------- File data -------------------------------
 
     const std::string& fName(tinyHandle nodeHandle) const noexcept {
         const Node* node = fnodes_.get(nodeHandle);
@@ -228,6 +317,8 @@ public:
         return result.c_str();
     }
 
+// ------------------------------- Type info -------------------------------
+
     TypeInfo* typeInfo(tinyType::ID typeID) noexcept {
         // Lazily create if not exists
         auto [it, inserted] = typeInfo_.try_emplace(typeID);
@@ -249,18 +340,20 @@ public:
         return typeInfo(tinyType::TypeID<T>());
     }
 
+// ------------------------------- Some accessors -------------------------------
+
     tinyHandle dataToFile(tinyHandle dataHandle) const noexcept {
-        auto it = dataToFileMap_.find(dataHandle);
-        return it != dataToFileMap_.end() ? it->second : tinyHandle();
+        auto it = dataToFile_.find(dataHandle);
+        return it != dataToFile_.end() ? it->second : tinyHandle();
     }
 
     [[nodiscard]] const Node* fNode(tinyHandle h) const noexcept { return fnodes_.get(h); }
-    [[nodiscard]] Node* fNode(tinyHandle h) noexcept { return fnodes_.get(h); }
-
     [[nodiscard]] const tinyPool<Node>& fNodes() const noexcept { return fnodes_; }
 
     [[nodiscard]] tinyRegistry& registry() noexcept { return registry_; }
     [[nodiscard]] const tinyRegistry& registry() const noexcept { return registry_; }
+
+// --------------------------- Cool static utilities ----------------------------
 
     static std::string pName(const std::string& filepath, bool withExt = true) noexcept {
         size_t pos = filepath.find_last_of("/\\");
@@ -288,14 +381,13 @@ private:
     tinyRegistry   registry_;
     tinyHandle     rootHandle_;
 
-    // Full path cache: file node -> vector of ancestors (root first)
     std::unordered_map<tinyHandle, std::vector<tinyHandle>> pathCache_;
+    std::unordered_map<tinyHandle, tinyHandle> dataToFile_;
 
-    // Type Info
     std::unordered_map<tinyType::ID, TypeInfo> typeInfo_;
+    std::vector<tinyHandle> deferredRms_;
 
-    // Data handle -> file node handle
-    std::unordered_map<tinyHandle, tinyHandle> dataToFileMap_;
+    std::unordered_map<const char*, std::unordered_set<tinyType::ID>> deferredRmsKeys_;
 
     std::string resolveUniqueName(tinyHandle parent, std::string name, tinyHandle exclude = {}) const {
         const Node* p = fnodes_.get(parent);
