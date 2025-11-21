@@ -69,13 +69,16 @@ public:
         root.data = {};
         root.fs_ = this;
         rootHandle_ = fnodes_.emplace(std::move(root));
+
+        // Ensure void type info exists
+        typeInfo(tinyType::TypeID<void>());
     }
 
     [[nodiscard]] tinyHandle root() const noexcept { return rootHandle_; }
 
 // ------------------------------- Node creation -------------------------------
 
-    tinyHandle createFolder(tinyHandle parent, std::string name) {
+    tinyHandle createFolder(std::string name, tinyHandle parent = {}) {
         if (!parent) parent = rootHandle_;
         Node* p = fnodes_.get(parent);
         if (!p || p->isFile()) return {};
@@ -93,13 +96,9 @@ public:
         return h;
     }
 
-    tinyHandle createFolder(std::string name) {
-        return createFolder(rootHandle_, std::move(name));
-    }
-
     // Create file with data
     template<typename T>
-    tinyHandle createFile(tinyHandle parent, std::string name, T&& data) {
+    tinyHandle createFile(std::string name, T&& data, tinyHandle parent = {}) {
         if (!parent) parent = rootHandle_;
         Node* p = fnodes_.get(parent);
         if (!p || p->isFile()) return {};
@@ -123,11 +122,6 @@ public:
         updatePathCache(h);
 
         return h;
-    }
-
-    template<typename T>
-    tinyHandle createFile(std::string name, T&& data) {
-        return createFile(rootHandle_, std::move(name), std::forward<T>(data));
     }
 
 // ------------------------------- File/folder operations -------------------------------

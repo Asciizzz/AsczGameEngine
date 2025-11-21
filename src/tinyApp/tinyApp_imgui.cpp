@@ -618,7 +618,7 @@ static void RenderFileNodeHierarchy() {
             const tinyFS::TypeInfo* typeInfo = fs.typeInfo(dHandle.tID());
 
             bool isFolder = node->isFolder();
-            bool isExpanded = State::isExpanded(h.raw()) && isFolder;
+            bool isExpanded = State::isExpanded(h) && isFolder;
 
             short state = isFolder + isExpanded; // 0: is file, 1: collapsed, 2: expanded
             switch (state) {
@@ -722,7 +722,7 @@ static void RenderFileNodeHierarchy() {
             }
             if (node->isFolder()) {
                 if (ImGui::MenuItem("Add Folder")) {
-                    fs.createFolder(h, "New Folder");
+                    fs.createFolder("New Folder", h);
                     State::setExpanded(h, true);
                 }
             }

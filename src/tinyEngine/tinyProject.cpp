@@ -59,7 +59,7 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
     parentFolder = parentFolder ? parentFolder : fs_->root();
 
     // Create a folder for the model in the specified parent
-    tinyHandle fnModelFolder = fs_->createFolder(parentFolder, model.name);
+    tinyHandle fnModelFolder = fs_->createFolder(model.name, parentFolder);
 
     // Note: fnHandle - handle to file node in tinyFS's fnodes
     //       tHandle - handle to the actual data in the registry (infused with Type info for tinyFS usage)
@@ -67,13 +67,12 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
     // Import textures to registry
     std::vector<tinyHandle> glbTexRHandle;
     if (!model.textures.empty()) {
-        tinyHandle fnTexFolder = fs_->createFolder(fnModelFolder, "Textures");
-
+        tinyHandle fnTexFolder = fs_->createFolder("Textures", fnModelFolder);
         for (auto& mTexture : model.textures) {
             tinyTextureVk textureVk;
             textureVk.createFrom(std::move(mTexture.texture), deviceVk_);
 
-            tinyHandle fnHandle = fs_->createFile(fnTexFolder, mTexture.name, std::move(textureVk));
+            tinyHandle fnHandle = fs_->createFile(mTexture.name, std::move(textureVk), fnTexFolder);
             tinyHandle fDataHandle = fs_->fDataHandle(fnHandle);
             glbTexRHandle.push_back(fDataHandle);
         }
@@ -81,7 +80,7 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
 
     std::vector<tinyHandle> glmMatRHandle;
     if (!model.materials.empty()) {
-        tinyHandle fnMatFolder = fs_->createFolder(fnModelFolder, "Materials");
+        tinyHandle fnMatFolder = fs_->createFolder("Materials", fnModelFolder);
 
         for (const auto& mMaterial : model.materials) {
             tinyMaterialVk materialVk;
@@ -113,7 +112,7 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
             tinyHandle emisHandle = linkHandle(mMaterial.emisIndx, glbTexRHandle);
             materialVk.setTexture(MTexSlot::Emissive, r().get<tinyTextureVk>(emisHandle));
 
-            tinyHandle fnHandle = fs_->createFile(fnMatFolder, mMaterial.name, std::move(materialVk));
+            tinyHandle fnHandle = fs_->createFile(mMaterial.name, std::move(materialVk), fnMatFolder);
             tinyHandle fDataHandle = fs_->fDataHandle(fnHandle);
             glmMatRHandle.push_back(fDataHandle);
         }
@@ -121,7 +120,7 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
 
     std::vector<tinyHandle> glbMeshRHandle;
     if (!model.meshes.empty()) {
-        tinyHandle fnMeshFolder = fs_->createFolder(fnModelFolder, "Meshes");
+        tinyHandle fnMeshFolder = fs_->createFolder("Meshes", fnModelFolder);
 
         for (auto& mMesh : model.meshes) {
             // Remap material indices
@@ -135,7 +134,7 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
 
             meshVk.createFrom(std::move(mMesh.mesh));
 
-            tinyHandle fnHandle = fs_->createFile(fnMeshFolder, mMesh.name, std::move(meshVk));
+            tinyHandle fnHandle = fs_->createFile(mMesh.name, std::move(meshVk), fnMeshFolder);
             tinyHandle fDataHandle = fs_->fDataHandle(fnHandle);
             glbMeshRHandle.push_back(fDataHandle);
         }
@@ -145,10 +144,10 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
     std::vector<tinyHandle> glbSkeleRHandle;
 
     if (!model.skeletons.empty()) {
-        tinyHandle fnSkeleFolder = fs_->createFolder(fnModelFolder, "Skeletons");
+        tinyHandle fnSkeleFolder = fs_->createFolder("Skeletons", fnModelFolder);
         for (auto& mSkeleton : model.skeletons) {
 
-            tinyHandle fnHandle = fs_->createFile(fnSkeleFolder, mSkeleton.name, std::move(mSkeleton.skeleton));
+            tinyHandle fnHandle = fs_->createFile(mSkeleton.name, std::move(mSkeleton.skeleton), fnSkeleFolder);
             tinyHandle fDataHandle = fs_->fDataHandle(fnHandle);
             glbSkeleRHandle.push_back(fDataHandle);
         }
@@ -254,7 +253,7 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
     }
 
     // Add scene to registry
-    tinyHandle fnHandle = fs_->createFile(fnModelFolder, model.name, std::move(scene));
+    tinyHandle fnHandle = fs_->createFile(model.name, std::move(scene), fnModelFolder);
     return fs_->fDataHandle(fnHandle); // Return the scene's registry handle
 }
 
@@ -464,7 +463,7 @@ void tinyProject::vkCreateDefault() {
     mainScene.addRoot("Root");
     mainScene.setSharedRes(sharedRes_);
 
-    tinyHandle mainSceneFileHandle = fs_->createFile(fs_->root(), "Main Scene", std::move(mainScene));
+    tinyHandle mainSceneFileHandle = fs_->createFile("Main Scene", std::move(mainScene), fs_->root());
 
     mainSceneHandle = fs_->fDataHandle(mainSceneFileHandle);
 }
