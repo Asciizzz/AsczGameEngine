@@ -58,8 +58,20 @@ public:
         return registry().get<tinySceneRT>(sceneHandle);
     }
 
+    // File removal with special handling
+    enum class PendingRemovalType {
+        Vulkan, Audio
+    };
+
+    void fRemove(tinyHandle fileHandle);
+    void execPendingRms(PendingRemovalType type);
+    bool hasPendingRms(PendingRemovalType type) const;
+
 private:
     const tinyVk::Device* deviceVk_;
+
+    // File removals that need special handling
+    UnorderedMap<PendingRemovalType, std::vector<tinyHandle>> pendingRms;
 
     UniquePtr<tinyGlobal> global_;
     UniquePtr<tinyCamera> camera_;

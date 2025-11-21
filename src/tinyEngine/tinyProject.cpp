@@ -322,6 +322,39 @@ void tinyProject::setupFS() {
     atxt->color[0] = 153; atxt->color[1] = 153; atxt->color[2] = 153;
 }
 
+// ------------------ Pending Removals ------------------
+
+void tinyProject::fRemove(tinyHandle fileHandle) {
+    const tinyNodeFS* node = fs_->fNode(fileHandle);
+    if (!node) return;
+
+    tinyHandle dataHandle = fs_->fDataHandle(fileHandle);
+
+    if (dataHandle.is<tinyTextureVk>() ||
+        dataHandle.is<tinyMaterialVk>() ||
+        dataHandle.is<tinyMeshVk>()) {
+        pendingRms[PendingRemovalType::Vulkan].push_back(fileHandle);
+    } else {
+        fs_->fRemove(fileHandle); // Raw removal
+    }
+}
+
+void tinyProject::execPendingRms(PendingRemovalType type) {
+    auto it = pendingRms.find(type);
+    if (it == pendingRms.end()) return;
+
+    for (tinyHandle h : it->second) {
+        fs_->fRemove(h);
+    }
+
+    pendingRms.erase(it);
+}
+
+bool tinyProject::hasPendingRms(PendingRemovalType type) const {
+    auto it = pendingRms.find(type);
+    return it != pendingRms.end() && !it->second.empty();
+}
+
 
 // ------------------ Vulkan Resource Creation ------------------
 
