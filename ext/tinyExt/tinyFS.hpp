@@ -126,7 +126,7 @@ public:
 
 // ------------------------------- File/folder operations -------------------------------
 
-    bool fMove(tinyHandle nodeHandle, tinyHandle newParentHandle) {
+    bool move(tinyHandle nodeHandle, tinyHandle newParentHandle) {
         Node* node = fnodes_.get(nodeHandle);
         Node* newParent = fnodes_.get(newParentHandle);
         if (!node || !newParent || newParent->isFile()) return false;
@@ -146,7 +146,7 @@ public:
         return true;
     }
 
-    void fRename(tinyHandle nodeHandle, std::string newName) {
+    void rename(tinyHandle nodeHandle, std::string newName) {
         Node* node = fnodes_.get(nodeHandle);
         if (!node) return;
 
@@ -174,7 +174,7 @@ public:
         return queue;
     }
 
-    void fRm(tinyHandle nodeHandle) {
+    void rm(tinyHandle nodeHandle) {
         if (!nodeHandle || nodeHandle == rootHandle_) return; // Cannot remove root
 
         const Node* targetNode = fnodes_.get(nodeHandle);
@@ -212,7 +212,7 @@ public:
     }
 
     // Remove this node only
-    void fRmRaw(tinyHandle nodeHandle) {
+    void rmRaw(tinyHandle nodeHandle) {
         if (!nodeHandle || nodeHandle == rootHandle_) return;
 
         const Node* node = fnodes_.get(nodeHandle);
@@ -239,42 +239,42 @@ public:
 
 // ------------------------------- File/folder info -------------------------------
 
-    const std::string& fName(tinyHandle nodeHandle) const noexcept {
+    const std::string& name(tinyHandle nodeHandle) const noexcept {
         const Node* node = fnodes_.get(nodeHandle);
         static const std::string empty;
         return node ? node->name : empty;
     }
 
     template<typename T>
-    [[nodiscard]] T* fData(tinyHandle fileHandle) noexcept {
+    [[nodiscard]] T* data(tinyHandle fileHandle) noexcept {
         Node* node = fnodes_.get(fileHandle);
         return node && node->isFile() ? registry_.get<T>(node->data) : nullptr;
     }
 
     template<typename T>
-    [[nodiscard]] const T* fData(tinyHandle fileHandle) const noexcept {
+    [[nodiscard]] const T* data(tinyHandle fileHandle) const noexcept {
         return const_cast<tinyFS*>(this)->data<T>(fileHandle);
     }
 
-    [[nodiscard]] tinyHandle fDataHandle(tinyHandle fileHandle) const noexcept {
+    [[nodiscard]] tinyHandle dataHandle(tinyHandle fileHandle) const noexcept {
         const Node* node = fnodes_.get(fileHandle);
         return node && node->isFile() ? node->data : tinyHandle();
     }
 
-    [[nodiscard]] tinyType::ID fTypeID(tinyHandle fileHandle) const noexcept {
+    [[nodiscard]] tinyType::ID typeID(tinyHandle fileHandle) const noexcept {
         if (const Node* node = fnodes_.get(fileHandle)) return node->typeID();
         return 0;
     }
 
-    [[nodiscard]] TypeInfo* fTypeInfo(tinyHandle fileHandle) noexcept {
-        return typeInfo(fTypeID(fileHandle));
+    [[nodiscard]] TypeInfo* typeInfo(tinyHandle fileHandle) noexcept {
+        return typeInfo(typeID(fileHandle));
     }
 
-    [[nodiscard]] const TypeInfo* fTypeInfo(tinyHandle fileHandle) const noexcept {
-        return typeInfo(fTypeID(fileHandle));
+    [[nodiscard]] const TypeInfo* typeInfo(tinyHandle fileHandle) const noexcept {
+        return typeInfo(typeID(fileHandle));
     }
 
-    [[nodiscard]] const char* fPath(tinyHandle handle, const char* rootAlias = nullptr) const noexcept {
+    [[nodiscard]] const char* path(tinyHandle handle, const char* rootAlias = nullptr) const noexcept {
         auto it = pathCache_.find(handle);
         if (it == pathCache_.end()) return nullptr;
 

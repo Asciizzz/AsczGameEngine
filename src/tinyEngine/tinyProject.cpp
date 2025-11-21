@@ -73,8 +73,8 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
             textureVk.createFrom(std::move(mTexture.texture), deviceVk_);
 
             tinyHandle fnHandle = fs_->createFile(mTexture.name, std::move(textureVk), fnTexFolder);
-            tinyHandle fDataHandle = fs_->fDataHandle(fnHandle);
-            glbTexRHandle.push_back(fDataHandle);
+            tinyHandle dataHandle = fs_->dataHandle(fnHandle);
+            glbTexRHandle.push_back(dataHandle);
         }
     }
 
@@ -113,8 +113,8 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
             materialVk.setTexture(MTexSlot::Emissive, r().get<tinyTextureVk>(emisHandle));
 
             tinyHandle fnHandle = fs_->createFile(mMaterial.name, std::move(materialVk), fnMatFolder);
-            tinyHandle fDataHandle = fs_->fDataHandle(fnHandle);
-            glmMatRHandle.push_back(fDataHandle);
+            tinyHandle dataHandle = fs_->dataHandle(fnHandle);
+            glmMatRHandle.push_back(dataHandle);
         }
     }
 
@@ -135,8 +135,8 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
             meshVk.createFrom(std::move(mMesh.mesh));
 
             tinyHandle fnHandle = fs_->createFile(mMesh.name, std::move(meshVk), fnMeshFolder);
-            tinyHandle fDataHandle = fs_->fDataHandle(fnHandle);
-            glbMeshRHandle.push_back(fDataHandle);
+            tinyHandle dataHandle = fs_->dataHandle(fnHandle);
+            glbMeshRHandle.push_back(dataHandle);
         }
     }
 
@@ -148,8 +148,8 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
         for (auto& mSkeleton : model.skeletons) {
 
             tinyHandle fnHandle = fs_->createFile(mSkeleton.name, std::move(mSkeleton.skeleton), fnSkeleFolder);
-            tinyHandle fDataHandle = fs_->fDataHandle(fnHandle);
-            glbSkeleRHandle.push_back(fDataHandle);
+            tinyHandle dataHandle = fs_->dataHandle(fnHandle);
+            glbSkeleRHandle.push_back(dataHandle);
         }
     }
 
@@ -254,7 +254,7 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
 
     // Add scene to registry
     tinyHandle fnHandle = fs_->createFile(model.name, std::move(scene), fnModelFolder);
-    return fs_->fDataHandle(fnHandle); // Return the scene's registry handle
+    return fs_->dataHandle(fnHandle); // Return the scene's registry handle
 }
 
 void tinyProject::addSceneInstance(tinyHandle fromHandle, tinyHandle toHandle, tinyHandle parentHandle) {
@@ -329,8 +329,8 @@ void tinyProject::fRemove(tinyHandle fileHandle) {
 
     std::vector<tinyHandle> rmQueue = fs_->fQueue(fileHandle);
     std::sort(rmQueue.begin(), rmQueue.end(), [&](tinyHandle a, tinyHandle b) {
-        const tinyFS::TypeInfo* tInfoA = fs().fTypeInfo(a);
-        const tinyFS::TypeInfo* tInfoB = fs().fTypeInfo(b);
+        const tinyFS::TypeInfo* tInfoA = fs().typeInfo(a);
+        const tinyFS::TypeInfo* tInfoB = fs().typeInfo(b);
         uint8_t orderA = tInfoA ? tInfoA->rmOrder : 255;
         uint8_t orderB = tInfoB ? tInfoB->rmOrder : 255;
 
@@ -338,7 +338,7 @@ void tinyProject::fRemove(tinyHandle fileHandle) {
     });
 
     for (tinyHandle h : rmQueue) {
-        tinyHandle dHandle = fs_->fDataHandle(h);
+        tinyHandle dHandle = fs_->dataHandle(h);
 
         if (dHandle.is<tinyMeshVk>() ||
             dHandle.is<tinyMaterialVk>() ||
@@ -347,7 +347,7 @@ void tinyProject::fRemove(tinyHandle fileHandle) {
         {
             deferredRms_[DeferRmType::Vulkan].push_back(h);
         } else {
-            fs_->fRmRaw(h); // Remove this node immediately
+            fs_->rmRaw(h); // Remove this node immediately
         }
     }
 }
@@ -357,7 +357,7 @@ void tinyProject::execDeferredRms(DeferRmType type) {
     if (it == deferredRms_.end()) return;
 
     for (tinyHandle h : it->second) {
-        fs_->fRmRaw(h);
+        fs_->rmRaw(h);
     }
 
     it->second.clear();
@@ -465,5 +465,5 @@ void tinyProject::vkCreateDefault() {
 
     tinyHandle mainSceneFileHandle = fs_->createFile("Main Scene", std::move(mainScene), fs_->root());
 
-    mainSceneHandle = fs_->fDataHandle(mainSceneFileHandle);
+    mainSceneHandle = fs_->dataHandle(mainSceneFileHandle);
 }

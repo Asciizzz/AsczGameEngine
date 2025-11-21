@@ -583,7 +583,7 @@ static void RenderSceneNodeHierarchy() {
 
                 // File = further handling
                 if (data->is<tinyNodeFS>()) {
-                    tinyHandle dataHandle = fs.fDataHandle(data->handle);
+                    tinyHandle dataHandle = fs.dataHandle(data->handle);
 
                     // Scene File = instantiate
                     if (dataHandle.is<tinySceneRT>() && dataHandle != State::sceneHandle) {
@@ -613,7 +613,7 @@ static void RenderFileNodeHierarchy() {
             }
 
             std::string name = node->name;
-            tinyHandle dHandle = fs.fDataHandle(h);
+            tinyHandle dHandle = fs.dataHandle(h);
 
             const tinyFS::TypeInfo* typeInfo = fs.typeInfo(dHandle.tID());
 
@@ -631,7 +631,7 @@ static void RenderFileNodeHierarchy() {
             if (State::renamed == h) {
                 bool enter = ImGui::InputText("##rename", State::renameBuffer, sizeof(State::renameBuffer), ImGuiInputTextFlags_EnterReturnsTrue);
                 if (enter || ImGui::IsItemDeactivatedAfterEdit()) {
-                    fs.fRename(h, State::renameBuffer);
+                    fs.rename(h, State::renameBuffer);
                     State::renamed = tinyHandle();
                 }
             } else {
@@ -665,8 +665,8 @@ static void RenderFileNodeHierarchy() {
             if (const tinyFS::Node* node = fs.fNode(h)) {
                 std::vector<tinyHandle> children = node->children;
                 std::sort(children.begin(), children.end(), [&](tinyHandle a, tinyHandle b) {
-                    tinyFS::TypeInfo* typeA = fs.typeInfo(fs.fDataHandle(a).tID());
-                    tinyFS::TypeInfo* typeB = fs.typeInfo(fs.fDataHandle(b).tID());
+                    tinyFS::TypeInfo* typeA = fs.typeInfo(fs.dataHandle(a).tID());
+                    tinyFS::TypeInfo* typeB = fs.typeInfo(fs.dataHandle(b).tID());
                     if (typeA->ext != typeB->ext) return typeA->ext < typeB->ext;
                     return fs.fNode(a)->name < fs.fNode(b)->name;
                 });
@@ -698,13 +698,13 @@ static void RenderFileNodeHierarchy() {
 
             if (!node->isFolder()) { // Write colored extension
                 ImGui::SameLine();
-                tinyFS::TypeInfo* typeInfo = fs.typeInfo(fs.fDataHandle(h).tID());
+                tinyFS::TypeInfo* typeInfo = fs.typeInfo(fs.dataHandle(h).tID());
                 ImGui::TextColored(IMVEC4_COLOR3(typeInfo->color, 1.0f), ".%s", typeInfo->c_str());
             }
 
             ImGui::Separator();
 
-            tinyHandle dHandle = fs.fDataHandle(h);
+            tinyHandle dHandle = fs.dataHandle(h);
             if (dHandle.is<tinySceneRT>()) {
                 tinySceneRT* scene = fs.r().get<tinySceneRT>(dHandle);
                 if (RenderMenuItemToggle("Make Active", "Active", State::isActiveScene(dHandle))) {
@@ -741,7 +741,7 @@ static void RenderFileNodeHierarchy() {
             const tinyFS::Node* node = fs.fNode(h);
             if (!node || node->isFolder()) return;
 
-            tinyHandle dHandle = fs.fDataHandle(h);
+            tinyHandle dHandle = fs.dataHandle(h);
             if (dHandle.is<tinySceneRT>()) {
                 State::sceneHandle = dHandle;
             }
@@ -763,7 +763,7 @@ static void RenderFileNodeHierarchy() {
                 } else {
                     ImGui::SameLine();
 
-                    tinyFS::TypeInfo* typeInfo = fs.typeInfo(fs.fTypeID(h));
+                    tinyFS::TypeInfo* typeInfo = fs.typeInfo(fs.typeID(h));
                     ImGui::TextColored(IMVEC4_COLOR3(typeInfo->color, 1.0f), ".%s", typeInfo->c_str());
                 }
                 ImGui::EndTooltip();
@@ -781,14 +781,14 @@ static void RenderFileNodeHierarchy() {
             ImGui::Text("Dragging: %s", node->name.c_str());
             ImGui::Separator();
 
-            const tinyFS::TypeInfo* typeInfo = fs.typeInfo(fs.fDataHandle(h).tID());
+            const tinyFS::TypeInfo* typeInfo = fs.typeInfo(fs.dataHandle(h).tID());
             ImGui::TextColored(IMVEC4_COLOR3(typeInfo->color, 1.0f), "Type: .%s", typeInfo->c_str());
         },
         // Drop
         [&fs](tinyHandle h) {
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PAYLOAD")) {
                 Payload* data = (Payload*)payload->Data;
-                if (data->is<tinyNodeFS>() && fs.fMove(data->handle, h)) {
+                if (data->is<tinyNodeFS>() && fs.move(data->handle, h)) {
                     State::setExpanded(h, true);
                     State::selected = data->handle;
                 }
@@ -870,7 +870,7 @@ static void RenderMESHRD(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
     const auto* meshVk = fs.rGet<tinyMeshVk>(meshHandle);
 
     RenderDragField(
-        [&fs, meshFHandle]() { return fs.fName(meshFHandle); },
+        [&fs, meshFHandle]() { return fs.name(meshFHandle); },
         "No Mesh Assigned",
         [&]() { if (meshVk) return IMVEC4_EXT_COLOR(fs.typeExt<tinyMeshVk>()); return ImVec4(0.5f, 0.5f, 0.5f, 1.0f); },
         ImVec4(0.2f, 0.2f, 0.2f, 1.0f),
@@ -892,7 +892,7 @@ static void RenderMESHRD(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
         [&fs, meshFHandle]() {
             ImGui::BeginTooltip();
 
-            const char* fullPath = fs.fName(meshFHandle, true, ".root");
+            const char* fullPath = fs.name(meshFHandle, true, ".root");
             fullPath = fullPath ? fullPath : "<Invalid Mesh>";
 
             ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.7f, 1.0f), "[FS]");
@@ -964,7 +964,7 @@ static void RenderSKEL3D(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
                 tinyHandle skeleHandle = skel3D->skeleHandle();
 
                 tinyHandle fHandle = fs.dataToFileHandle(MAKE_TH(tinySkeleton, skeleHandle));
-                const char* fullPath = fs.fName(fHandle, true, ".root");
+                const char* fullPath = fs.name(fHandle, true, ".root");
                 fullPath = fullPath ? fullPath : "<Invalid Skeleton>";
 
                 ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.7f, 1.0f), "[FS]");
@@ -993,7 +993,7 @@ static void RenderSCRIPT(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
 
     // Render the drag field for the script file
     RenderDragField(
-        [&fs, scriptFHandle]() { return fs.fName(scriptFHandle).c_str(); },
+        [&fs, scriptFHandle]() { return fs.name(scriptFHandle).c_str(); },
         "No Script Assigned",
         [&]() { return ImVec4(0.4f, 0.6f, 0.9f, 1.0f); },
         ImVec4(0.2f, 0.2f, 0.2f, 1.0f),
@@ -1005,7 +1005,7 @@ static void RenderSCRIPT(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
                     if (!data->is<tinyNodeFS>()) { ImGui::EndDragDropTarget(); return; }
                     
                     tinyHandle fHandle = data->handle;
-                    tinyHandle dHandle = fs.fDataHandle(fHandle);
+                    tinyHandle dHandle = fs.dataHandle(fHandle);
                     if (!dHandle.is<tinyScript>()) { ImGui::EndDragDropTarget(); return; }
 
                     script->assign(dHandle);
@@ -1017,7 +1017,7 @@ static void RenderSCRIPT(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
         [&fs, scriptFHandle]() {
             ImGui::BeginTooltip();
 
-            const char* fullPath = fs.fPath(scriptFHandle);
+            const char* fullPath = fs.path(scriptFHandle);
             fullPath = fullPath ? fullPath : "<Invalid Script>";
 
             ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.7f, 1.0f), "[FS]");
@@ -1114,7 +1114,7 @@ static void RenderSCRIPT(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
                                     }
                                     // File need a bit more checking
                                     else if (data->handle.is<tinyNodeFS>()) {
-                                        tinyHandle dHandle = fs.fDataHandle(data->handle);
+                                        tinyHandle dHandle = fs.dataHandle(data->handle);
                                         if (val.is(dHandle.tID())) val = dHandle;
                                     }
 
@@ -1263,7 +1263,7 @@ static void RenderFileInspector(tinyProject* project) {
     }
 
     // typeHandle typeHdl = fs.fTypeHandle(fHandle);
-    tinyHandle dHandle = fs.fDataHandle(handle);
+    tinyHandle dHandle = fs.dataHandle(handle);
 
     ImGui::BeginGroup();
     ImGui::Text("%s", node->name.c_str());
@@ -1279,7 +1279,7 @@ static void RenderFileInspector(tinyProject* project) {
         ImGui::BeginTooltip();
 
         // ".root" + path + ".ext"
-        ImGui::Text("%s", fs.fPath(handle)); ImGui::SameLine();
+        ImGui::Text("%s", fs.path(handle)); ImGui::SameLine();
         // tinyFS::TypeExt typeExt = fs.fTypeExt(handle); 
         const auto* typeInfo = fs.typeInfo(handle);
         ImGui::TextColored(IMVEC4_COLOR3(typeInfo->color, 1.0), ".%s", typeInfo->c_str());
@@ -1298,7 +1298,7 @@ static void RenderFileInspector(tinyProject* project) {
         // Display all types of children in the format Type (with color): count
         std::map<tinyType::ID, int> typeCounts;
         for (const auto& childHdl : node->children) {
-            tinyHandle childDataHandle = fs.fDataHandle(childHdl);
+            tinyHandle childDataHandle = fs.dataHandle(childHdl);
             typeCounts[childDataHandle.typeID]++;
         }
         for (const auto& [typeID, count] : typeCounts) {
@@ -1351,7 +1351,7 @@ static void RenderScriptEditor() {
     const tinyFS::Node* node = fs.fNode(fHandle);
     if (!node) return;
 
-    tinyHandle dHandle = fs.fDataHandle(fHandle);
+    tinyHandle dHandle = fs.dataHandle(fHandle);
     if (!dHandle.is<tinyScript>()) return;
 
     tinyScript* script = fs.r().get<tinyScript>(dHandle);
