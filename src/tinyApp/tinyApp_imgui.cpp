@@ -40,6 +40,11 @@ namespace State {
 
 namespace Editor {
     static tinyHandle selected;
+    static const char* what = "None";
+
+    static bool is(const char* typeName) {
+        return std::strcmp(what, typeName) == 0;
+    }
 }
 
 // Code editor state
@@ -737,13 +742,17 @@ static void RenderFileNodeHierarchy() {
         },
         // DbClick - Do nothing for now
         [&fs](tinyHandle h) {
-            // Double clicked scene file -> make active
             const tinyFS::Node* node = fs.fNode(h);
             if (!node || node->isFolder()) return;
 
             tinyHandle dHandle = fs.dataHandle(h);
+            
+            // Scene file -> make active
             if (dHandle.is<tinySceneRT>()) {
                 State::sceneHandle = dHandle;
+            // Script file -> open code editor
+            } else if (dHandle.is<tinyScript>()) {
+                Editor::selected = h;
             }
         },
         // Hover
@@ -945,6 +954,8 @@ static void RenderBONE3D(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
     tinyHandle skeleNodeHandle = bone3D->skeleNodeHandle;
 }
 
+*/
+
 static void RenderSKEL3D(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWrap& wrap) {
     tinyRT_SKEL3D* skel3D = wrap.skel3D;
     if (!skel3D) return;
@@ -963,8 +974,8 @@ static void RenderSKEL3D(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
             if (skel3D->hasSkeleton()) {
                 tinyHandle skeleHandle = skel3D->skeleHandle();
 
-                tinyHandle fHandle = fs.dataToFileHandle(MAKE_TH(tinySkeleton, skeleHandle));
-                const char* fullPath = fs.name(fHandle, true, ".root");
+                tinyHandle fHandle = fs.rDataToFile(skeleHandle);
+                const char* fullPath = fs.path(fHandle);
                 fullPath = fullPath ? fullPath : "<Invalid Skeleton>";
 
                 ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.7f, 1.0f), "[FS]");
@@ -977,10 +988,10 @@ static void RenderSKEL3D(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
 
     // For the time being just open the editor
     if (ImGui::Button("Open Runtime Skeleton Editor", ImVec2(-1, 0))) {
-        Editor::selected = typeHandle::make<tinyNodeRT::SKEL3D>(wrap.handle);
+        Editor::selected = wrap.handle;
+        Editor::what = "SKEL3D";
     }
 }
-*/
 
 static void RenderSCRIPT(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWrap& wrap) {
     tinyRT_SCRIPT* script = wrap.script;
@@ -1225,12 +1236,12 @@ static void RenderSceneNodeInspector(tinyProject* project) {
     //     [&scene, handle]() { scene->writeComp<tinyNodeRT::BONE3D>(handle); },
     //     [&scene, handle]() { scene->removeComp<tinyNodeRT::BONE3D>(handle); }
     // });
-    // components.push_back({
-    //     "Skeleton 3D", wrap.skel3D != nullptr,
-    //     [&]() { RenderSKEL3D(fs, scene, wrap); },
-    //     [&scene, handle]() { scene->writeComp<tinyNodeRT::SKEL3D>(handle); },
-    //     [&scene, handle]() { scene->removeComp<tinyNodeRT::SKEL3D>(handle); }
-    // });
+    components.push_back({
+        "Skeleton 3D", wrap.skel3D != nullptr,
+        [&]() { RenderSKEL3D(fs, scene, wrap); },
+        [&scene, handle]() { scene->writeComp<tinyNodeRT::SKEL3D>(handle); },
+        [&scene, handle]() { scene->removeComp<tinyNodeRT::SKEL3D>(handle); }
+    });
     components.push_back({
         "Runtime Script", wrap.script != nullptr,
         [&]() { RenderSCRIPT(fs, scene, wrap); },
@@ -1415,14 +1426,15 @@ static void RenderScriptEditor() {
 }
 
 static void RenderSkeleNodeEditor() {
-    tinyHandle nHandle = Editor::selected;
-    if (!nHandle.is<tinyNodeRT::SKEL3D>()) return;
+    if (Editor::what != "SKEL3D") return;
 
     tinySceneRT* scene = sceneRef;
-    const tinyFS& fs = projRef->fs();
 
+    tinyHandle nHandle = Editor::selected;
     tinyRT_SKEL3D* skel3D = scene->rtComp<tinyNodeRT::SKEL3D>(nHandle);
     if (!skel3D) return;
+
+    const tinyFS& fs = projRef->fs();
 
     const tinySkeleton* skeleton = skel3D->rSkeleton();
     if (!skeleton) return;
