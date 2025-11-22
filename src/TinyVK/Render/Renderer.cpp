@@ -221,7 +221,7 @@ void Renderer::drawSky(const tinyProject* project, const PipelineRaster* skyPipe
     vkCmdDraw(currentCmd, 3, 1, 0, 0);
 }
 
-
+/*
 void Renderer::drawScene(tinyProject* project, rtScene* activeScene, const PipelineRaster* plRigged, const PipelineRaster* plStatic) const {
     if (!activeScene) return;
 
@@ -378,6 +378,7 @@ void Renderer::drawSceneMeshOnly(tinyProject* project, rtScene* activeScene, con
         }
     }
 }
+*/
 
 // End frame: finalize command buffer, submit, and present
 void Renderer::endFrame(uint32_t imageIndex) {

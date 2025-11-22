@@ -18,11 +18,11 @@ extern "C" {
 // HELPER FUNCTIONS
 // ========================================
 
-static inline tinyRT::Scene* getSceneFromLua(lua_State* L) {
+static inline rtScene* getSceneFromLua(lua_State* L) {
     lua_getglobal(L, "__scene");
     void* ptr = lua_touserdata(L, -1);
     lua_pop(L, 1);
-    return static_cast<tinyRT::Scene*>(ptr);
+    return static_cast<rtScene*>(ptr);
 }
 
 static inline void decomposeMatrix(const glm::mat4& mat, glm::vec3& pos, glm::quat& rot, glm::vec3& scale) {
@@ -40,8 +40,8 @@ static inline tinyHandle* getNodeHandleFromUserdata(lua_State* L, int index) {
     return ud ? static_cast<tinyHandle*>(ud) : nullptr;
 }
 
-static inline tinyRT::Scene** getSceneFromUserdata(lua_State* L, int index) {
-    return static_cast<tinyRT::Scene**>(luaL_checkudata(L, index, "Scene"));
+static inline rtScene** getSceneFromUserdata(lua_State* L, int index) {
+    return static_cast<rtScene**>(luaL_checkudata(L, index, "Scene"));
 }
 
 static inline void pushNode(lua_State* L, tinyHandle handle) {
@@ -51,8 +51,8 @@ static inline void pushNode(lua_State* L, tinyHandle handle) {
     lua_setmetatable(L, -2);
 }
 
-static inline void pushScene(lua_State* L, tinyRT::Scene* scene) {
-    tinyRT::Scene** ud = static_cast<tinyRT::Scene**>(lua_newuserdata(L, sizeof(tinyRT::Scene*)));
+static inline void pushScene(lua_State* L, rtScene* scene) {
+    rtScene** ud = static_cast<rtScene**>(lua_newuserdata(L, sizeof(rtScene*)));
     *ud = scene;
     luaL_getmetatable(L, "Scene");
     lua_setmetatable(L, -2);
@@ -260,17 +260,17 @@ struct LuaHandle {
 
     // Convert LuaHandle to tinyHandle based on type string
     tinyHandle toTinyHandle() const {
-        if (type == "node") return tinyHandle::make<tinyNodeRT>(index, version); else
-        if (type == "script") return tinyHandle::make<tinyScript>(index, version); else
-        if (type == "scene") return tinyHandle::make<rtScene>(index, version); else
+        // if (type == "node") return tinyHandle::make<tinyNodeRT>(index, version); else
+        // if (type == "script") return tinyHandle::make<tinyScript>(index, version); else
+        // if (type == "scene") return tinyHandle::make<rtScene>(index, version); else
         return tinyHandle::make<void>(index, version);
     }
 
     // Create LuaHandle from tinyHandle
     static LuaHandle fromTinyHandle(const tinyHandle& th) {
-        if (th.is<tinyNodeRT>()) return LuaHandle("node", th.idx(), th.ver()); else
-        if (th.is<tinyScript>()) return LuaHandle("script", th.idx(), th.ver()); else
-        if (th.is<rtScene>()) return LuaHandle("scene", th.idx(), th.ver()); else
+        // if (th.is<tinyNodeRT>()) return LuaHandle("node", th.idx(), th.ver()); else
+        // if (th.is<tinyScript>()) return LuaHandle("script", th.idx(), th.ver()); else
+        // if (th.is<rtScene>()) return LuaHandle("scene", th.idx(), th.ver()); else
         return LuaHandle("resource", th.idx(), th.ver());
     }
 };
@@ -376,12 +376,13 @@ static inline int lua_handleValid(lua_State* L) {
     return 1;
 }
 
+/*
 // ========================================
 // SCENE METHODS
 // ========================================
 
 static inline int scene_node(lua_State* L) {
-    tinyRT::Scene** scenePtr = getSceneFromUserdata(L, 1);
+    rtScene** scenePtr = getSceneFromUserdata(L, 1);
     if (!scenePtr || !*scenePtr)
         return luaL_error(L, "Invalid scene");
     
@@ -414,7 +415,7 @@ static inline int scene_node(lua_State* L) {
 }
 
 static inline int scene_addScene(lua_State* L) {
-    tinyRT::Scene** scenePtr = getSceneFromUserdata(L, 1);
+    rtScene** scenePtr = getSceneFromUserdata(L, 1);
     if (!scenePtr || !*scenePtr)
         return luaL_error(L, "Invalid scene");
     
@@ -453,7 +454,7 @@ static inline int scene_addScene(lua_State* L) {
 }
 
 static inline int scene_delete(lua_State* L) {
-    tinyRT::Scene** scenePtr = getSceneFromUserdata(L, 1);
+    rtScene** scenePtr = getSceneFromUserdata(L, 1);
     if (!scenePtr || !*scenePtr)
         return luaL_error(L, "Invalid scene");
     
@@ -476,6 +477,8 @@ static inline int scene_delete(lua_State* L) {
     lua_pushboolean(L, success);
     return 1;
 }
+
+*/
 
 // ========================================
 // INPUT SYSTEM
@@ -540,6 +543,8 @@ static inline int lua_kState(lua_State* L) {
     lua_pushboolean(L, keyboardState[scancode] != 0);
     return 1;
 }
+
+/*
 
 // ========================================
 // COMPONENT: TRANSFORM3D
@@ -685,7 +690,7 @@ static inline int node_transform3D(lua_State* L) {
     tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
     if (!handle) { lua_pushnil(L); return 1; }
     
-    tinyRT::Scene* scene = getSceneFromLua(L);
+    rtScene* scene = getSceneFromLua(L);
     if (!scene) { lua_pushnil(L); return 1; }
     
     auto comps = scene->Wrap(*handle);
@@ -1524,7 +1529,7 @@ static inline int node_delete(lua_State* L) {
     }
     
     // Get scene and call removeNode
-    tinyRT::Scene* scene = getSceneFromLua(L);
+    rtScene* scene = getSceneFromLua(L);
     if (!scene) {
         lua_pushboolean(L, false);
         return 1;
@@ -1548,21 +1553,24 @@ static inline int node_handle(lua_State* L) {
     return 1;
 }
 
+*/
+
 // ========================================
 // FS (FILESYSTEM REGISTRY) OBJECT
 // ========================================
 
 // Helper to get tinyRegistry pointer from __scene
 static inline tinyRegistry* getFSRegistryFromLua(lua_State* L) {
-    tinyRT::Scene* scene = getSceneFromLua(L);
+    rtScene* scene = getSceneFromLua(L);
     if (!scene) return nullptr;
-    return scene->sharedRes().fsRegistry;
+    return scene->res().fsReg;
 }
 
 // Helper to get FS userdata (just a marker, we access registry through __scene)
 static inline void** getFSUserdata(lua_State* L, int index) {
     return static_cast<void**>(luaL_checkudata(L, index, "FS"));
 }
+
 
 // Push FS object (just a marker userdata)
 static inline void pushFS(lua_State* L) {
@@ -2051,6 +2059,7 @@ static inline int lua_quat_lookAt(lua_State* L) {
     return 1;
 }
 
+/*
 static inline int lua_print(lua_State* L) {
     lua_getglobal(L, "__rtScript");
     void* rtScriptPtr = lua_touserdata(L, -1);
@@ -2073,6 +2082,8 @@ static inline int lua_print(lua_State* L) {
     rtScript->debug().log(message, 1.0f, 1.0f, 1.0f);
     return 0;
 }
+*/
+
 
 // ========================================
 // REGISTRATION FUNCTION
@@ -2096,6 +2107,7 @@ static inline int lua_print(lua_State* L) {
     lua_pop(L, 1)
 
 static inline void registerNodeBindings(lua_State* L) {
+
     // Vec2 metatable
     luaL_newmetatable(L, "Vec2");
     lua_pushcfunction(L, vec2_index);
@@ -2131,6 +2143,7 @@ static inline void registerNodeBindings(lua_State* L) {
     LUA_REG_GLOBAL(lua_Vec3, "Vec3");
     LUA_REG_GLOBAL(lua_Vec4, "Vec4");
     
+    /*
     // Transform3D metatable
     LUA_BEGIN_METATABLE("Transform3D");
     LUA_REG_METHOD(transform3d_getPos, "getPos");
@@ -2224,7 +2237,9 @@ static inline void registerNodeBindings(lua_State* L) {
     LUA_REG_METHOD(script_getVar, "getVar");
     LUA_REG_METHOD(script_setVar, "setVar");
     LUA_END_METATABLE("Script");
-    
+
+    */
+
     // FS metatable (filesystem registry accessor)
     LUA_BEGIN_METATABLE("FS");
     LUA_REG_METHOD(fs_get, "get");
@@ -2235,6 +2250,7 @@ static inline void registerNodeBindings(lua_State* L) {
     LUA_REG_METHOD(staticscript_call, "call");
     LUA_END_METATABLE("StaticScript");
     
+    /*
     // Node metatable
     LUA_BEGIN_METATABLE("Node");
     LUA_REG_METHOD(node_transform3D, "transform3D");
@@ -2269,6 +2285,8 @@ static inline void registerNodeBindings(lua_State* L) {
     LUA_REG_METHOD(scene_addScene, "addScene");
     LUA_REG_METHOD(scene_delete, "delete");
     LUA_END_METATABLE("Scene");
+
+    */
     
     // Handle metatable (unified handle system)
     luaL_newmetatable(L, "Handle");
@@ -2304,7 +2322,7 @@ static inline void registerNodeBindings(lua_State* L) {
     // Global Functions
     LUA_REG_GLOBAL(lua_kState, "kState");
     LUA_REG_GLOBAL(lua_Handle, "Handle");
-    LUA_REG_GLOBAL(lua_print, "print");
+    // LUA_REG_GLOBAL(lua_print, "print");
     
     // Quaternion Utility Functions
     LUA_REG_GLOBAL(lua_quat_slerp, "quat_slerp");

@@ -162,11 +162,11 @@ void tinyApp::updateActiveScene() {
     curScene = project->scene(State::sceneHandle);
     sceneRef = curScene;
 
-    curScene->setFStart({
-        renderer->getCurrentFrame(),
-        fpsManager->deltaTime
-    });
-    curScene->update();
+    // curScene->setFStart({
+    //     renderer->getCurrentFrame(),
+    //     fpsManager->deltaTime
+    // });
+    // curScene->update();
 }
 
 // ===========================================================================
@@ -423,6 +423,7 @@ static void RenderSceneNodeHierarchy() {
     rtScene* scene = sceneRef;
     tinyFS& fs = projRef->fs();
 
+    /*
     RenderGenericNodeHierarchy(
         scene->rootHandle(), 0,
         // Div
@@ -602,6 +603,7 @@ static void RenderSceneNodeHierarchy() {
             }
         }
     );
+    */
 }
 
 static void RenderFileNodeHierarchy() {
@@ -715,9 +717,9 @@ static void RenderFileNodeHierarchy() {
                 if (RenderMenuItemToggle("Make Active", "Active", State::isActiveScene(dHandle))) {
                     State::sceneHandle = dHandle;
                 }
-                if (RenderMenuItemToggle("Cleanse", "Cleansed", scene->isClean())) {
-                    scene->cleanse();
-                }
+                // if (RenderMenuItemToggle("Cleanse", "Cleansed", scene->isClean())) {
+                //     scene->cleanse();
+                // }
             }
             if (dHandle.is<tinyScript>()) {
                 tinyScript* script = fs.r().get<tinyScript>(dHandle);
@@ -813,7 +815,7 @@ static void RenderFileNodeHierarchy() {
 
 
 // Scene node inspector
-
+/*
 static void RenderTRFM3D(const tinyFS& fs, rtScene* scene, rtScene::NWrap& wrap) {
     tinyRT_TRFM3D* trfm3D = wrap.trfm3D;
     if (!trfm3D) return;
@@ -863,7 +865,7 @@ static void RenderTRFM3D(const tinyFS& fs, rtScene* scene, rtScene::NWrap& wrap)
     if (ImGui::Button("Reset", ImVec2(-1, 0))) trfm3D->local = trfm3D->base;
     ImGui::PopStyleColor();
 }
-/*
+
 
 static void RenderMESHRD(const tinyFS& fs, rtScene* scene, rtScene::NWrap& wrap) {
     tinyRT_MESHRD* meshRD = wrap.meshRD;
@@ -954,7 +956,6 @@ static void RenderBONE3D(const tinyFS& fs, rtScene* scene, rtScene::NWrap& wrap)
     tinyHandle skeleNodeHandle = bone3D->skeleNodeHandle;
 }
 
-*/
 
 static void RenderSKEL3D(const tinyFS& fs, rtScene* scene, rtScene::NWrap& wrap) {
     tinyRT_SKEL3D* skel3D = wrap.skel3D;
@@ -1259,6 +1260,7 @@ static void RenderSceneNodeInspector(tinyProject* project) {
         RenderCOMP(comp);
     }
 }
+*/
 
 // File inspector
 static void RenderFileInspector(tinyProject* project) {
@@ -1346,7 +1348,7 @@ static void RenderFileInspector(tinyProject* project) {
 }
 
 static void RenderInspector(tinyProject* project) {
-    RenderSceneNodeInspector(project);
+    // RenderSceneNodeInspector(project);
     RenderFileInspector(project);
 }
 
@@ -1425,6 +1427,7 @@ static void RenderScriptEditor() {
     ImGui::PopStyleColor();
 }
 
+/*
 static void RenderSkeleNodeEditor() {
     if (Editor::what != "SKEL3D") return;
 
@@ -1569,7 +1572,7 @@ static void RenderSkeleNodeEditor() {
     ImGui::EndChild();
     ImGui::PopStyleColor();
 }
-
+*/
 
 // ============================================================================
 // MAIN UI RENDERING FUNCTION
@@ -1709,7 +1712,7 @@ void tinyApp::renderUI() {
 
     if (tinyUI::Begin("Editor", nullptr, ImGuiWindowFlags_NoCollapse)) {
         RenderScriptEditor();
-        RenderSkeleNodeEditor();
+        // RenderSkeleNodeEditor();
         tinyUI::End();
     }
 }

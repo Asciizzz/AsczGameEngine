@@ -77,7 +77,7 @@ file(GLOB_RECURSE SRC_FILES
 
     src/tinyRT/tinyRT_MeshRender3D.cpp
     src/tinyRT/tinyRT_Skeleton3D.cpp
-    src/tinyRT/tinyRT_Anime3D.cpp
+    # src/tinyRT/tinyRT_Anime3D.cpp
     src/tinyRT/tinyRT_Script.cpp
     src/tinyRT/sceneRes.cpp
     src/tinyRT/rtScene.cpp

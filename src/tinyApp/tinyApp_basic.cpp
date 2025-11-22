@@ -231,19 +231,19 @@ void tinyApp::mainLoop() {
                         project->addModel(model);
                     }
 
-                    if (ext == "lua") {
-                        tinyScript script;
-                        script.code = tinyText::readFrom(droppedFile);
+                    // if (ext == "lua") {
+                    //     tinyScript script;
+                    //     script.code = tinyText::readFrom(droppedFile);
 
-                        project->fs().createFile(name, std::move(script));
-                    }
+                    //     project->fs().createFile(name, std::move(script));
+                    // }
 
-                    if (ext == "txt" || ext == "cfg" || ext == "ini" || ext == "log" || ext == "md") {
-                        tinyText text;
-                        text.str = tinyText::readFrom(droppedFile);
+                    // if (ext == "txt" || ext == "cfg" || ext == "ini" || ext == "log" || ext == "md") {
+                    //     tinyText text;
+                    //     text.str = tinyText::readFrom(droppedFile);
 
-                        project->fs().createFile(name, std::move(text));
-                    }
+                    //     project->fs().createFile(name, std::move(text));
+                    // }
 
                     if (ext == "png" || ext == "jpg" || ext == "jpeg" || ext == "bmp") {
                         tinyTexture texture = tinyLoader::loadTexture(droppedFile);
@@ -343,11 +343,11 @@ void tinyApp::mainLoop() {
 
             rendererRef.drawSky(project.get(), pipelineSky.get());
 
-            rendererRef.drawScene(
-                project.get(), curScene,
-                pipelineRigged.get(),
-                pipelineStatic.get()
-            );
+            // rendererRef.drawScene(
+            //     project.get(), curScene,
+            //     pipelineRigged.get(),
+            //     pipelineStatic.get()
+            // );
 
             // For the time being draw mesh only pipeline
             // rendererRef.drawSceneMeshOnly(

@@ -433,7 +433,9 @@ void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, floa
     // Store rtScript pointer in Lua globals for print() function
     lua_pushlightuserdata(L_, rtScript);
     lua_setglobal(L_, "__rtScript");
-    
+
+    /*
+
     // Get vars and locals from rtScript
     auto* rt = static_cast<tinyRT::Script*>(rtScript);
     auto& vars = rt->vMap();
@@ -489,7 +491,7 @@ void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, floa
     lua_pushnumber(L_, deltaTime); lua_setglobal(L_, "DELTATIME");
     lua_pushlightuserdata(L_, scene); lua_setglobal(L_, "__scene");
 
-    pushScene(L_, static_cast<tinyRT::Scene*>(scene)); lua_setglobal(L_, "SCENE");
+    pushScene(L_, static_cast<rtScene*>(scene)); lua_setglobal(L_, "SCENE");
     pushNode(L_, nodeHandle); lua_setglobal(L_, "NODE");
     pushFS(L_); lua_setglobal(L_, "FS");
 
@@ -499,4 +501,6 @@ void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, floa
     // Pull values back from Lua using helper
     pullMapFromLua(L_, "VARS", vars);
     pullMapFromLua(L_, "LOCALS", locals);
+
+    */
 }

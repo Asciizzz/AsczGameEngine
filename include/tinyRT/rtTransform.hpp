@@ -4,61 +4,48 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-struct Tr3DWrap {
-    glm::vec3 position{0.0f, 0.0f, 0.0f};
-    glm::quat rotation{1.0f, 0.0f, 0.0f, 0.0f};
-    glm::vec3 scale{1.0f, 1.0f, 1.0f};
+struct Tr3D {
+    glm::vec3 T{0.0f, 0.0f, 0.0f};
+    glm::quat R{1.0f, 0.0f, 0.0f, 0.0f};
+    glm::vec3 S{1.0f, 1.0f, 1.0f};
+
+    glm::mat4 Mat4{1.0f};
+    void update() {
+        Mat4 = glm::translate(glm::mat4(1.0f), T) *
+               glm::mat4_cast(R) *
+               glm::scale(glm::mat4(1.0f), S);
+    }
 };
 
 namespace tinyRT {
 
 struct Transform3D {
-    const glm::mat4& getLMat4() const {
-        if (localDirty) {
-            local = glm::mat4(1.0f);
-            local = glm::translate(local, localWrap.position);
-            local *= glm::mat4_cast(localWrap.rotation);
-            local = glm::scale(local, localWrap.scale);
-            localDirty = false;
+    Tr3D& local() {
+        lDirty_ = true;
+        local_.update(); // Late refresh (acceptable)
+        return local_;
+    }
+
+    const glm::mat4& world() const {
+        return world_;
+    }
+
+    const glm::mat4& recalcWorld(const Transform3D* parent) {
+        if (wDirty_ || (parent && parent->wDirty_)) {
+            world_ = parent->world() * local_.Mat4;
+            wDirty_ = false;
+            lDirty_ = false;
         }
-        return local;
-    }
 
-    Tr3DWrap& getLWrap() {
-        localDirty = true;
-        worldDirty = true;
-        return localWrap;
-    }
-
-    const glm::mat4& getWMat4(const Transform3D* parent) const {
-        if (!worldDirty && !(parent && parent->worldDirty)) return world;
-
-        glm::mat4 parentMat = parent ? parent->world : glm::mat4(1.0f);
-        world = parentMat * getLMat4();
-        worldDirty = false;
-    }
-
-    const glm::mat4& getWMat4() const {
-        return world;
+        return world_;
     }
 
 private:
-    Tr3DWrap localWrap;
-    mutable glm::mat4 local{1.0f};
-    mutable bool localDirty{true};
+    Tr3D local_;
+    bool lDirty_ = true;
 
-    mutable glm::mat4 world{1.0f};
-    mutable bool worldDirty{true};
-};
-
-struct Transform2D {
-    
+    glm::mat4 world_{1.0f};
+    bool wDirty_ = true;
 };
 
 }
-
-using rtTransform3D = tinyRT::Transform3D;
-using rtTRANF3D = tinyRT::Transform3D;
-
-using rtTransform2D = tinyRT::Transform2D;
-using rtTRANF2D = tinyRT::Transform2D;

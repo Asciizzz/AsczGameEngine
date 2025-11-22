@@ -5,6 +5,7 @@
 #include "tinyTexture.hpp"
 #include "tinySkeleton.hpp"
 #include "tinyRT_Anime3D.hpp"
+#include "tinyScript.hpp"
 
 // lightweight structure to hold primitive model data
 

@@ -1,8 +1,6 @@
 #include "tinyEngine/tinyProject.hpp"
 #include "tinyEngine/tinyLoader.hpp"
 
-using NTypes = tinyNodeRT::Types;
-
 using namespace tinyVk;
 
 // A quick function for range validation
@@ -44,6 +42,8 @@ tinyProject::~tinyProject() {
 
 tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
     parentFolder = parentFolder ? parentFolder : fs_->root();
+
+/*
 
     tinyHandle fnModelFolder = fs_->createFolder(model.name, parentFolder);
 
@@ -238,14 +238,18 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
     // Add scene to registry
     tinyHandle fnHandle = fs_->createFile(model.name, std::move(scene), fnModelFolder);
     return fs_->dataHandle(fnHandle); // Return the scene's registry handle
+
+*/
+
+    return tinyHandle();
 }
 
 void tinyProject::addSceneInstance(tinyHandle fromHandle, tinyHandle toHandle, tinyHandle parentHandle) {
     if (fromHandle == toHandle) return; // Prevent self-copy
 
-    if (rtScene* toScene = r().get<rtScene>(toHandle)) {
-        toScene->addScene(fromHandle, parentHandle);
-    }
+    // if (rtScene* toScene = r().get<rtScene>(toHandle)) {
+    //     toScene->addScene(fromHandle, parentHandle);
+    // }
 }
 
 // ------------------- Filesystem Setup -------------------
@@ -354,7 +358,7 @@ void tinyProject::vkCreateResources() {
 
     // Setup shared scene requirements
     sharedRes_.maxFramesInFlight = 2;
-    sharedRes_.fsRegistry = &fs().r();
+    sharedRes_.fsReg = &fs().r();
     sharedRes_.deviceVk = deviceVk_;
 
     // Skin descriptors
@@ -412,7 +416,7 @@ void tinyProject::vkCreateDefault() {
     DescSet dummySkinDescSet;
 
     dummySkinDescSet.allocate(deviceVk_->device, sharedRes_.skinDescPool(), sharedRes_.skinDescLayout());
-    tinyRT_SKEL3D::vkWrite(deviceVk_, &dummySkinBuffer, &dummySkinDescSet, sharedRes_.maxFramesInFlight, 1);
+    // tinyRT_SKEL3D::vkWrite(deviceVk_, &dummySkinBuffer, &dummySkinDescSet, sharedRes_.maxFramesInFlight, 1);
 
     rAdd<DataBuffer>(std::move(dummySkinBuffer)); // No need to store handle
     sharedRes_.hDummySkinDescSet = rAdd<DescSet>(std::move(dummySkinDescSet));
@@ -422,11 +426,11 @@ void tinyProject::vkCreateDefault() {
     DataBuffer dummyMrphDsBuffer, dummyMrphWsBuffer;
     DescSet dummyMrphDsDescSet, dummyMrphWsDescSet;
 
-    dummyMrphDsDescSet.allocate(deviceVk_->device, sharedRes_.mrphDsDescPool(), sharedRes_.mrphDsDescLayout());
-    tinyRT_MESHRD::vkWrite(deviceVk_, &dummyMrphDsBuffer, &dummyMrphDsDescSet, 1, 1); // Non-dynamic
+    // dummyMrphDsDescSet.allocate(deviceVk_->device, sharedRes_.mrphDsDescPool(), sharedRes_.mrphDsDescLayout());
+    // tinyRT_MESHRD::vkWrite(deviceVk_, &dummyMrphDsBuffer, &dummyMrphDsDescSet, 1, 1); // Non-dynamic
 
-    dummyMrphWsDescSet.allocate(deviceVk_->device, sharedRes_.mrphWsDescPool(), sharedRes_.mrphWsDescLayout());
-    tinyRT_MESHRD::vkWrite(deviceVk_, &dummyMrphWsBuffer, &dummyMrphWsDescSet, sharedRes_.maxFramesInFlight, 1);
+    // dummyMrphWsDescSet.allocate(deviceVk_->device, sharedRes_.mrphWsDescPool(), sharedRes_.mrphWsDescLayout());
+    // tinyRT_MESHRD::vkWrite(deviceVk_, &dummyMrphWsBuffer, &dummyMrphWsDescSet, sharedRes_.maxFramesInFlight, 1);
 
     rAdd<DataBuffer>(std::move(dummyMrphDsBuffer));
     sharedRes_.hDummyMeshMrphDsDescSet = rAdd<DescSet>(std::move(dummyMrphDsDescSet));
@@ -439,8 +443,8 @@ void tinyProject::vkCreateDefault() {
 // CRITICAL: Main Scene must be created last after all resources are ready
 
     rtScene mainScene;
-    mainScene.addRoot("Root");
-    mainScene.setSharedRes(sharedRes_);
+    // mainScene.addRoot("Root");
+    // mainScene.setSharedRes(sharedRes_);
 
     tinyHandle mainSceneFileHandle = fs_->createFile("Main Scene", std::move(mainScene), fs_->root());
 

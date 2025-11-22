@@ -6,17 +6,17 @@
 // Descriptor accessors
 
 VkDescriptorPool sceneRes::descPool(tinyHandle handle) const {
-    if (auto* ptr = fsRegistry->get<tinyVk::DescPool>(handle)) return *ptr;
+    if (auto* ptr = fsReg->get<tinyVk::DescPool>(handle)) return *ptr;
     return VK_NULL_HANDLE;
 }
 
 VkDescriptorSetLayout sceneRes::descLayout(tinyHandle handle) const {
-    if (auto* ptr = fsRegistry->get<tinyVk::DescSLayout>(handle)) return *ptr;
+    if (auto* ptr = fsReg->get<tinyVk::DescSLayout>(handle)) return *ptr;
     return VK_NULL_HANDLE;
 }
 
 VkDescriptorSet sceneRes::descSet(tinyHandle handle) const {
-    if (auto* ptr = fsRegistry->get<tinyVk::DescSet>(handle)) return *ptr;
+    if (auto* ptr = fsReg->get<tinyVk::DescSet>(handle)) return *ptr;
     return VK_NULL_HANDLE;
 }
 
@@ -38,15 +38,15 @@ VkDescriptorSetLayout sceneRes::mrphWsDescLayout() const { return descLayout(hMr
 #include "tinyTexture.hpp"
 
 const tinyMaterialVk* sceneRes::defaultMaterialVk() const {
-    return fsRegistry->get<tinyMaterialVk>(hDefaultMaterialVk);
+    return fsReg->get<tinyMaterialVk>(hDefaultMaterialVk);
 }
 
 const tinyTextureVk* sceneRes::defaultTextureVk0() const {
-    return fsRegistry->get<tinyTextureVk>(hDefaultTextureVk0);
+    return fsReg->get<tinyTextureVk>(hDefaultTextureVk0);
 }
 
 const tinyTextureVk* sceneRes::defaultTextureVk1() const {
-    return fsRegistry->get<tinyTextureVk>(hDefaultTextureVk1);
+    return fsReg->get<tinyTextureVk>(hDefaultTextureVk1);
 }
 
 VkDescriptorSet sceneRes::dummySkinDescSet() const { return descSet(hDummySkinDescSet); }
