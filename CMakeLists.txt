@@ -73,15 +73,15 @@ file(GLOB_RECURSE SRC_FILES
     # Engine specific files
 
     src/tinyData/tinyCamera.cpp
-
     src/tinyScript/tinyScript.cpp
-    src/tinyData/tinySharedRes.cpp
-    src/tinyData/tinyRT_MeshRender3D.cpp
-    src/tinyData/tinyRT_Skeleton3D.cpp
-    src/tinyData/tinyRT_Anime3D.cpp
-    src/tinyData/tinyRT_Script.cpp
-    src/tinyData/tinyRT_Scene.cpp
-    src/tinyData/tinyRT_Node.cpp
+
+    src/tinyRT/tinyRT_MeshRender3D.cpp
+    src/tinyRT/tinyRT_Skeleton3D.cpp
+    src/tinyRT/tinyRT_Anime3D.cpp
+    src/tinyRT/tinyRT_Script.cpp
+    src/tinyRT/sceneRes.cpp
+    src/tinyRT/rtScene.cpp
+    src/tinyRT/tinyRT_Node.cpp
 
     src/tinyEngine/tinyGlobal.cpp
     src/tinyEngine/tinyProject.cpp
@@ -140,6 +140,7 @@ target_include_directories(AsczGame PRIVATE
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/include/tinyVk
     ${CMAKE_SOURCE_DIR}/include/tinyData
+    ${CMAKE_SOURCE_DIR}/include/tinyRT
     ${CMAKE_SOURCE_DIR}/include/tinyScript
     ${CMAKE_SOURCE_DIR}/include/tinySystem
     ${CMAKE_SOURCE_DIR}/include/tinyEngine

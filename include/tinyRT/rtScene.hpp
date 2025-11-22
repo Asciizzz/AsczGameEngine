@@ -8,7 +8,7 @@
 #include "tinyRT_Script.hpp"
 #include "tinyRT_Node.hpp"
 
-#include "tinySharedRes.hpp"
+#include "sceneRes.hpp"
 
 namespace tinyRT {
 
@@ -64,8 +64,8 @@ public:
     void setRoot(tinyHandle handle) { rootHandle_ = handle; }
     tinyHandle rootHandle() const { return rootHandle_; }
 
-    void setSharedRes(const tinySharedRes& sharedRes) { sharedRes_ = sharedRes; }
-    const tinySharedRes& sharedRes() const { return sharedRes_; }
+    void setSharedRes(const sceneRes& sharedRes) { sharedRes_ = sharedRes; }
+    const sceneRes& sharedRes() const { return sharedRes_; }
 
     // --------- Node management ---------
 
@@ -238,7 +238,7 @@ private:
 
     FStart fStart_;
 
-    tinySharedRes sharedRes_; // Shared resources and requirements
+    sceneRes sharedRes_; // Shared resources and requirements
     tinyPool<tinyNodeRT> nodes_;
     tinyRegistry rtRegistry_; // Runtime registry for this scene
 
@@ -374,4 +374,4 @@ private:
 
 } // namespace tinyRT
 
-using tinySceneRT = tinyRT::Scene;
+using rtScene = tinyRT::Scene;

@@ -1,5 +1,5 @@
 #include "tinyRT_Anime3D.hpp"
-#include "tinyRT_Scene.hpp"
+#include "rtScene.hpp"
 
 using namespace tinyRT;
 
@@ -110,7 +110,7 @@ void Anime3D::play(const tinyHandle& handle, bool restart) {
 
 using AnimeTarget = Anime3D::Channel::Target;
 
-glm::mat4 getTransform(const tinySceneRT* scene, const Anime3D::Channel& channel) {
+glm::mat4 getTransform(const rtScene* scene, const Anime3D::Channel& channel) {
     if (scene == nullptr) return glm::mat4(1.0f);
 
     // Return transform component of node

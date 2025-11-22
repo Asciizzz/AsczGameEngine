@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tinyRT_Scene.hpp"
+#include "rtScene.hpp"
 #include "tinyRT_Node.hpp"
 
 #define GLM_ENABLE_EXPERIMENTAL
@@ -262,7 +262,7 @@ struct LuaHandle {
     tinyHandle toTinyHandle() const {
         if (type == "node") return tinyHandle::make<tinyNodeRT>(index, version); else
         if (type == "script") return tinyHandle::make<tinyScript>(index, version); else
-        if (type == "scene") return tinyHandle::make<tinySceneRT>(index, version); else
+        if (type == "scene") return tinyHandle::make<rtScene>(index, version); else
         return tinyHandle::make<void>(index, version);
     }
 
@@ -270,7 +270,7 @@ struct LuaHandle {
     static LuaHandle fromTinyHandle(const tinyHandle& th) {
         if (th.is<tinyNodeRT>()) return LuaHandle("node", th.idx(), th.ver()); else
         if (th.is<tinyScript>()) return LuaHandle("script", th.idx(), th.ver()); else
-        if (th.is<tinySceneRT>()) return LuaHandle("scene", th.idx(), th.ver()); else
+        if (th.is<rtScene>()) return LuaHandle("scene", th.idx(), th.ver()); else
         return LuaHandle("resource", th.idx(), th.ver());
     }
 };

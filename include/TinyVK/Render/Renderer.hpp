@@ -53,12 +53,12 @@ public:
 
     void drawSky(const tinyProject* project, const PipelineRaster* skyPipeline) const;
 
-    void drawScene(tinyProject* project, tinySceneRT* activeScene, const PipelineRaster* plRigged, const PipelineRaster* plStatic) const;
+    void drawScene(tinyProject* project, rtScene* activeScene, const PipelineRaster* plRigged, const PipelineRaster* plStatic) const;
 
-    void drawSceneMeshOnly(tinyProject* project, tinySceneRT* activeScene, const PipelineRaster* rPipeline) const;
+    void drawSceneMeshOnly(tinyProject* project, rtScene* activeScene, const PipelineRaster* rPipeline) const;
 
     // Safe resource deletion with Vulkan synchronization
-    void processPendingRemovals(tinyProject* project, tinySceneRT* activeScene);
+    void processPendingRemovals(tinyProject* project, rtScene* activeScene);
 
     // Get swapchain framebuffer for external ImGui rendering
     VkFramebuffer getFrameBuffer(uint32_t imageIndex) const;

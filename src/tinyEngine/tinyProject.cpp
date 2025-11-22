@@ -140,7 +140,7 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
     if (model.nodes.empty()) return tinyHandle();
 
     // Create scene with nodes - preserve hierarchy but remap resource references
-    tinySceneRT scene;
+    rtScene scene;
     scene.setSharedRes(sharedRes_);
 
     // First pass: Insert empty nodes and store their handles
@@ -243,7 +243,7 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
 void tinyProject::addSceneInstance(tinyHandle fromHandle, tinyHandle toHandle, tinyHandle parentHandle) {
     if (fromHandle == toHandle) return; // Prevent self-copy
 
-    if (tinySceneRT* toScene = r().get<tinySceneRT>(toHandle)) {
+    if (rtScene* toScene = r().get<rtScene>(toHandle)) {
         toScene->addScene(fromHandle, parentHandle);
     }
 }
@@ -255,7 +255,7 @@ void tinyProject::setupFS() {
 
     // ------------------ Standard files ------------------
 
-    tinyFS::TypeInfo* ascn = fs_->typeInfo<tinySceneRT>();
+    tinyFS::TypeInfo* ascn = fs_->typeInfo<rtScene>();
     ascn->ext = "ascn";
     ascn->color[0] = 102; ascn->color[1] = 255; ascn->color[2] = 102;
 
@@ -324,7 +324,7 @@ void tinyProject::fRemove(tinyHandle fileHandle) {
         if (dHandle.is<tinyMeshVk>() ||
             dHandle.is<tinyMaterialVk>() ||
             dHandle.is<tinyTextureVk>() ||
-            dHandle.is<tinySceneRT>())
+            dHandle.is<rtScene>())
         {
             deferredRms_[DeferRmType::Vulkan].push_back(h);
         } else {
@@ -438,7 +438,7 @@ void tinyProject::vkCreateDefault() {
 
 // CRITICAL: Main Scene must be created last after all resources are ready
 
-    tinySceneRT mainScene;
+    rtScene mainScene;
     mainScene.addRoot("Root");
     mainScene.setSharedRes(sharedRes_);
 

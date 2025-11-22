@@ -58,7 +58,7 @@ private:
 
     UniquePtr<tinyProject> project; // New gigachad system
 
-    tinySceneRT* curScene = nullptr;
+    rtScene* curScene = nullptr;
 
     // tinyUI
     tinyUI::Backend_Vulkan* UIBackend = nullptr;

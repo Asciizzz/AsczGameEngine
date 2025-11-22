@@ -3,7 +3,7 @@
 #include "tinyFS.hpp"
 
 #include "tinyModel.hpp"
-#include "tinyRT_Scene.hpp"
+#include "rtScene.hpp"
 
 #include "tinyCamera.hpp"
 #include "tinyEngine/tinyGlobal.hpp"
@@ -45,7 +45,7 @@ public:
     tinyRegistry& r() { return fs_->r(); }
     const tinyRegistry& r() const { return fs_->r(); }
 
-    const tinySharedRes& sharedRes() const { return sharedRes_; }
+    const sceneRes& sharedRes() const { return sharedRes_; }
     const tinyVk::Device* vkDevice() const { return deviceVk_; }
 
     tinyCamera* camera() const { return camera_.get(); }
@@ -53,9 +53,9 @@ public:
 
     tinyHandle mainSceneHandle;
 
-    tinySceneRT* scene(tinyHandle& sceneHandle = tinyHandle()) {
+    rtScene* scene(tinyHandle& sceneHandle = tinyHandle()) {
         sceneHandle = sceneHandle ? sceneHandle : mainSceneHandle;
-        return r().get<tinySceneRT>(sceneHandle);
+        return r().get<rtScene>(sceneHandle);
     }
 
     // File removal with special handling
@@ -86,7 +86,7 @@ private:
 
 // -------------- Shared resources --------------
 
-    tinySharedRes sharedRes_;
+    sceneRes sharedRes_;
     void vkCreateResources();
 
     void vkCreateDefault();

@@ -222,10 +222,10 @@ void Renderer::drawSky(const tinyProject* project, const PipelineRaster* skyPipe
 }
 
 
-void Renderer::drawScene(tinyProject* project, tinySceneRT* activeScene, const PipelineRaster* plRigged, const PipelineRaster* plStatic) const {
+void Renderer::drawScene(tinyProject* project, rtScene* activeScene, const PipelineRaster* plRigged, const PipelineRaster* plStatic) const {
     if (!activeScene) return;
 
-    const tinySharedRes& sharedRes = activeScene->sharedRes();
+    const sceneRes& sharedRes = activeScene->sharedRes();
 
     VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
 
@@ -323,10 +323,10 @@ void Renderer::drawScene(tinyProject* project, tinySceneRT* activeScene, const P
 }
 
 
-void Renderer::drawSceneMeshOnly(tinyProject* project, tinySceneRT* activeScene, const PipelineRaster* rPipeline) const {
+void Renderer::drawSceneMeshOnly(tinyProject* project, rtScene* activeScene, const PipelineRaster* rPipeline) const {
     if (!activeScene) return;
 
-    const tinySharedRes& sharedRes = activeScene->sharedRes();
+    const sceneRes& sharedRes = activeScene->sharedRes();
 
     VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
 
@@ -435,7 +435,7 @@ void Renderer::endFrame(uint32_t imageIndex) {
     currentFrame = (currentFrame + 1) % maxFramesInFlight;
 }
 
-void Renderer::processPendingRemovals(tinyProject* project, tinySceneRT* activeScene) {
+void Renderer::processPendingRemovals(tinyProject* project, rtScene* activeScene) {
     if (!project->hasDeferredRms(tinyProject::DeferRmType::Vulkan)) return;
 
     // Wait for ALL in-flight fences to ensure no resources are in use by GPU

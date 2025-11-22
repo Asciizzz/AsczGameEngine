@@ -1,4 +1,4 @@
-#include "tinyData/tinyRT_MeshRender3D.hpp"
+#include "tinyRT_MeshRender3D.hpp"
 
 using namespace tinyRT;
 using namespace tinyVk;

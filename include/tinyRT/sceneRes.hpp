@@ -1,7 +1,7 @@
 #pragma once
 
 #include "tinyRegistry.hpp"
-#include "vulkan/vulkan.h"
+#include <vulkan/vulkan.h>
 
 // Forward declarations
 namespace tinyVk {
@@ -11,7 +11,7 @@ namespace tinyVk {
 struct tinyMaterialVk;
 struct tinyTextureVk;
 
-struct tinySharedRes {
+struct sceneRes {
     uint32_t maxFramesInFlight = 0; // If you messed this up the app just straight up jump off a cliff
 
     tinyRegistry* fsRegistry = nullptr; // For stuffs and things

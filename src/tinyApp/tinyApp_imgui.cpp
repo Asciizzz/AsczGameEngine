@@ -83,7 +83,7 @@ namespace CodeEditor {
     }
 }
 
-static tinySceneRT* sceneRef = nullptr;
+static rtScene* sceneRef = nullptr;
 static tinyProject* projRef = nullptr;
 
 namespace Texture {
@@ -420,7 +420,7 @@ static void RenderGenericNodeHierarchy(
 // ============================================================================
 
 static void RenderSceneNodeHierarchy() {
-    tinySceneRT* scene = sceneRef;
+    rtScene* scene = sceneRef;
     tinyFS& fs = projRef->fs();
 
     RenderGenericNodeHierarchy(
@@ -524,7 +524,7 @@ static void RenderSceneNodeHierarchy() {
                 std::vector<tinyHandle> children = node->childrenHandles;
                 for (const auto& childHandle : children) sceneRef->removeNode(childHandle);
             }
-            tinySceneRT::NWrap Wrap = sceneRef->Wrap(h);
+            rtScene::NWrap Wrap = sceneRef->Wrap(h);
             if (tinyRT_ANIM3D* anim3D = Wrap.anim3D) {
                 ImGui::Separator();
                 for (auto& anime : anim3D->MAL()) {
@@ -548,7 +548,7 @@ static void RenderSceneNodeHierarchy() {
 
                     ImGui::Text("%s", node->name.c_str());
                     ImGui::Separator();
-                    tinySceneRT::NWrap wrap = scene->Wrap(h);
+                    rtScene::NWrap wrap = scene->Wrap(h);
                     std::string compList = "";
                     if (wrap.trfm3D) compList += "[TRFM3D] ";
                     if (wrap.meshRD) compList += "[MESHRD] ";
@@ -591,7 +591,7 @@ static void RenderSceneNodeHierarchy() {
                     tinyHandle dataHandle = fs.dataHandle(data->handle);
 
                     // Scene File = instantiate
-                    if (dataHandle.is<tinySceneRT>() && dataHandle != State::sceneHandle) {
+                    if (dataHandle.is<rtScene>() && dataHandle != State::sceneHandle) {
                         scene->addScene(dataHandle, h);
                         State::setExpanded(h, true);
                     }
@@ -710,8 +710,8 @@ static void RenderFileNodeHierarchy() {
             ImGui::Separator();
 
             tinyHandle dHandle = fs.dataHandle(h);
-            if (dHandle.is<tinySceneRT>()) {
-                tinySceneRT* scene = fs.r().get<tinySceneRT>(dHandle);
+            if (dHandle.is<rtScene>()) {
+                rtScene* scene = fs.r().get<rtScene>(dHandle);
                 if (RenderMenuItemToggle("Make Active", "Active", State::isActiveScene(dHandle))) {
                     State::sceneHandle = dHandle;
                 }
@@ -748,7 +748,7 @@ static void RenderFileNodeHierarchy() {
             tinyHandle dHandle = fs.dataHandle(h);
             
             // Scene file -> make active
-            if (dHandle.is<tinySceneRT>()) {
+            if (dHandle.is<rtScene>()) {
                 State::sceneHandle = dHandle;
             // Script file -> open code editor
             } else if (dHandle.is<tinyScript>()) {
@@ -814,7 +814,7 @@ static void RenderFileNodeHierarchy() {
 
 // Scene node inspector
 
-static void RenderTRFM3D(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWrap& wrap) {
+static void RenderTRFM3D(const tinyFS& fs, rtScene* scene, rtScene::NWrap& wrap) {
     tinyRT_TRFM3D* trfm3D = wrap.trfm3D;
     if (!trfm3D) return;
 
@@ -865,7 +865,7 @@ static void RenderTRFM3D(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
 }
 /*
 
-static void RenderMESHRD(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWrap& wrap) {
+static void RenderMESHRD(const tinyFS& fs, rtScene* scene, rtScene::NWrap& wrap) {
     tinyRT_MESHRD* meshRD = wrap.meshRD;
     if (!meshRD) return;
 
@@ -874,7 +874,7 @@ static void RenderMESHRD(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
     tinyHandle meshFHandle = fs.dataToFileHandle(MAKE_TH(tinyMeshVk, meshHandle));
 
     tinyHandle rtSkeleHandle = meshRD->skeleNodeHandle();
-    tinySceneRT::CNWrap skeleCWrap = scene->CWrap(rtSkeleHandle);
+    rtScene::CNWrap skeleCWrap = scene->CWrap(rtSkeleHandle);
 
     const auto* meshVk = fs.rGet<tinyMeshVk>(meshHandle);
 
@@ -926,7 +926,7 @@ static void RenderMESHRD(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
                     Payload* data = (Payload*)payload->Data;
                     if (!data->is<tinyNodeRT>()) { ImGui::EndDragDropTarget(); return; }
                     tinyHandle nodeHandle = data->handle();
-                    tinySceneRT::CNWrap cWrap = scene->CWrap(nodeHandle);
+                    rtScene::CNWrap cWrap = scene->CWrap(nodeHandle);
                     if (!cWrap.skel3D) { ImGui::EndDragDropTarget(); return; }
                     meshRD->setSkeleNode(nodeHandle);
                     ImGui::EndDragDropTarget();
@@ -947,7 +947,7 @@ static void RenderMESHRD(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
     );
 }
 
-static void RenderBONE3D(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWrap& wrap) {
+static void RenderBONE3D(const tinyFS& fs, rtScene* scene, rtScene::NWrap& wrap) {
     tinyRT_BONE3D* bone3D = wrap.bone3D;
     if (!bone3D) return;
 
@@ -956,7 +956,7 @@ static void RenderBONE3D(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
 
 */
 
-static void RenderSKEL3D(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWrap& wrap) {
+static void RenderSKEL3D(const tinyFS& fs, rtScene* scene, rtScene::NWrap& wrap) {
     tinyRT_SKEL3D* skel3D = wrap.skel3D;
     if (!skel3D) return;
 
@@ -993,7 +993,7 @@ static void RenderSKEL3D(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
     }
 }
 
-static void RenderSCRIPT(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWrap& wrap) {
+static void RenderSCRIPT(const tinyFS& fs, rtScene* scene, rtScene::NWrap& wrap) {
     tinyRT_SCRIPT* script = wrap.script;
     if (!script) return;
 
@@ -1097,7 +1097,7 @@ static void RenderSCRIPT(const tinyFS& fs, tinySceneRT* scene, tinySceneRT::NWra
 
                     std::string type = "Unknown";
                     if (val.is<tinyNodeRT>())  type = "Node"; else
-                    if (val.is<tinySceneRT>()) type = "Scene"; else
+                    if (val.is<rtScene>()) type = "Scene"; else
                     if (val.is<tinyScript>())  type = "Script"; else
                     if (val.is<tinyMeshVk>())  type = "Mesh";
 
@@ -1194,7 +1194,7 @@ static void RenderCOMP(const CompInfo& comp) {
 }
 
 static void RenderSceneNodeInspector(tinyProject* project) {
-    tinySceneRT* scene = project->scene(State::sceneHandle);
+    rtScene* scene = project->scene(State::sceneHandle);
     if (!scene) return;
 
     tinyHandle handle = State::selected;
@@ -1212,7 +1212,7 @@ static void RenderSceneNodeInspector(tinyProject* project) {
     ImGui::SameLine();
     ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.9f, 1.0f), "[HDL: %zu, %zu]", handle.index, handle.version);
 
-    tinySceneRT::NWrap wrap = scene->Wrap(handle);
+    rtScene::NWrap wrap = scene->Wrap(handle);
 
     const tinyFS& fs = project->fs();
 
@@ -1428,7 +1428,7 @@ static void RenderScriptEditor() {
 static void RenderSkeleNodeEditor() {
     if (Editor::what != "SKEL3D") return;
 
-    tinySceneRT* scene = sceneRef;
+    rtScene* scene = sceneRef;
 
     tinyHandle nHandle = Editor::selected;
     tinyRT_SKEL3D* skel3D = scene->rtComp<tinyNodeRT::SKEL3D>(nHandle);
