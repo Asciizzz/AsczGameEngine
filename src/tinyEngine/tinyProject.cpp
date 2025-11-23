@@ -446,7 +446,7 @@ void tinyProject::vkCreateDefault() {
     // mainScene.addRoot("Root");
     // mainScene.setSharedRes(sharedRes_);
 
-    tinyHandle mainSceneFileHandle = fs_->createFile("Main Scene", std::move(mainScene), fs_->root());
+    tinyHandle mainSceneFileHandle = fs_->createFile("Main Scene", std::move(mainScene));
 
     mainSceneHandle = fs_->dataHandle(mainSceneFileHandle);
 }

@@ -49,19 +49,10 @@ class tinyRegistry {
 
 public:
     tinyRegistry() noexcept = default;
-    tinyRegistry(const tinyRegistry&) = delete;
-    tinyRegistry& operator=(const tinyRegistry&) = delete;
-    tinyRegistry(tinyRegistry&&) noexcept = default;
-    tinyRegistry& operator=(tinyRegistry&&) noexcept = default;
 
     template<typename T, typename... Args>
     [[nodiscard]] tinyHandle emplace(Args&&... args) {
         return ensurePool<T>().pool.emplace(std::forward<Args>(args)...);
-    }
-
-    template<typename T>
-    [[nodiscard]] tinyHandle add(T&& obj) {
-        return emplace<T>(std::forward<T>(obj));
     }
 
     template<typename T>

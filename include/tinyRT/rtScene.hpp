@@ -20,6 +20,8 @@ class Scene {
 
 public:
 
+    tinyRegistry rt_;
+
     sceneRes& res() noexcept { return res_; }
 };
 

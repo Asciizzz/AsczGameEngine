@@ -93,11 +93,6 @@ struct tinyPool {
         return tinyHandle(index, version, TYPE_ID);
     }
 
-    template<typename U>
-    [[nodiscard]] TINY_FORCE_INLINE tinyHandle add(U&& value) {
-        return emplace(std::forward<U>(value));
-    }
-
     [[nodiscard]] TINY_FORCE_INLINE T* get(tinyHandle h) noexcept {
         if (TINY_LIKELY(h && h.typeID == TYPE_ID)) {
             const uint32_t idx = h.index;

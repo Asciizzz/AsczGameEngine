@@ -83,7 +83,7 @@ struct Anime3D {
             clip.duration = std::max(clip.duration, sampler.times.back());
         }
 
-        nameToHandle[uniqueName] = clips.add(std::move(clip));
+        nameToHandle[uniqueName] = clips.emplace(std::move(clip));
 
         return nameToHandle[uniqueName];
     }
