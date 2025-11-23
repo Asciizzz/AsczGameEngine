@@ -46,21 +46,11 @@ const std::vector<tinyHandle>& Scene::NWrap::children() const noexcept {
     static const std::vector<tinyHandle> empty;
     return node_ ? node_->children : empty;
 }
-
 size_t Scene::NWrap::childrenCount() const noexcept {
     return node_ ? node_->children.size() : 0;
 }
 tinyHandle Scene::NWrap::addChild(const std::string& name) noexcept {
-    if (!scene_ || !node_) return tinyHandle();
-
-    Node childNode;
-    childNode.name = name;
-    childNode.parent = handle_;
-
-    tinyHandle childHandle = scene_->nodes_.emplace(std::move(childNode));
-    node_->addChild(childHandle);
-
-    return childHandle;
+    return scene_ ? scene_->nAdd(name, handle_) : tinyHandle();
 }
 
 
@@ -72,6 +62,16 @@ bool Scene::NWrap::setParent(tinyHandle newParent) noexcept {
 
     Node* newParentNode = get(newParent);
     if (!newParentNode) return false;
+
+    // Check for cyclic parentage
+    tinyHandle checkHandle = newParent;
+    while (checkHandle) {
+        if (checkHandle == handle_) return false; // Cycle detected
+
+        Node* checkNode = get(checkHandle);
+        if (!checkNode) break;
+        checkHandle = checkNode->parent;
+    }
 
     // Remove from current parent
     if (Node* currentParentNode = get(node_->parent)) {
@@ -85,16 +85,77 @@ bool Scene::NWrap::setParent(tinyHandle newParent) noexcept {
     return true;
 }
 
-bool Scene::NWrap::rmChild(tinyHandle child) noexcept {
-    if (!node_) return false;
+void Scene::NWrap::erase(tinyHandle child, bool recursive, size_t* count) noexcept {
+    if (scene_) scene_->nErase(child, recursive, count);
+}
 
-    Node* childNode = get(child);
-    if (!childNode) return false;
+// ---------------------------------------------------------------
+// Actual scene APIs
+// ---------------------------------------------------------------
 
-    // Clear all components
-    for (auto& [_, rtHandle] : childNode->comps) {
-        scene_->rt().remove(rtHandle);
+void Scene::nEraseComp(tinyHandle nHandle) noexcept {
+    Node* node = nodes_.get(nHandle);
+    if (!node) return;
+
+    for (auto& [_, rtHandle] : node->comps) {
+        rt_.remove(rtHandle);
     }
 
-    return node_->rmChild(child);
+    node->comps.clear();
+}
+
+
+std::vector<tinyHandle> Scene::nQueue(tinyHandle start) noexcept {
+    std::vector<tinyHandle> queue; // A DFS queue
+
+    std::function<void(tinyHandle)> addToQueue = [&](tinyHandle h) {
+        Node* node = nodes_.get(h);
+        if (!node) return;
+
+        for (tinyHandle child : node->children) {
+            addToQueue(child);
+        }
+
+        queue.push_back(h);
+    };
+    addToQueue(start);
+    return queue;
+}
+
+tinyHandle Scene::nAdd(const std::string& name, tinyHandle parent) noexcept {
+    Node* nParent = nodes_.get(parent);
+    if (!nParent) nParent = nodes_.get(root_);
+
+    Node newNode;
+    newNode.name = name;
+    newNode.parent = parent;
+
+    tinyHandle nHandle = nodes_.emplace(std::move(newNode));
+    nParent->addChild(nHandle);
+
+    return nHandle;
+}
+
+void Scene::nErase(tinyHandle nHandle, bool recursive, size_t* count) noexcept {
+    Node* node = nodes_.get(nHandle);
+    if (!node) return;
+
+    if (Node* parentNode = nodes_.get(node->parent)) {
+        parentNode->rmChild(nHandle);
+    }
+
+    if (!recursive) {
+        nEraseComp(nHandle);
+
+        nodes_.remove(nHandle);
+        if (count) (*count) = 1;
+        return;
+    }
+
+    std::vector<tinyHandle> toErase = nQueue(nHandle);
+    for (tinyHandle h : toErase) {
+        nEraseComp(h);
+        nodes_.remove(h);
+    }
+    if (count) (*count) = toErase.size();
 }

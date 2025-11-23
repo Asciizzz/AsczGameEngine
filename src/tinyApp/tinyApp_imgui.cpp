@@ -428,7 +428,7 @@ static void RenderSceneNodeHierarchy() {
         // Div
         [scene](tinyHandle h, int depth) {
             // const tinyNodeRT* node = scene->node(h);
-            rtScene::NWrap wrap = scene->nwrap(h);
+            rtScene::NWrap wrap = scene->nWrap(h);
             if (!wrap) {
                 ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "<Invalid>");
                 return;
@@ -476,13 +476,13 @@ static void RenderSceneNodeHierarchy() {
         [](tinyHandle h) -> bool { return State::selected == h; },
         // Children
         [](tinyHandle h) -> std::vector<tinyHandle> {
-            rtScene::NWrap wrap = sceneRef->nwrap(h);
+            rtScene::NWrap wrap = sceneRef->nWrap(h);
             std::vector<tinyHandle> children = wrap.children();
             std::sort(children.begin(), children.end(), [](tinyHandle a, tinyHandle b) {
                 // const tinyNodeRT* nodeA = sceneRef->node(a);
                 // const tinyNodeRT* nodeB = sceneRef->node(b);
-                rtScene::NWrap wrapA = sceneRef->nwrap(a);
-                rtScene::NWrap wrapB = sceneRef->nwrap(b);
+                rtScene::NWrap wrapA = sceneRef->nWrap(a);
+                rtScene::NWrap wrapB = sceneRef->nWrap(b);
 
                 bool aHasChildren = wrapA.childrenCount() > 0;
                 bool bHasChildren = wrapB.childrenCount() > 0;
@@ -499,7 +499,7 @@ static void RenderSceneNodeHierarchy() {
         },
         // RClick
         [](tinyHandle h) {
-            rtScene::NWrap wrap = sceneRef->nwrap(h);
+            rtScene::NWrap wrap = sceneRef->nWrap(h);
             if (!wrap) {
                 ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid Node!");
             }
@@ -521,12 +521,11 @@ static void RenderSceneNodeHierarchy() {
             ImGui::Separator();
 
             bool canDelete = h != sceneRef->root();
-            // if (ImGui::MenuItem("Delete", nullptr, false, canDelete))  wrap.rmC;
-            // if (ImGui::MenuItem("Flatten", nullptr, false, canDelete)) sceneRef->flattenNode(h);
-            // if (ImGui::MenuItem("Clear", nullptr, false, !node->childrenHandles.empty())) {
-            //     std::vector<tinyHandle> children = node->childrenHandles;
-            //     for (const auto& childHandle : children) sceneRef->removeNode(childHandle);
-            // }
+            if (ImGui::MenuItem("Erase", nullptr, false, canDelete)) wrap.erase(h);
+            if (ImGui::MenuItem("Clear", nullptr, false, wrap.childrenCount() > 0)) {
+                std::vector<tinyHandle> children = wrap.children();
+                for (const auto& childHandle : children) wrap.erase(childHandle);
+            }
 
             // if (tinyRT_ANIM3D* anim3D = Wrap.anim3D) {
             //     ImGui::Separator();
@@ -547,12 +546,13 @@ static void RenderSceneNodeHierarchy() {
         // Hover
         [scene](tinyHandle h) {
             if (ImGui::BeginTooltip()) {
-                if (rtScene::NWrap wrap = scene->nwrap(h)) {
+                if (rtScene::NWrap wrap = scene->nWrap(h)) {
                     ImGui::Text("%s", wrap.cname());
                     ImGui::Separator();
                     std::string compList = "";
                     if (wrap.has<rtTRANFM3D>()) compList += "[Tranfm 3D] ";
                     if (wrap.has<rtMESHRD3D>()) compList += "[Mesh Rd 3D] ";
+                    compList = compList.empty() ? "[None]" : compList;
                     ImGui::Text("%s", compList.c_str());
                 } else {
                     ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid Node!");
@@ -563,7 +563,7 @@ static void RenderSceneNodeHierarchy() {
         // Drag
         [scene](tinyHandle h) {
             // const tinyNodeRT* node = scene->node(h);
-            rtScene::NWrap wrap = scene->nwrap(h);
+            rtScene::NWrap wrap = scene->nWrap(h);
             if (!wrap) return;
 
             Payload payload = Payload::make(h, wrap.name());
@@ -577,7 +577,7 @@ static void RenderSceneNodeHierarchy() {
 
                 // Node = reparenting
                 if (data->is<rtNode>()) {
-                    rtScene::NWrap wrap = scene->nwrap(data->handle);
+                    rtScene::NWrap wrap = scene->nWrap(data->handle);
                     wrap.setParent(h);
 
                     // Auto-expand the parent node

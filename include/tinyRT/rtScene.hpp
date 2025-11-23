@@ -52,8 +52,11 @@ class Scene {
 // Machines vroom vroom, Max Verstappen
     MeshStatic3D meshStatic3D_;
 
-// Internal getters
+// Internal helpers
     [[nodiscard]] inline tinyRegistry& fsr() noexcept { return *res_.fsReg; }
+    [[nodiscard]] inline Node* node(tinyHandle nHandle) noexcept { return nodes_.get(nHandle); }
+
+    void nEraseComp(tinyHandle nHandle) noexcept;
 
 public:
     Scene() noexcept = default;
@@ -97,7 +100,11 @@ public:
         tinyHandle parent() const noexcept;
         bool setParent(tinyHandle newParent) noexcept;
 
-        bool rmChild(tinyHandle child) noexcept;
+    // Indirect APIs
+
+        void erase(tinyHandle nHandle, bool recursive = true, size_t* count = nullptr) noexcept;
+
+    // Component APIs
 
         template<typename T>
         T* writeComp() noexcept {
@@ -142,11 +149,15 @@ public:
 // Node APIs
     [[nodiscard]] tinyHandle root() const noexcept { return root_; }
 
-    [[nodiscard]] NWrap nwrap(tinyHandle h) noexcept {
+    [[nodiscard]] NWrap nWrap(tinyHandle h) noexcept {
         NWrap wrap;
         wrap.set(this, h);
         return wrap;
     }
+
+    inline std::vector<tinyHandle> nQueue(tinyHandle start) noexcept;
+    inline tinyHandle nAdd(const std::string& name = "New Node", tinyHandle parent = tinyHandle()) noexcept;
+    inline void nErase(tinyHandle nHandle, bool recursive = true, size_t* count = nullptr) noexcept;
 };
 
 } // namespace tinyRT
