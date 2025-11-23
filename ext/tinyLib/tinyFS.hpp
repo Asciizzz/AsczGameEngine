@@ -257,6 +257,11 @@ public:
         return node ? node->name : empty;
     }
 
+    const char* nameCStr(tinyHandle nodeHandle) const noexcept {
+        const Node* node = fnodes_.get(nodeHandle);
+        return node ? node->name.c_str() : nullptr;
+    }
+
     template<typename T>
     [[nodiscard]] T* data(tinyHandle fileHandle) noexcept {
         Node* node = fnodes_.get(fileHandle);

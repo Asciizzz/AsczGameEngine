@@ -859,25 +859,22 @@ static void RenderTRANFM3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle)
     }
 }
 
-/*
-
-static void RenderMESHRD(const tinyFS& fs, rtScene* scene, rtScene::NWrap& wrap) {
-    tinyRT_MESHRD* meshRD = wrap.meshRD;
+static void RenderMESHRD3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle) {
+    rtMESHRD3D* meshRD = scene->nWriteComp<rtMESHRD3D>(nHandle);
     if (!meshRD) return;
 
-    tinyHandle meshHandle = meshRD->meshHandle();
+    tinyHandle meshHandle = meshRD->mesh;
+    const tinyMeshVk* meshVk = fs.r().get<tinyMeshVk>(meshHandle);
 
-    tinyHandle meshFHandle = fs.dataToFileHandle(MAKE_TH(tinyMeshVk, meshHandle));
-
-    tinyHandle rtSkeleHandle = meshRD->skeleNodeHandle();
-    rtScene::CNWrap skeleCWrap = scene->CWrap(rtSkeleHandle);
-
-    const auto* meshVk = fs.rGet<tinyMeshVk>(meshHandle);
+    tinyHandle meshFHandle = fs.rDataToFile(meshHandle);
 
     RenderDragField(
-        [&fs, meshFHandle]() { return fs.name(meshFHandle); },
+        [&fs, meshFHandle]() { return fs.nameCStr(meshFHandle); },
         "No Mesh Assigned",
-        [&]() { if (meshVk) return IMVEC4_EXT_COLOR(fs.typeExt<tinyMeshVk>()); return ImVec4(0.5f, 0.5f, 0.5f, 1.0f); },
+        [&]() { 
+            if (!meshVk) return ImVec4(0.5f, 0.5f, 0.5f, 1.0f);
+            return IMVEC4_COLOR3(fs.typeInfo<tinyMeshVk>()->color, 1.0);
+        },
         ImVec4(0.2f, 0.2f, 0.2f, 1.0f),
         [meshVk]() { return meshVk != nullptr; },
         [&fs, meshRD]() {
@@ -885,10 +882,12 @@ static void RenderMESHRD(const tinyFS& fs, rtScene* scene, rtScene::NWrap& wrap)
                 if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PAYLOAD")) {
                     Payload* data = (Payload*)payload->Data;
                     if (!data->is<tinyNodeFS>()) { ImGui::EndDragDropTarget(); return; }
-                    tinyHandle fHandle = data->handle();
-                    typeHandle fTypeHdl = fs.fTypeHandle(fHandle);
-                    if (!fTypeHdl.is<tinyMeshVk>()) { ImGui::EndDragDropTarget(); return; }
-                    meshRD->setMesh(fTypeHdl.handle);
+
+                    tinyHandle fHandle = data->handle;
+                    tinyHandle dHandle = fs.dataHandle(fHandle);
+
+                    if (!dHandle.is<tinyMeshVk>()) { ImGui::EndDragDropTarget(); return; }
+                    meshRD->mesh = dHandle;
                     ImGui::EndDragDropTarget();
                 }
             }
@@ -897,7 +896,7 @@ static void RenderMESHRD(const tinyFS& fs, rtScene* scene, rtScene::NWrap& wrap)
         [&fs, meshFHandle]() {
             ImGui::BeginTooltip();
 
-            const char* fullPath = fs.name(meshFHandle, true, ".root");
+            const char* fullPath = fs.path(meshFHandle);
             fullPath = fullPath ? fullPath : "<Invalid Mesh>";
 
             ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.7f, 1.0f), "[FS]");
@@ -906,42 +905,9 @@ static void RenderMESHRD(const tinyFS& fs, rtScene* scene, rtScene::NWrap& wrap)
             ImGui::EndTooltip();
         }
     );
-
-    RenderDragField(
-        [scene, skeleCWrap]() {
-            if (skeleCWrap.skel3D) return scene->nodeName(skeleCWrap.handle);
-            return "Invalid Skeleton Node";
-        },
-        "No Skeleton Node Assigned",
-        [&]() { if (skeleCWrap.skel3D) return ImVec4(0.8f, 0.6f, 0.6f, 1.0f); return ImVec4(0.5f, 0.5f, 0.5f, 1.0f); },
-        ImVec4(0.2f, 0.2f, 0.2f, 1.0f),
-        [skeleCWrap]() { return skeleCWrap.skel3D != nullptr; },
-        [&fs, scene, meshRD]() {
-            if (ImGui::BeginDragDropTarget()) {
-                if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PAYLOAD")) {
-                    Payload* data = (Payload*)payload->Data;
-                    if (!data->is<tinyNodeRT>()) { ImGui::EndDragDropTarget(); return; }
-                    tinyHandle nodeHandle = data->handle();
-                    rtScene::CNWrap cWrap = scene->CWrap(nodeHandle);
-                    if (!cWrap.skel3D) { ImGui::EndDragDropTarget(); return; }
-                    meshRD->setSkeleNode(nodeHandle);
-                    ImGui::EndDragDropTarget();
-                }
-            }
-        },
-        []() {  },
-        [scene, rtSkeleHandle]() {
-            ImGui::BeginTooltip();
-            const char* fullPath = scene->nodeName(rtSkeleHandle, true);
-            fullPath = fullPath ? fullPath : "<Invalid Node>";
-
-            ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.7f, 1.0f), "[Scene]");
-            ImGui::SameLine(); ImGui::Text("%s", fullPath);
-
-            ImGui::EndTooltip();
-        }
-    );
 }
+
+/*
 
 static void RenderBONE3D(const tinyFS& fs, rtScene* scene, rtScene::NWrap& wrap) {
     tinyRT_BONE3D* bone3D = wrap.bone3D;
@@ -1214,12 +1180,12 @@ static void RenderSceneNodeInspector(tinyProject* project) {
         [&]() { wrap.writeComp<rtTRANFM3D>(); },
         [&]() { wrap.eraseComp<rtTRANFM3D>(); }
     });
-    // components.push_back({
-    //     "Mesh Renderer 3D", wrap.meshRD != nullptr,
-    //     [&]() { RenderMESHRD(fs, scene, wrap); },
-    //     [&scene, handle]() { scene->writeComp<tinyNodeRT::MESHRD>(handle); },
-    //     [&scene, handle]() { scene->removeComp<tinyNodeRT::MESHRD>(handle); }
-    // });
+    components.push_back({
+        "Mesh Render 3D", wrap.has<rtMESHRD3D>(),
+        [&]() { RenderMESHRD3D(fs, scene, handle); },
+        [&]() { wrap.writeComp<rtMESHRD3D>(); },
+        [&]() { wrap.eraseComp<rtMESHRD3D>(); }
+    });
     // components.push_back({
     //     "Bone 3D", wrap.bone3D != nullptr,
     //     [&]() { RenderBONE3D(fs, scene, wrap); },
