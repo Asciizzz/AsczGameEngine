@@ -49,3 +49,6 @@ private:
 };
 
 }
+
+using rtTransform3D = tinyRT::Transform3D;
+using rtTRANFM3D = tinyRT::Transform3D;

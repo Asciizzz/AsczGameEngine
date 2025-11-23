@@ -67,5 +67,6 @@ private:
 }
 
 using rtMeshRender3D = tinyRT::MeshRender3D;
+using rtMESHRD3D = tinyRT::MeshRender3D;
 
 using rtMeshStatic3D = tinyRT::MeshStatic3D;

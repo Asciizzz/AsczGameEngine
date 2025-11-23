@@ -80,9 +80,7 @@ public:
     void remove(tinyHandle h) noexcept {
         if (!h) return;
         auto it = pools_.find(h.typeID);
-        if (it != pools_.end()) {
-            it->second->remove(h);
-        }
+        if (it != pools_.end()) it->second->remove(h);
     }
 
     // View raw pools
