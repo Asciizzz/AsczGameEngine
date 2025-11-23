@@ -55,7 +55,7 @@ void tinyApp::initComponents() {
 
 // PLAYGROUND FROM HERE
 
-    const sceneRes& sharedRes = project->sharedRes();
+    const SceneRes& sharedRes = project->sharedRes();
     VkRenderPass renderPass = renderer->getMainRenderPass();
 
     // Get vertex layouts

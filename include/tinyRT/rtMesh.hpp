@@ -42,6 +42,9 @@ struct MeshStatic3D {
     MeshStatic3D(const MeshStatic3D&) = delete;
     MeshStatic3D& operator=(const MeshStatic3D&) = delete;
 
+    MeshStatic3D(MeshStatic3D&&) noexcept = default;
+    MeshStatic3D& operator=(MeshStatic3D&&) noexcept = default;
+
     VkBuffer instaBuffer() const { return instaBuffer_; } // Implicit conversion
 
     void reset() {

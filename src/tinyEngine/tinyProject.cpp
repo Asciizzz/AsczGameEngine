@@ -443,8 +443,7 @@ void tinyProject::vkCreateDefault() {
 // CRITICAL: Main Scene must be created last after all resources are ready
 
     rtScene mainScene;
-    // mainScene.addRoot("Root");
-    // mainScene.setSharedRes(sharedRes_);
+    mainScene.init(sharedRes_);
 
     tinyHandle mainSceneFileHandle = fs_->createFile("Main Scene", std::move(mainScene));
 

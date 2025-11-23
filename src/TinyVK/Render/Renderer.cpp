@@ -225,7 +225,7 @@ void Renderer::drawSky(const tinyProject* project, const PipelineRaster* skyPipe
 void Renderer::drawScene(tinyProject* project, rtScene* activeScene, const PipelineRaster* plRigged, const PipelineRaster* plStatic) const {
     if (!activeScene) return;
 
-    const sceneRes& sharedRes = activeScene->sharedRes();
+    const SceneRes& sharedRes = activeScene->sharedRes();
 
     VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
 
@@ -326,7 +326,7 @@ void Renderer::drawScene(tinyProject* project, rtScene* activeScene, const Pipel
 void Renderer::drawSceneMeshOnly(tinyProject* project, rtScene* activeScene, const PipelineRaster* rPipeline) const {
     if (!activeScene) return;
 
-    const sceneRes& sharedRes = activeScene->sharedRes();
+    const SceneRes& sharedRes = activeScene->sharedRes();
 
     VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
 

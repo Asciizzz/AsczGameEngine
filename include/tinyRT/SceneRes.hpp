@@ -11,7 +11,7 @@ namespace tinyVk {
 struct tinyMaterialVk;
 struct tinyTextureVk;
 
-struct sceneRes {
+struct SceneRes {
     uint32_t maxFramesInFlight = 0; // If you messed this up the app just straight up jump off a cliff
 
     tinyRegistry* fsReg = nullptr; // For stuffs and things

@@ -45,7 +45,7 @@ public:
     tinyRegistry& r() { return fs_->r(); }
     const tinyRegistry& r() const { return fs_->r(); }
 
-    const sceneRes& sharedRes() const { return sharedRes_; }
+    const SceneRes& sharedRes() const { return sharedRes_; }
     const tinyVk::Device* vkDevice() const { return deviceVk_; }
 
     tinyCamera* camera() const { return camera_.get(); }
@@ -86,7 +86,7 @@ private:
 
 // -------------- Shared resources --------------
 
-    sceneRes sharedRes_;
+    SceneRes sharedRes_;
     void vkCreateResources();
 
     void vkCreateDefault();
