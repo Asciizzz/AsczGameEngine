@@ -7,13 +7,13 @@
 using namespace tinyVk;
 
 
-Renderer::Renderer (Device* deviceVk, VkSurfaceKHR surface, SDL_Window* window, uint32_t maxFramesInFlight)
-: deviceVk(deviceVk), maxFramesInFlight(maxFramesInFlight) {
+Renderer::Renderer (Device* dvk, VkSurfaceKHR surface, SDL_Window* window, uint32_t maxFramesInFlight)
+: dvk(dvk), maxFramesInFlight(maxFramesInFlight) {
 
-    swapchain = MakeUnique<Swapchain>(deviceVk, surface, window);
+    swapchain = MakeUnique<Swapchain>(dvk, surface, window);
 
-    depthImage = MakeUnique<DepthImage>(deviceVk->device);
-    depthImage->create(deviceVk->pDevice, swapchain->getExtent());
+    depthImage = MakeUnique<DepthImage>(dvk->device);
+    depthImage->create(dvk->pDevice, swapchain->getExtent());
 
     createRenderTargets();
 
@@ -22,7 +22,7 @@ Renderer::Renderer (Device* deviceVk, VkSurfaceKHR surface, SDL_Window* window, 
 }
 
 Renderer::~Renderer() {
-    VkDevice device = deviceVk->device;
+    VkDevice device = dvk->device;
 
     for (size_t i = 0; i < maxFramesInFlight; ++i) {
         if (inFlightFences[i])           vkDestroyFence(    device, inFlightFences[i],           nullptr);
@@ -37,7 +37,7 @@ Renderer::~Renderer() {
 }
 
 void Renderer::createCommandBuffers() {
-    cmdBuffers.create(deviceVk->device, deviceVk->graphicsPoolWrapper.pool, maxFramesInFlight);
+    cmdBuffers.create(dvk->device, dvk->graphicsPoolWrapper.pool, maxFramesInFlight);
 }
 
 void Renderer::createSyncObjects() {
@@ -58,22 +58,22 @@ void Renderer::createSyncObjects() {
 
     // per-frame acquire + fence
     for (size_t i = 0; i < maxFramesInFlight; ++i) {
-        if (vkCreateSemaphore(deviceVk->device, &semInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
-            vkCreateFence(    deviceVk->device, &fenceInfo, nullptr, &inFlightFences[i])          != VK_SUCCESS) {
+        if (vkCreateSemaphore(dvk->device, &semInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
+            vkCreateFence(    dvk->device, &fenceInfo, nullptr, &inFlightFences[i])          != VK_SUCCESS) {
             throw std::runtime_error("failed to create per-frame sync objects!");
         }
     }
 
     // per-image render-finished
     for (size_t i = 0; i < swapchainImageCount; ++i) {
-        if (vkCreateSemaphore(deviceVk->device, &semInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS) {
+        if (vkCreateSemaphore(dvk->device, &semInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS) {
             throw std::runtime_error("failed to create per-image renderFinished semaphore!");
         }
     }
 }
 
 void Renderer::createRenderTargets() {
-    VkDevice device = deviceVk->device;
+    VkDevice device = dvk->device;
     VkExtent2D extent = swapchain->getExtent();
     
     // Clear existing targets and resources
@@ -142,14 +142,14 @@ VkCommandBuffer Renderer::getCurrentCommandBuffer() const {
 
 void Renderer::handleWindowResize(SDL_Window* window) {
     // Wait for device to be idle
-    vkDeviceWaitIdle(deviceVk->device);
+    vkDeviceWaitIdle(dvk->device);
     
     // Get new window dimensions for depth resources
     int newWidth, newHeight;
     SDL_GetWindowSize(window, &newWidth, &newHeight);
     
     // Recreate depth resources before recreating other resources
-    depthImage->create(deviceVk->pDevice, newWidth, newHeight);
+    depthImage->create(dvk->pDevice, newWidth, newHeight);
     
     // Now safe to cleanup and recreate Swapchain
     swapchain->cleanup();
@@ -162,7 +162,7 @@ void Renderer::handleWindowResize(SDL_Window* window) {
 
 // Begin frame: handle synchronization, image acquisition, and render pass setup
 uint32_t Renderer::beginFrame() {
-    VkDevice device = deviceVk->device;
+    VkDevice device = dvk->device;
 
     // Wait for the current frame's fence
     vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
@@ -178,11 +178,11 @@ uint32_t Renderer::beginFrame() {
 
     // CRITICAL: If this image is still being used by another frame, wait for that frame's completion
     if (imagesInFlight[imageIndex] != VK_NULL_HANDLE) {
-        vkWaitForFences(deviceVk->device, 1, &imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
+        vkWaitForFences(dvk->device, 1, &imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
     }
     
     // Reset the current frame's fence ONLY after we're sure the image is free
-    vkResetFences(deviceVk->device, 1, &inFlightFences[currentFrame]);
+    vkResetFences(dvk->device, 1, &inFlightFences[currentFrame]);
     
     // Now assign this image to the current frame
     imagesInFlight[imageIndex] = inFlightFences[currentFrame];
@@ -413,7 +413,7 @@ void Renderer::endFrame(uint32_t imageIndex) {
     submit.signalSemaphoreCount = 1;
     submit.pSignalSemaphores    = signalSemaphores;
 
-    if (vkQueueSubmit(deviceVk->graphicsQueue, 1, &submit, inFlightFences[currentFrame]) != VK_SUCCESS) {
+    if (vkQueueSubmit(dvk->graphicsQueue, 1, &submit, inFlightFences[currentFrame]) != VK_SUCCESS) {
         throw std::runtime_error("failed to submit draw command buffer");
     }
 
@@ -426,7 +426,7 @@ void Renderer::endFrame(uint32_t imageIndex) {
     present.pSwapchains        = chains;
     present.pImageIndices      = &imageIndex;
 
-    VkResult res = vkQueuePresentKHR(deviceVk->presentQueue, &present);
+    VkResult res = vkQueuePresentKHR(dvk->presentQueue, &present);
     if (res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_SUBOPTIMAL_KHR || framebufferResized) {
         framebufferResized = true;
     } else if (res != VK_SUCCESS) {
@@ -450,7 +450,7 @@ void Renderer::processPendingRemovals(tinyProject* project, rtScene* activeScene
     
     if (!allFences.empty()) {
         // Wait for all frames to complete with a reasonable timeout (1 second)
-        VkResult result = vkWaitForFences(deviceVk->device, 
+        VkResult result = vkWaitForFences(dvk->device, 
                                         static_cast<uint32_t>(allFences.size()), 
                                         allFences.data(), 
                                         VK_TRUE, 

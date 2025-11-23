@@ -33,7 +33,7 @@ struct tinyMaterialVk {
         }
     }
 
-    static tinyVk::DescSLayout createDescSetLayout(VkDevice deviceVk) {
+    static tinyVk::DescSLayout createDescSetLayout(VkDevice dvk) {
         using namespace tinyVk;
 
         DescSLayout layout;
@@ -46,16 +46,16 @@ struct tinyMaterialVk {
             bindings.push_back({ i + 1, DescType::CombinedImageSampler, 1, ShaderStage::Fragment, nullptr });
         }
 
-        layout.create(deviceVk, bindings);
+        layout.create(dvk, bindings);
 
         return layout;
     }
 
-    static tinyVk::DescPool createDescPool(VkDevice deviceVk, uint32_t maxSets) {
+    static tinyVk::DescPool createDescPool(VkDevice dvk, uint32_t maxSets) {
         using namespace tinyVk;
 
         DescPool pool;
-        pool.create(deviceVk, {
+        pool.create(dvk, {
             { DescType::UniformBuffer, maxSets },
             { DescType::CombinedImageSampler, maxSets * static_cast<uint32_t>(TexSlot::Count) }
         }, maxSets);
@@ -64,7 +64,7 @@ struct tinyMaterialVk {
     }
 
     void init(
-        const tinyVk::Device* deviceVk,
+        const tinyVk::Device* dvk,
         const tinyTextureVk* defTex0,
         const tinyTextureVk* defTex1,
         VkDescriptorSetLayout descSLayout,
@@ -72,17 +72,17 @@ struct tinyMaterialVk {
     ) {
         using namespace tinyVk;
 
-        deviceVk_ = deviceVk;
+        dvk_ = dvk;
         defTex0_ = defTex0;
         defTex1_ = defTex1;
 
-        descSet_.allocate(deviceVk->device, descPool, descSLayout);
+        descSet_.allocate(dvk->device, descPool, descSLayout);
 
         propsBuffer_
             .setDataSize(sizeof(Props))
             .setUsageFlags(BufferUsage::Uniform)
             .setMemPropFlags(MemProp::HostVisibleAndCoherent)
-            .createBuffer(deviceVk);
+            .createBuffer(dvk);
 
         propsBuffer_.uploadData(&props_);
 
@@ -101,7 +101,7 @@ struct tinyMaterialVk {
         textures_(other.textures_),
         props_(other.props_),
         propsBuffer_(std::move(other.propsBuffer_)),
-        deviceVk_(other.deviceVk_)
+        dvk_(other.dvk_)
     {
         // Null out the old object so its destructor doesn't decrement
         other.textures_.fill(nullptr);
@@ -115,7 +115,7 @@ struct tinyMaterialVk {
             }
 
             descSet_ = std::move(other.descSet_);
-            deviceVk_ = other.deviceVk_;
+            dvk_ = other.dvk_;
             defTex0_ = other.defTex0_;
             defTex1_ = other.defTex1_;
             textures_ = other.textures_;
@@ -200,7 +200,7 @@ private:
                 tex->view(),
                 ImageLayout::ShaderReadOnlyOptimal
             }})
-            .updateDescSets(deviceVk_->device);
+            .updateDescSets(dvk_->device);
     }
 
     void updatePropsBinding() {
@@ -215,7 +215,7 @@ private:
                 0,
                 sizeof(Props)
             }})
-            .updateDescSets(deviceVk_->device);
+            .updateDescSets(dvk_->device);
     }
 
     void updateAllBindings() {
@@ -227,7 +227,7 @@ private:
         }
     }
 
-    const tinyVk::Device* deviceVk_ = nullptr;
+    const tinyVk::Device* dvk_ = nullptr;
      // Fallback textures
     const tinyTextureVk* defTex0_ = nullptr; // Full white
     const tinyTextureVk* defTex1_ = nullptr; // Full black

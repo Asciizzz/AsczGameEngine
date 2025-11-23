@@ -33,13 +33,13 @@ private:
 // RAII temporary command buffer wrapper
 class TempCmd {
 public:
-    TempCmd(const Device* deviceVk, const Device::PoolWrapper& poolWrapper);
+    TempCmd(const Device* dvk, const Device::PoolWrapper& poolWrapper);
     ~TempCmd();
     void endAndSubmit(VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 
     VkCommandBuffer get() const { return cmdBuffer; }
 
-    const Device* deviceVk = nullptr;
+    const Device* dvk = nullptr;
     Device::PoolWrapper poolWrapper{};
     VkCommandBuffer cmdBuffer = VK_NULL_HANDLE;
     bool submitted = false;

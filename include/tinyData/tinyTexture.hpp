@@ -116,9 +116,9 @@ private:
 
 struct tinyTextureVk {
     tinyTextureVk() noexcept = default;
-    tinyTextureVk(tinyTexture&& texture, const tinyVk::Device* deviceVk = nullptr) noexcept {
+    tinyTextureVk(tinyTexture&& texture, const tinyVk::Device* dvk = nullptr) noexcept {
         set(std::forward<tinyTexture>(texture));
-        if (deviceVk) create(deviceVk);
+        if (dvk) create(dvk);
     }
 
     tinyTextureVk(const tinyTextureVk&) = delete;
@@ -134,7 +134,7 @@ struct tinyTextureVk {
         return *this;
     }
 
-    bool create(const tinyVk::Device* deviceVk) {
+    bool create(const tinyVk::Device* dvk) {
         using namespace tinyVk;
 
         if (!texture_) return false;
@@ -156,13 +156,13 @@ struct tinyTextureVk {
             .setDataSize(imageSize * sizeof(uint8_t))
             .setUsageFlags(ImageUsage::TransferSrc)
             .setMemPropFlags(MemProp::HostVisibleAndCoherent)
-            .createBuffer(deviceVk)
+            .createBuffer(dvk)
             .uploadData(texture_.dataPtr());
 
         uint32_t mipLevel = ImageVk::autoMipLevels(texture_.width(), texture_.height());
 
         ImageConfig imageConfig = ImageConfig()
-            .withPhysicalDevice(deviceVk->pDevice)
+            .withPhysicalDevice(dvk->pDevice)
             .withDimensions(texture_.width(), texture_.height())
             .withMipLevels(mipLevel)
             .withFormat(textureFormat)
@@ -190,7 +190,7 @@ struct tinyTextureVk {
 
         textureVk_ = TextureVk(); // Reset texture
         bool success = textureVk_
-            .init(deviceVk->device)
+            .init(dvk->device)
             .createImage(imageConfig)
             .createView(viewConfig)
             .createSampler(sampConfig)
@@ -198,12 +198,12 @@ struct tinyTextureVk {
 
         if (!success) return false;
 
-        TempCmd tempCmd(deviceVk, deviceVk->graphicsPoolWrapper);
+        TempCmd tempCmd(dvk, dvk->graphicsPoolWrapper);
 
         textureVk_
             .transitionLayoutImmediate(tempCmd.get(), ImageLayout::Undefined, ImageLayout::TransferDstOptimal)
             .copyFromBufferImmediate(tempCmd.get(), stagingBuffer.get())
-            .generateMipmapsImmediate(tempCmd.get(), deviceVk->pDevice);
+            .generateMipmapsImmediate(tempCmd.get(), dvk->pDevice);
 
         tempCmd.endAndSubmit(); // Kinda redundant with RAII but whatever
 
@@ -213,8 +213,8 @@ struct tinyTextureVk {
         return true;
     }
 
-    bool createFrom(tinyTexture&& texture, const tinyVk::Device* deviceVk) {
-        return set(std::forward<tinyTexture>(texture)).create(deviceVk);
+    bool createFrom(tinyTexture&& texture, const tinyVk::Device* dvk) {
+        return set(std::forward<tinyTexture>(texture)).create(dvk);
     }
 
 // -----------------------------------------
@@ -238,9 +238,9 @@ struct tinyTextureVk {
     uint32_t incrementUse() noexcept { return ++useCount_; }
     uint32_t decrementUse() noexcept { return useCount_ > 0 ? --useCount_ : 0; }
 
-    static tinyTextureVk aPixel(const tinyVk::Device* deviceVk, uint8_t r = 255, uint8_t g = 255, uint8_t b = 255, uint8_t a = 255) {
+    static tinyTextureVk aPixel(const tinyVk::Device* dvk, uint8_t r = 255, uint8_t g = 255, uint8_t b = 255, uint8_t a = 255) {
         tinyTextureVk textureVk;
-        textureVk.createFrom(tinyTexture::aPixel(r, g, b, a), deviceVk);
+        textureVk.createFrom(tinyTexture::aPixel(r, g, b, a), dvk);
         return textureVk;
     }
 

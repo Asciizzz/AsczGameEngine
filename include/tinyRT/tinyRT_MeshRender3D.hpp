@@ -12,7 +12,7 @@ namespace tinyRT {
 
 struct MeshRender3D {
     MeshRender3D() noexcept = default;
-    void init(const tinyVk::Device* deviceVk, const tinyPool<tinyMeshVk>* meshPool, VkDescriptorSetLayout mrphWsDescSetLayout, VkDescriptorPool mrphWsDescPool, uint32_t maxFramesInFlight);
+    void init(const tinyVk::Device* dvk, const tinyPool<tinyMeshVk>* meshPool, VkDescriptorSetLayout mrphWsDescSetLayout, VkDescriptorPool mrphWsDescPool, uint32_t maxFramesInFlight);
 
     MeshRender3D(const MeshRender3D&) = delete;
     MeshRender3D& operator=(const MeshRender3D&) = delete;
@@ -84,7 +84,7 @@ private:
 
     bool vkValid = false;
     const tinyPool<tinyMeshVk>* meshPool_ = nullptr;
-    const tinyVk::Device* deviceVk_ = nullptr;
+    const tinyVk::Device* dvk_ = nullptr;
     uint32_t maxFramesInFlight_ = 2;
 
     // Morph target weights

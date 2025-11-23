@@ -1563,7 +1563,7 @@ static inline int node_handle(lua_State* L) {
 static inline tinyRegistry* getFSRegistryFromLua(lua_State* L) {
     rtScene* scene = getSceneFromLua(L);
     if (!scene) return nullptr;
-    return scene->res().fsReg;
+    return scene->res().fsr;
 }
 
 // Helper to get FS userdata (just a marker, we access registry through __scene)

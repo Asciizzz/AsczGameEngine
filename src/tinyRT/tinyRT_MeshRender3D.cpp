@@ -3,13 +3,13 @@
 using namespace tinyRT;
 using namespace tinyVk;
 
-void MeshRender3D::init(const Device* deviceVk, const tinyPool<tinyMeshVk>* meshPool, VkDescriptorSetLayout mrphWsDescSetLayout, VkDescriptorPool mrphWsDescPool, uint32_t maxFramesInFlight) {
-    deviceVk_ = deviceVk;
+void MeshRender3D::init(const Device* dvk, const tinyPool<tinyMeshVk>* meshPool, VkDescriptorSetLayout mrphWsDescSetLayout, VkDescriptorPool mrphWsDescPool, uint32_t maxFramesInFlight) {
+    dvk_ = dvk;
     meshPool_ = meshPool;
     maxFramesInFlight_ = maxFramesInFlight;
     vkValid = true;
 
-    mrphWsDescSet_.allocate(deviceVk->device, mrphWsDescPool, mrphWsDescSetLayout);
+    mrphWsDescSet_.allocate(dvk->device, mrphWsDescPool, mrphWsDescSetLayout);
 }
 
 MeshRender3D& MeshRender3D::setMesh(tinyHandle meshHandle) {
@@ -24,17 +24,17 @@ MeshRender3D& MeshRender3D::setMesh(tinyHandle meshHandle) {
         matSlots_.push_back(part.material);
     }
 
-    vkWrite(deviceVk_, &mrphWsBuffer_, &mrphWsDescSet_, maxFramesInFlight_, mrphCount(), &unalignedSize_, &alignedSize_);
+    vkWrite(dvk_, &mrphWsBuffer_, &mrphWsDescSet_, maxFramesInFlight_, mrphCount(), &unalignedSize_, &alignedSize_);
     mrphWeights_.resize(mrphCount(), 0.0f);
 
     return *this;
 }
 
-void MeshRender3D::vkWrite(const tinyVk::Device* deviceVk, tinyVk::DataBuffer* buffer, tinyVk::DescSet* descSet, size_t maxFramesInFlight, size_t mrphCount, uint32_t* unalignedSize, uint32_t* alignedSize) {
+void MeshRender3D::vkWrite(const tinyVk::Device* dvk, tinyVk::DataBuffer* buffer, tinyVk::DescSet* descSet, size_t maxFramesInFlight, size_t mrphCount, uint32_t* unalignedSize, uint32_t* alignedSize) {
     if (mrphCount == 0) return; // No morph targets
 
     VkDeviceSize perFrameSize = sizeof(float) * mrphCount;
-    VkDeviceSize perFrameAligned = deviceVk->alignSizeSSBO(perFrameSize);
+    VkDeviceSize perFrameAligned = dvk->alignSizeSSBO(perFrameSize);
 
     bool isDynamic = maxFramesInFlight > 1;
     VkDeviceSize finalSize = isDynamic ? perFrameAligned * maxFramesInFlight : perFrameSize; // Non-dynamic can keep original size
@@ -46,7 +46,7 @@ void MeshRender3D::vkWrite(const tinyVk::Device* deviceVk, tinyVk::DataBuffer* b
         ->setDataSize(finalSize)
         .setUsageFlags(BufferUsage::Storage)
         .setMemPropFlags(MemProp::HostVisibleAndCoherent)
-        .createBuffer(deviceVk)
+        .createBuffer(dvk)
         .mapMemory();
 
     DescWrite()
@@ -58,7 +58,7 @@ void MeshRender3D::vkWrite(const tinyVk::Device* deviceVk, tinyVk::DataBuffer* b
             0,
             isDynamic ? perFrameAligned : perFrameSize
         } })
-        .updateDescSets(deviceVk->device);
+        .updateDescSets(dvk->device);
 }
 
 

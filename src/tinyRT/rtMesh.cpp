@@ -24,7 +24,7 @@ std::vector<VkVertexInputAttributeDescription> Static3D::Data::attrDescs() {
 
 
 
-void MeshStatic3D::init(const tinyVk::Device* deviceVk, const tinyPool<tinyMesh>* meshPool) {
+void MeshStatic3D::init(const tinyVk::Device* dvk, const tinyPool<tinyMesh>* meshPool) {
     meshPool_ = meshPool;
 
     // Create instance buffer with max size
@@ -33,5 +33,5 @@ void MeshStatic3D::init(const tinyVk::Device* deviceVk, const tinyPool<tinyMesh>
         .setDataSize(bufferSize)
         .setUsageFlags(BufferUsage::Vertex)
         .setMemPropFlags(MemProp::HostVisibleAndCoherent)
-        .createBuffer(deviceVk);
+        .createBuffer(dvk);
 }

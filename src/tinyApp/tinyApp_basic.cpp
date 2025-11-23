@@ -17,7 +17,7 @@ tinyApp::tinyApp(const char* title, uint32_t width, uint32_t height)
 }
 
 tinyApp::~tinyApp() {
-    vkDeviceWaitIdle(deviceVk->device);
+    vkDeviceWaitIdle(dvk->device);
     tinyUI::Shutdown();
 }
 
@@ -35,20 +35,20 @@ void tinyApp::initComponents() {
     instanceVk = MakeUnique<Instance>(extensions, enableValidationLayers);
     instanceVk->createSurface(windowManager->window);
 
-    deviceVk = MakeUnique<Device>(instanceVk->instance, instanceVk->surface);
+    dvk = MakeUnique<Device>(instanceVk->instance, instanceVk->surface);
 
-    VkDevice device = deviceVk->device;
-    VkPhysicalDevice pDevice = deviceVk->pDevice;
+    VkDevice device = dvk->device;
+    VkPhysicalDevice pDevice = dvk->pDevice;
 
     // Create renderer (which now manages depth manager, swap chain and render passes)
     renderer = MakeUnique<Renderer>(
-        deviceVk.get(),
+        dvk.get(),
         instanceVk->surface,
         windowManager->window,
         tinyApp::MAX_FRAMES_IN_FLIGHT
     );
 
-    project = MakeUnique<tinyProject>(deviceVk.get());
+    project = MakeUnique<tinyProject>(dvk.get());
 
     float aspectRatio = static_cast<float>(appWidth) / static_cast<float>(appHeight);
     project->camera()->setAspectRatio(aspectRatio);
@@ -247,7 +247,7 @@ void tinyApp::mainLoop() {
 
                     if (ext == "png" || ext == "jpg" || ext == "jpeg" || ext == "bmp") {
                         tinyTexture texture = tinyLoader::loadTexture(droppedFile);
-                        tinyTextureVk texVk = tinyTextureVk(std::move(texture), deviceVk.get());
+                        tinyTextureVk texVk = tinyTextureVk(std::move(texture), dvk.get());
 
                         project->fs().createFile(name, std::move(texVk));
                     }
@@ -374,5 +374,5 @@ void tinyApp::mainLoop() {
         }
     }
 
-    vkDeviceWaitIdle(deviceVk->device);
+    vkDeviceWaitIdle(dvk->device);
 }

@@ -37,7 +37,7 @@ struct MeshStatic3D {
 
 // ---------------------------------------------------------------
     MeshStatic3D() = default;
-    void init(const tinyVk::Device* deviceVk, const tinyPool<tinyMesh>* meshPool);
+    void init(const tinyVk::Device* dvk, const tinyPool<tinyMesh>* meshPool);
 
     MeshStatic3D(const MeshStatic3D&) = delete;
     MeshStatic3D& operator=(const MeshStatic3D&) = delete;

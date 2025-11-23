@@ -160,9 +160,9 @@ private:
 
 struct tinyMeshVk {
     tinyMeshVk() noexcept = default;
-    void init(const tinyVk::Device* deviceVk, VkDescriptorSetLayout mrphDsDescSetLayout, VkDescriptorPool mrphDsDescPool) {
-        deviceVk_ = deviceVk;
-        mrphDsDescSet_.allocate(deviceVk->device, mrphDsDescPool, mrphDsDescSetLayout);
+    void init(const tinyVk::Device* dvk, VkDescriptorSetLayout mrphDsDescSetLayout, VkDescriptorPool mrphDsDescPool) {
+        dvk_ = dvk;
+        mrphDsDescSet_.allocate(dvk->device, mrphDsDescPool, mrphDsDescSetLayout);
     }
 
     tinyMeshVk(const tinyMeshVk&) = delete;
@@ -205,12 +205,12 @@ struct tinyMeshVk {
         vrtxBuffer_
             .setDataSize(mesh_.vrtxData().size())
             .setUsageFlags(BufferUsage::Vertex)
-            .createDeviceLocalBuffer(deviceVk_, mesh_.vrtxData().data());
+            .createDeviceLocalBuffer(dvk_, mesh_.vrtxData().data());
 
         indxBuffer_ 
             .setDataSize(mesh_.indxData().size())
             .setUsageFlags(BufferUsage::Index)
-            .createDeviceLocalBuffer(deviceVk_, mesh_.indxData().data());
+            .createDeviceLocalBuffer(dvk_, mesh_.indxData().data());
 
         switch (mesh_.indxStride()) {
             case sizeof(uint8_t):  indxType_ = VK_INDEX_TYPE_UINT8;  break;
@@ -225,7 +225,7 @@ struct tinyMeshVk {
         mrphDsBuffer_
             .setDataSize(mrphSize)
             .setUsageFlags(BufferUsage::Storage)
-            .createDeviceLocalBuffer(deviceVk_, mesh_.mrphData().data());
+            .createDeviceLocalBuffer(dvk_, mesh_.mrphData().data());
 
         DescWrite()
             .setDstSet(mrphDsDescSet_)
@@ -236,7 +236,7 @@ struct tinyMeshVk {
                 0,
                 mrphSize
             } })
-            .updateDescSets(deviceVk_->device);
+            .updateDescSets(dvk_->device);
 
         // Clear the cpu mesh data
         mesh_.clearData();
@@ -266,7 +266,7 @@ struct tinyMeshVk {
     }
 
 private:
-    const tinyVk::Device* deviceVk_;
+    const tinyVk::Device* dvk_;
     tinyMesh mesh_;
 
     tinyVk::DataBuffer vrtxBuffer_;

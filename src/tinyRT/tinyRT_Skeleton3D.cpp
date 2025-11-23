@@ -3,14 +3,14 @@
 using namespace tinyVk;
 using namespace tinyRT;
 
-Skeleton3D* Skeleton3D::init(const tinyVk::Device* deviceVk, const tinyPool<tinySkeleton>* skelePool, VkDescriptorPool descPool, VkDescriptorSetLayout descSLayout, uint32_t maxFramesInFlight) {
+Skeleton3D* Skeleton3D::init(const tinyVk::Device* dvk, const tinyPool<tinySkeleton>* skelePool, VkDescriptorPool descPool, VkDescriptorSetLayout descSLayout, uint32_t maxFramesInFlight) {
     vkValid = true;
 
-    deviceVk_ = deviceVk;
+    dvk_ = dvk;
     skelePool_ = skelePool;
     maxFramesInFlight_ = maxFramesInFlight;
 
-    descSet_.allocate(deviceVk->device, descPool, descSLayout);
+    descSet_.allocate(dvk->device, descPool, descSLayout);
     return this;
 }
 
@@ -29,7 +29,7 @@ void Skeleton3D::set(tinyHandle skeletonHandle) {
         localPose_[i] = skeleton->bones[i].bindPose;
     }
 
-    vkWrite(deviceVk_, &skinBuffer_, &descSet_, maxFramesInFlight_, skinData_.size());
+    vkWrite(dvk_, &skinBuffer_, &descSet_, maxFramesInFlight_, skinData_.size());
 }
 
 void Skeleton3D::copy(const Skeleton3D* other) {
@@ -41,11 +41,11 @@ void Skeleton3D::copy(const Skeleton3D* other) {
     finalPose_ = other->finalPose_;
     skinData_ = other->skinData_;
 
-    vkWrite(deviceVk_, &skinBuffer_, &descSet_, maxFramesInFlight_, skinData_.size());
+    vkWrite(dvk_, &skinBuffer_, &descSet_, maxFramesInFlight_, skinData_.size());
 }
 
 
-void Skeleton3D::vkWrite(const tinyVk::Device* deviceVk, tinyVk::DataBuffer* buffer, tinyVk::DescSet* descSet, size_t maxFramesInFlight, uint32_t boneCount) {
+void Skeleton3D::vkWrite(const tinyVk::Device* dvk, tinyVk::DataBuffer* buffer, tinyVk::DescSet* descSet, size_t maxFramesInFlight, uint32_t boneCount) {
     if (boneCount == 0) return;
 
     VkDeviceSize perFrameSize = sizeof(glm::mat4) * boneCount;
@@ -53,7 +53,7 @@ void Skeleton3D::vkWrite(const tinyVk::Device* deviceVk, tinyVk::DataBuffer* buf
         ->setDataSize(perFrameSize * maxFramesInFlight)
         .setUsageFlags(BufferUsage::Storage)
         .setMemPropFlags(MemProp::HostVisibleAndCoherent)
-        .createBuffer(deviceVk)
+        .createBuffer(dvk)
         .mapMemory();
 
     DescWrite()
@@ -65,7 +65,7 @@ void Skeleton3D::vkWrite(const tinyVk::Device* deviceVk, tinyVk::DataBuffer* buf
             0,
             perFrameSize
         } })
-        .updateDescSets(deviceVk->device);
+        .updateDescSets(dvk->device);
 }
 
 void Skeleton3D::refresh(uint32_t boneIndex, bool reupdate) {

@@ -134,10 +134,10 @@ void tinyApp::initUI() {
 
     tinyUI::VulkanBackendData vkData;
     vkData.instance = instanceVk->instance;
-    vkData.physicalDevice = deviceVk->pDevice;
-    vkData.device = deviceVk->device;
-    vkData.queueFamily = deviceVk->queueFamilyIndices.graphicsFamily.value();
-    vkData.queue = deviceVk->graphicsQueue;
+    vkData.physicalDevice = dvk->pDevice;
+    vkData.device = dvk->device;
+    vkData.queueFamily = dvk->queueFamilyIndices.graphicsFamily.value();
+    vkData.queue = dvk->graphicsQueue;
     vkData.renderPass = renderer->getMainRenderPass();
     vkData.minImageCount = 2;
     vkData.imageCount = renderer->getSwapChainImageCount();

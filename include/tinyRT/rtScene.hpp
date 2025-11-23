@@ -72,7 +72,7 @@ class Scene {
     MeshStatic3D meshStatic3D_;
 
 // Internal helpers
-    [[nodiscard]] inline tinyRegistry& fsr() noexcept { return *res_.fsReg; }
+    [[nodiscard]] inline tinyRegistry& fsr() noexcept { return *res_.fsr; }
     [[nodiscard]] inline Node* node(tinyHandle nHandle) noexcept { return nodes_.get(nHandle); }
 public:
     Scene() noexcept = default;

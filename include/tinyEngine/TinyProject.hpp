@@ -14,7 +14,7 @@ public:
     static constexpr size_t maxMaterials = 65536; // Lol
     static constexpr size_t maxMeshes    = 65536; 
 
-    tinyProject(const tinyVk::Device* deviceVk_);
+    tinyProject(const tinyVk::Device* dvk_);
     ~tinyProject();
 
     tinyProject(const tinyProject&) = delete;
@@ -46,7 +46,7 @@ public:
     const tinyRegistry& r() const { return fs_->r(); }
 
     const SceneRes& sharedRes() const { return sharedRes_; }
-    const tinyVk::Device* vkDevice() const { return deviceVk_; }
+    const tinyVk::Device* vkDevice() const { return dvk_; }
 
     tinyCamera* camera() const { return camera_.get(); }
     tinyGlobal* global() const { return global_.get(); }
@@ -68,7 +68,7 @@ public:
     bool hasDeferredRms(DeferRmType type) const;
 
 private:
-    const tinyVk::Device* deviceVk_;
+    const tinyVk::Device* dvk_;
 
     // File removals that need special handling
     UnorderedMap<DeferRmType, std::vector<tinyHandle>> deferredRms_;

@@ -45,7 +45,7 @@ public:
     DataBuffer& setUsageFlags(VkBufferUsageFlags flags);
     DataBuffer& setMemPropFlags(VkMemoryPropertyFlags flags);
 
-    DataBuffer& createBuffer(const Device* deviceVk);
+    DataBuffer& createBuffer(const Device* dvk);
 
     DataBuffer& copyFrom(VkCommandBuffer cmdBuffer, VkBuffer srcBuffer, VkBufferCopy* copyRegion, uint32_t regionCount);
 
@@ -56,12 +56,12 @@ public:
 
     DataBuffer& copyData(const void* data, size_t size=0, size_t offset=0);
 
-    DataBuffer& createDeviceLocalBuffer(const Device* deviceVk, const void* initialData);
+    DataBuffer& createDeviceLocalBuffer(const Device* dvk, const void* initialData);
 
 private:
-    const Device* deviceVk_ = nullptr;
-    VkDevice device() const { return deviceVk_->device; }
-    VkPhysicalDevice pDevice() const { return deviceVk_->pDevice; }
+    const Device* dvk_ = nullptr;
+    VkDevice device() const { return dvk_->device; }
+    VkPhysicalDevice pDevice() const { return dvk_->pDevice; }
 
     VkBuffer buffer_ = VK_NULL_HANDLE;
     VkDeviceMemory memory_ = VK_NULL_HANDLE;

@@ -9,7 +9,7 @@ using namespace tinyVk;
 
 // Move constructor
 DataBuffer::DataBuffer(DataBuffer&& other) noexcept {
-    deviceVk_ = other.deviceVk_;
+    dvk_ = other.dvk_;
 
     buffer_ = other.buffer_;
     memory_ = other.memory_;
@@ -30,7 +30,7 @@ DataBuffer::DataBuffer(DataBuffer&& other) noexcept {
 DataBuffer& DataBuffer::operator=(DataBuffer&& other) noexcept {
     if (this != &other) {
         cleanup();
-        deviceVk_ = other.deviceVk_;
+        dvk_ = other.dvk_;
 
         buffer_ = other.buffer_;
         memory_ = other.memory_;
@@ -50,7 +50,7 @@ DataBuffer& DataBuffer::operator=(DataBuffer&& other) noexcept {
 }
 
 DataBuffer& DataBuffer::cleanup() {
-    if (!deviceVk_) return *this;
+    if (!dvk_) return *this;
 
     if (buffer_ != VK_NULL_HANDLE) {
         if (mapped_) {
@@ -80,11 +80,11 @@ DataBuffer& DataBuffer::setMemPropFlags(VkMemoryPropertyFlags flags) {
     memPropFlags_ = flags; return *this;
 }
 
-DataBuffer& DataBuffer::createBuffer(const Device* deviceVk) {
-    deviceVk_ = deviceVk;
+DataBuffer& DataBuffer::createBuffer(const Device* dvk) {
+    dvk_ = dvk;
 
-    if (!deviceVk_) {
-        throw std::runtime_error("DataBuffer: Vulkan deviceVk_ not initialized");
+    if (!dvk_) {
+        throw std::runtime_error("DataBuffer: Vulkan dvk_ not initialized");
     }
 
     cleanup();
@@ -147,27 +147,27 @@ DataBuffer& DataBuffer::copyData(const void* data, size_t size, size_t offset) {
     return *this;
 }
 
-DataBuffer& DataBuffer::createDeviceLocalBuffer(const Device* deviceVk, const void* initialData) {
+DataBuffer& DataBuffer::createDeviceLocalBuffer(const Device* dvk, const void* initialData) {
     // --- staging buffer_ (CPU visible) ---
     DataBuffer stagingBuffer;
     stagingBuffer
         .setDataSize(dataSize_)
         .setUsageFlags(VK_BUFFER_USAGE_TRANSFER_SRC_BIT)
         .setMemPropFlags(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
-        .createBuffer(deviceVk)
+        .createBuffer(dvk)
         .uploadData(initialData);
 
     // Update usage flags to include transfer dst
     usageFlags_ = usageFlags_ | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     setUsageFlags(usageFlags_);
 
-    // Update memory_ properties to deviceVk_ local
+    // Update memory_ properties to dvk_ local
     memPropFlags_ = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
     setMemPropFlags(memPropFlags_);
 
-    createBuffer(deviceVk);
+    createBuffer(dvk);
 
-    TempCmd copyCmd(deviceVk, deviceVk->transferPoolWrapper);
+    TempCmd copyCmd(dvk, dvk->transferPoolWrapper);
 
     VkBufferCopy copyRegion{};
     copyRegion.srcOffset = 0;

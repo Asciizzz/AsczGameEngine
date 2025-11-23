@@ -3,20 +3,22 @@
 #include "tinyVk/Resource/DataBuffer.hpp"
 #include "tinyVk/Resource/Descriptor.hpp"
 
+#include "tinyRT/rtMesh.hpp" // In the future rename this to mesh machine
+
 // Descriptor accessors
 
 VkDescriptorPool SceneRes::descPool(tinyHandle handle) const {
-    if (auto* ptr = fsReg->get<tinyVk::DescPool>(handle)) return *ptr;
+    if (auto* ptr = fsr->get<tinyVk::DescPool>(handle)) return *ptr;
     return VK_NULL_HANDLE;
 }
 
 VkDescriptorSetLayout SceneRes::descLayout(tinyHandle handle) const {
-    if (auto* ptr = fsReg->get<tinyVk::DescSLayout>(handle)) return *ptr;
+    if (auto* ptr = fsr->get<tinyVk::DescSLayout>(handle)) return *ptr;
     return VK_NULL_HANDLE;
 }
 
 VkDescriptorSet SceneRes::descSet(tinyHandle handle) const {
-    if (auto* ptr = fsReg->get<tinyVk::DescSet>(handle)) return *ptr;
+    if (auto* ptr = fsr->get<tinyVk::DescSet>(handle)) return *ptr;
     return VK_NULL_HANDLE;
 }
 
@@ -32,21 +34,25 @@ VkDescriptorSetLayout SceneRes::mrphDsDescLayout() const { return descLayout(hMr
 VkDescriptorPool SceneRes::mrphWsDescPool() const { return descPool(hMrphWsDescPool); }
 VkDescriptorSetLayout SceneRes::mrphWsDescLayout() const { return descLayout(hMrphWsDescLayout); }
 
+tinyRT::MeshStatic3D* SceneRes::meshStatic3D() {
+    return fsr->get<rtMeshStatic3D>(hMeshStatic3D);
+}
+
 // Default resources accessors
 
 #include "tinyMaterial.hpp"
 #include "tinyTexture.hpp"
 
 const tinyMaterialVk* SceneRes::defaultMaterialVk() const {
-    return fsReg->get<tinyMaterialVk>(hDefaultMaterialVk);
+    return fsr->get<tinyMaterialVk>(hDefaultMaterialVk);
 }
 
 const tinyTextureVk* SceneRes::defaultTextureVk0() const {
-    return fsReg->get<tinyTextureVk>(hDefaultTextureVk0);
+    return fsr->get<tinyTextureVk>(hDefaultTextureVk0);
 }
 
 const tinyTextureVk* SceneRes::defaultTextureVk1() const {
-    return fsReg->get<tinyTextureVk>(hDefaultTextureVk1);
+    return fsr->get<tinyTextureVk>(hDefaultTextureVk1);
 }
 
 VkDescriptorSet SceneRes::dummySkinDescSet() const { return descSet(hDummySkinDescSet); }

@@ -45,7 +45,7 @@ private:
     UniquePtr<tinyChrono> fpsManager;
 
     UniquePtr<tinyVk::Instance> instanceVk;
-    UniquePtr<tinyVk::Device> deviceVk;
+    UniquePtr<tinyVk::Device> dvk;
 
     UniquePtr<tinyVk::Renderer> renderer;
 

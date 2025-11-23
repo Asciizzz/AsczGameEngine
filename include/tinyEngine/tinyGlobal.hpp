@@ -48,5 +48,5 @@ public:
     tinyVk::DataBuffer dataBuffer;
     tinyVk::DescSet descSet;
 
-    void vkCreate(const tinyVk::Device* deviceVk);
+    void vkCreate(const tinyVk::Device* dvk);
 };

@@ -8,8 +8,8 @@
 
 using namespace tinyVk;
 
-Swapchain::Swapchain(const Device* deviceVk, VkSurfaceKHR surface, SDL_Window* window)
-    : deviceVk(deviceVk), surface(surface) {
+Swapchain::Swapchain(const Device* dvk, VkSurfaceKHR surface, SDL_Window* window)
+    : dvk(dvk), surface(surface) {
     createSwapChain(window);
     createImageViews();
 }
@@ -19,7 +19,7 @@ Swapchain::~Swapchain() {
 }
 
 void Swapchain::createSwapChain(SDL_Window* window) {
-    SwapChainSupportDetails swapchainSupport = querySwapChainSupport(deviceVk->pDevice);
+    SwapChainSupportDetails swapchainSupport = querySwapChainSupport(dvk->pDevice);
 
     VkSurfaceFormatKHR sc_surfaceFormat = chooseSwapSurfaceFormat(swapchainSupport.formats);
     VkPresentModeKHR sc_presentMode = chooseSwapPresentMode(swapchainSupport.presentModes);
@@ -40,7 +40,7 @@ void Swapchain::createSwapChain(SDL_Window* window) {
     createInfo.imageArrayLayers = 1;
     createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
-    QueueFamilyIndices indices = deviceVk->queueFamilyIndices;
+    QueueFamilyIndices indices = dvk->queueFamilyIndices;
     uint32_t queueFamilyIndices[] = {indices.graphicsFamily.value(), indices.presentFamily.value()};
 
     if (indices.graphicsFamily != indices.presentFamily) {
@@ -56,18 +56,18 @@ void Swapchain::createSwapChain(SDL_Window* window) {
     createInfo.presentMode = sc_presentMode;
     createInfo.clipped = VK_TRUE;
 
-    if (vkCreateSwapchainKHR(deviceVk->device, &createInfo, nullptr, &swapchain) != VK_SUCCESS) {
+    if (vkCreateSwapchainKHR(dvk->device, &createInfo, nullptr, &swapchain) != VK_SUCCESS) {
         throw std::runtime_error("failed to create swap chain!");
     }
 
-    vkGetSwapchainImagesKHR(deviceVk->device, swapchain, &imageCount, nullptr);
+    vkGetSwapchainImagesKHR(dvk->device, swapchain, &imageCount, nullptr);
 
     std::vector<VkImage> rawImages(imageCount);
-    vkGetSwapchainImagesKHR(deviceVk->device, swapchain, &imageCount, rawImages.data());
+    vkGetSwapchainImagesKHR(dvk->device, swapchain, &imageCount, rawImages.data());
 
     for (const auto& image : rawImages) {
-        // images.emplace_back(deviceVk->device);
-        ImageVk img = ImageVk(deviceVk->device);
+        // images.emplace_back(dvk->device);
+        ImageVk img = ImageVk(dvk->device);
         img.wrapExternalImage(image, sc_surfaceFormat.format, sc_extent);
 
         images.push_back(std::move(img));
@@ -89,7 +89,7 @@ void Swapchain::createImageViews() {
 
 void Swapchain::cleanup() {
     if (swapchain != VK_NULL_HANDLE) {
-        vkDestroySwapchainKHR(deviceVk->device, swapchain, nullptr);
+        vkDestroySwapchainKHR(dvk->device, swapchain, nullptr);
         swapchain = VK_NULL_HANDLE;
     }
 

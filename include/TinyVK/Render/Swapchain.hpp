@@ -16,7 +16,7 @@ struct SwapChainSupportDetails {
 
 class Swapchain {
 public:
-    Swapchain(const Device* deviceVk, VkSurfaceKHR surface, SDL_Window* window);
+    Swapchain(const Device* dvk, VkSurfaceKHR surface, SDL_Window* window);
     ~Swapchain();
     void cleanup();
 
@@ -50,7 +50,7 @@ public:
     void createImageViews();
 
 private:
-    const Device* deviceVk;
+    const Device* dvk;
     VkSurfaceKHR surface;
 
     VkSwapchainKHR swapchain = VK_NULL_HANDLE;

@@ -7,18 +7,18 @@
 
 using namespace tinyVk;
 
-void tinyGlobal::vkCreate(const tinyVk::Device* deviceVk) {
+void tinyGlobal::vkCreate(const tinyVk::Device* dvk) {
     // get the true aligned size (for dynamic UBO offsets)
-    alignedSize = deviceVk->alignSizeUBO(sizeof(tinyGlobal::UBO));
+    alignedSize = dvk->alignSizeUBO(sizeof(tinyGlobal::UBO));
 
     dataBuffer
         .setDataSize(alignedSize * maxFramesInFlight)
         .setUsageFlags(BufferUsage::Uniform)
         .setMemPropFlags(MemProp::HostVisibleAndCoherent)
-        .createBuffer(deviceVk)
+        .createBuffer(dvk)
         .mapMemory();
 
-    VkDevice device = deviceVk->device;
+    VkDevice device = dvk->device;
 
     descSLayout.create(device, { {0, DescType::UniformBufferDynamic, 1, ShaderStage::VertexAndFragment, nullptr} });
     descPool.create(device, { {DescType::UniformBufferDynamic, 1} }, 1);
