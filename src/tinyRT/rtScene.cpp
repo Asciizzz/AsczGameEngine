@@ -172,6 +172,9 @@ void Scene::update(FrameStart frameStart) noexcept {
 
     glm::mat4 parentMat = glm::mat4(1.0f);
 
+    // Testing ground
+    testRenders.clear();
+
     std::function<void(tinyHandle)> updateNode = [&](tinyHandle nHandle) {
         Node* node = nodes_.get(nHandle);
         if (!node) return;
@@ -182,6 +185,13 @@ void Scene::update(FrameStart frameStart) noexcept {
                 tranfm3D->local.update();
                 tranfm3D->world = parentMat * tranfm3D->local.Mat4;
                 parentMat = tranfm3D->world;
+            }
+
+            if (rtMESHRD3D* meshRD3D = rt_.get<rtMESHRD3D>(compHandle)) {
+                TestRender tr;
+                tr.model = parentMat;
+                tr.mesh = meshRD3D->mesh;
+                testRenders.push_back(tr);
             }
         }
 

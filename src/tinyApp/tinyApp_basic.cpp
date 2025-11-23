@@ -122,25 +122,23 @@ void tinyApp::initComponents() {
     
     pipelineStatic = MakeUnique<PipelineRaster>(device, staticCfg);
 
-    // ===== Pipeline 4: Mesh Only =====
+    // ===== Pipeline 4: Test =====
 
-    RasterCfg meshOnlyCfg;
-    meshOnlyCfg.renderPass = renderPass;
-    meshOnlyCfg.setLayouts = {
+    RasterCfg testCfg;
+    testCfg.renderPass = renderPass;
+    testCfg.setLayouts = {
         project->descSLayout_Global()
     };
     // Push constants for mesh only (80 bytes)
-    VkPushConstantRange meshOnlyPushConstant{};
-    meshOnlyPushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    meshOnlyPushConstant.offset = 0;
-    meshOnlyPushConstant.size = 64;
-    meshOnlyCfg.pushConstantRanges = { meshOnlyPushConstant };
-
-    meshOnlyCfg.withShaders("Shaders/bin/Rasterize/MeshOnly.vert.spv", "Shaders/bin/Rasterize/MeshOnly.frag.spv")
+    VkPushConstantRange testPushConstant{};
+    testPushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    testPushConstant.offset = 0;
+    testPushConstant.size = 64;
+    testCfg.pushConstantRanges = { testPushConstant };
+    testCfg.withShaders("Shaders/bin/Test/Test.vert.spv", "Shaders/bin/Test/Test.frag.spv")
         .withVertexInput({ vstaticBind }, { vstaticAttrs });
 
-    pipelineMeshOnly = MakeUnique<PipelineRaster>(device, meshOnlyCfg);
-
+    pipelineTest = MakeUnique<PipelineRaster>(device, testCfg);
     // ===== Initialize UI System =====
     initUI();
 
@@ -169,13 +167,13 @@ bool tinyApp::checkWindowResize() {
     pipelineSky->cfg.renderPass = renderPass;
     pipelineRigged->cfg.renderPass = renderPass;
     pipelineStatic->cfg.renderPass = renderPass;
-    pipelineMeshOnly->cfg.renderPass = renderPass;
+    pipelineTest->cfg.renderPass = renderPass;
 
     // Recreate pipelines
     pipelineSky->recreate();
     pipelineRigged->recreate();
     pipelineStatic->recreate();
-    pipelineMeshOnly->recreate();
+    pipelineTest->recreate();
 
     
     // Update UI render pass
@@ -343,17 +341,11 @@ void tinyApp::mainLoop() {
 
             rendererRef.drawSky(project.get(), pipelineSky.get());
 
-            // rendererRef.drawScene(
-            //     project.get(), curScene,
-            //     pipelineRigged.get(),
-            //     pipelineStatic.get()
-            // );
-
-            // For the time being draw mesh only pipeline
-            // rendererRef.drawSceneMeshOnly(
-            //     project.get(), curScene,
-            //     pipelineMeshOnly.get()
-            // );
+            // For the time being draw test pipeline
+            rendererRef.drawTest(
+                project.get(), curScene,
+                pipelineTest.get()
+            );
 
             // Render UI
             VkCommandBuffer currentCmd = rendererRef.getCurrentCommandBuffer();

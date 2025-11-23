@@ -200,6 +200,15 @@ public:
 
 // Scene stuff and things idk
     void update(FrameStart frameStart) noexcept;
+
+
+// Testing ground
+
+    struct TestRender {
+        glm::mat4 model;
+        tinyHandle mesh;
+    };
+    std::vector<TestRender> testRenders;
 };
 
 } // namespace tinyRT

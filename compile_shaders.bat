@@ -9,8 +9,8 @@ glslc Shaders/raw/Rasterize/TestStatic.vert -o Shaders/bin/Rasterize/TestStatic.
 glslc Shaders/raw/Rasterize/TestRigged.vert -o Shaders/bin/Rasterize/TestRigged.vert.spv
 glslc Shaders/raw/Rasterize/TestSingle.frag -o Shaders/bin/Rasterize/TestSingle.frag.spv
 
-
-glslc Shaders/raw/Rasterize/MeshOnly.vert -o Shaders/bin/Rasterize/MeshOnly.vert.spv
-glslc Shaders/raw/Rasterize/MeshOnly.frag -o Shaders/bin/Rasterize/MeshOnly.frag.spv
+REM Tests
+glslc Shaders/raw/Test/Test.vert -o Shaders/bin/Test/Test.vert.spv
+glslc Shaders/raw/Test/Test.frag -o Shaders/bin/Test/Test.frag.spv
 
 echo Compiling completed!

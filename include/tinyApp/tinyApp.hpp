@@ -54,7 +54,7 @@ private:
     UniquePtr<tinyVk::PipelineRaster> pipelineRigged;
     UniquePtr<tinyVk::PipelineRaster> pipelineStatic;
 
-    UniquePtr<tinyVk::PipelineRaster> pipelineMeshOnly;
+    UniquePtr<tinyVk::PipelineRaster> pipelineTest;
 
     UniquePtr<tinyProject> project; // New gigachad system
 

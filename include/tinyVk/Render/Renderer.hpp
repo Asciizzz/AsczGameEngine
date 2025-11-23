@@ -52,10 +52,7 @@ public:
     DepthImage* getDepthManager() const { return depthImage.get(); }
 
     void drawSky(const tinyProject* project, const PipelineRaster* skyPipeline) const;
-
-    void drawScene(tinyProject* project, rtScene* activeScene, const PipelineRaster* plRigged, const PipelineRaster* plStatic) const;
-
-    void drawSceneMeshOnly(tinyProject* project, rtScene* activeScene, const PipelineRaster* rPipeline) const;
+    void drawTest(const tinyProject* project, const rtScene* scene, const PipelineRaster* testPipeline) const;
 
     // Safe resource deletion with Vulkan synchronization
     void processPendingRemovals(tinyProject* project, rtScene* activeScene);
