@@ -19,6 +19,8 @@ struct Node {
     // Entity data
     std::map<tinyType::ID, tinyHandle> comps;
 
+// Some helpers
+
     int whereChild(tinyHandle child) const noexcept {
         for (size_t i = 0; i < children.size(); ++i) {
             if (children[i] == child) return static_cast<int>(i);
@@ -39,6 +41,23 @@ struct Node {
         children.erase(children.begin() + idx);
         return true;
     }
+
+    template<typename T>
+    bool has() const noexcept {
+        return comps.find(tinyType::TypeID<T>()) != comps.end();
+    }
+
+    template<typename T>
+    tinyHandle get() const noexcept {
+        auto it = comps.find(tinyType::TypeID<T>());
+        return it != comps.end() ? it->second : tinyHandle();
+    }
+
+    template<typename T>
+    void erase() noexcept {
+        auto it = comps.find(tinyType::TypeID<T>());
+        if (it != comps.end()) comps.erase(it);
+    }
 };
 
 class Scene {
@@ -55,9 +74,6 @@ class Scene {
 // Internal helpers
     [[nodiscard]] inline tinyRegistry& fsr() noexcept { return *res_.fsReg; }
     [[nodiscard]] inline Node* node(tinyHandle nHandle) noexcept { return nodes_.get(nHandle); }
-
-    void nEraseComp(tinyHandle nHandle) noexcept;
-
 public:
     Scene() noexcept = default;
     void init(const SceneRes& res) noexcept;
@@ -84,7 +100,7 @@ public:
         template<typename T>
         bool has() const noexcept {
             if (!scene_ || !node_) return false;
-            return node_->comps.find(tinyType::TypeID<T>()) != node_->comps.end();
+            return node_->has<T>();
         }
 
     // Name APIs
@@ -109,6 +125,11 @@ public:
         template<typename T>
         T* writeComp() noexcept {
             return scene_ ? scene_->nWriteComp<T>(handle_) : nullptr;
+        }
+
+        template<typename T>
+        void eraseComp() noexcept {
+            if (scene_) scene_->nEraseComp<T>(handle_);
         }
 
     private:
@@ -151,13 +172,12 @@ public:
     inline tinyHandle nReparent(tinyHandle nHandle, tinyHandle nNewParent) noexcept;
 
     template<typename T>
-    T* nWriteComp(tinyHandle nHandle) noexcept {
+    T* nWriteComp(tinyHandle nHandle) noexcept { // Automatic creation
         Node* node = nodes_.get(nHandle);
         if (!node) return nullptr;
 
         // If already exists, return existing
-        auto it = node->comps.find(tinyType::TypeID<T>());
-        if (it != node->comps.end()) return rt_.get<T>(it->second);
+        if (node->has<T>()) return rt_.get<T>(node->get<T>());
 
         T comp{};
         tinyHandle compHandle = rt_.emplace<T>(std::move(comp));
@@ -165,6 +185,17 @@ public:
 
         return rt_.get<T>(compHandle);
     }
+
+    template<typename T>
+    void nEraseComp(tinyHandle nHandle) noexcept {
+        Node* node = nodes_.get(nHandle);
+        if (!node || !node->has<T>()) return;
+
+        rt_.remove(node->get<T>());
+        node->erase<T>();
+    }
+
+    void nEraseAllComps(tinyHandle nHandle) noexcept;
 
 // Special scene methods
     void cleanse() noexcept {} // Rewire pool into clean DFS order (to be implemented)

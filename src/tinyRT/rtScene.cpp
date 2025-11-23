@@ -69,18 +69,6 @@ void Scene::NWrap::erase(tinyHandle child, bool recursive, size_t* count) noexce
 // Actual scene APIs
 // ---------------------------------------------------------------
 
-void Scene::nEraseComp(tinyHandle nHandle) noexcept {
-    Node* node = nodes_.get(nHandle);
-    if (!node) return;
-
-    for (auto& [_, rtHandle] : node->comps) {
-        rt_.remove(rtHandle);
-    }
-
-    node->comps.clear();
-}
-
-
 std::vector<tinyHandle> Scene::nQueue(tinyHandle start) noexcept {
     std::vector<tinyHandle> queue; // A DFS queue
 
@@ -121,7 +109,7 @@ void Scene::nErase(tinyHandle nHandle, bool recursive, size_t* count) noexcept {
     }
 
     if (!recursive) {
-        nEraseComp(nHandle);
+        nEraseAllComps(nHandle);
 
         nodes_.remove(nHandle);
         if (count) (*count) = 1;
@@ -130,7 +118,7 @@ void Scene::nErase(tinyHandle nHandle, bool recursive, size_t* count) noexcept {
 
     std::vector<tinyHandle> toErase = nQueue(nHandle);
     for (tinyHandle h : toErase) {
-        nEraseComp(h);
+        nEraseAllComps(h);
         nodes_.remove(h);
     }
     if (count) (*count) = toErase.size();
@@ -163,6 +151,18 @@ tinyHandle Scene::nReparent(tinyHandle nHandle, tinyHandle nNewParent) noexcept 
     newParent->addChild(nHandle);
 
     return nHandle;
+}
+
+
+void Scene::nEraseAllComps(tinyHandle nHandle) noexcept {
+    Node* node = nodes_.get(nHandle);
+    if (!node) return;
+
+    for (auto& [_, rtHandle] : node->comps) {
+        rt_.remove(rtHandle);
+    }
+
+    node->comps.clear();
 }
 
 // ---------------------------------------------------------------

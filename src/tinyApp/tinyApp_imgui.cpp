@@ -814,57 +814,52 @@ static void RenderFileNodeHierarchy() {
 
 
 // Scene node inspector
-/*
-static void RenderTRFM3D(const tinyFS& fs, rtScene* scene, rtScene::NWrap& wrap) {
-    tinyRT_TRFM3D* trfm3D = wrap.trfm3D;
+static void RenderTRANFM3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle) {
+    rtTRANFM3D* trfm3D = scene->nWriteComp<rtTRANFM3D>(nHandle);
     if (!trfm3D) return;
 
-    glm::vec3 translation, scale, skew;
-    glm::quat rotation;
-    glm::vec4 perspective;
-    glm::decompose(trfm3D->local, scale, rotation, translation, skew, perspective);
-
-    // Helper to recompose after editing
-    auto recompose = [&]() {
-        glm::mat4 t = glm::translate(glm::mat4(1.0f), translation);
-        glm::mat4 r = glm::mat4_cast(rotation);
-        glm::mat4 s = glm::scale(glm::mat4(1.0f), scale);
-        trfm3D->local = t * r * s;
-    };
+    Tr3D& local = trfm3D->local;
 
     static glm::quat initialRotation;
     static bool isDraggingRotation = false;
     static glm::vec3 displayEuler;
 
-    if (!isDraggingRotation) {
-        displayEuler = glm::eulerAngles(rotation) * (180.0f / 3.14159265f);
-    }
-
-    if (ImGui::DragFloat3("Translation", &translation.x, 0.1f)) recompose();
+    if (ImGui::DragFloat3("Translation", &local.T.x, 0.1f)) { }
 
     if (ImGui::DragFloat3("Rotation", &displayEuler.x, 0.5f)) {
         // Euler angle is a b*tch
         if (!isDraggingRotation) {
-            initialRotation = rotation;
+            initialRotation = local.R;
             isDraggingRotation = true;
         }
         glm::vec3 initialEuler = glm::eulerAngles(initialRotation) * (180.0f / 3.14159265f);
         glm::vec3 delta = displayEuler - initialEuler;
-        rotation = initialRotation * glm::quat(glm::radians(delta));
-        recompose();
+        local.R = initialRotation * glm::quat(glm::radians(delta));
     }
 
     if (!ImGui::IsItemActive()) {
         isDraggingRotation = false;
     }
 
-    if (ImGui::DragFloat3("Scale", &scale.x, 0.1f)) recompose();
+    if (ImGui::DragFloat3("Scale", &local.S.x, 0.1f)) { }
 
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.2f, 0.2f, 1.0f));
-    if (ImGui::Button("Reset", ImVec2(-1, 0))) trfm3D->local = trfm3D->base;
+    if (ImGui::Button("Reset", ImVec2(-1, 0))) {
+        local = Tr3D();
+        displayEuler = glm::vec3(0.0f);
+    }
     ImGui::PopStyleColor();
+
+    // Display the world transform
+    ImGui::Separator();
+    ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "World Transform:");
+    glm::mat4 world = trfm3D->world;
+    for (int i = 0; i < 4; ++i) {
+        ImGui::Text("[%.3f, %.3f, %.3f, %.3f]", world[i][0], world[i][1], world[i][2], world[i][3]);
+    }
 }
 
+/*
 
 static void RenderMESHRD(const tinyFS& fs, rtScene* scene, rtScene::NWrap& wrap) {
     tinyRT_MESHRD* meshRD = wrap.meshRD;
@@ -1149,6 +1144,7 @@ static void RenderSCRIPT(const tinyFS& fs, rtScene* scene, rtScene::NWrap& wrap)
     }
     ImGui::PopStyleColor(2);
 }
+*/
 
 struct CompInfo {
     std::string name;
@@ -1198,31 +1194,25 @@ static void RenderSceneNodeInspector(tinyProject* project) {
     if (!scene) return;
 
     tinyHandle handle = State::selected;
-    if (!handle.is<tinyNodeRT>()) return;
+    if (!handle.is<rtNode>()) return;
 
-    const tinyNodeRT* node = scene->node(handle);
-    if (!node) {
-        ImGui::Text("Invalid node.");
-        return;
-    }
+    rtScene::NWrap wrap = scene->nWrap(handle);
     
-    ImGui::Text("%s", node->name.c_str());
-    // ImGui::Separator();
+    ImGui::Text("%s", wrap.cname());
+    ImGui::Separator();
 
     ImGui::SameLine();
     ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.9f, 1.0f), "[HDL: %zu, %zu]", handle.index, handle.version);
-
-    rtScene::NWrap wrap = scene->Wrap(handle);
 
     const tinyFS& fs = project->fs();
 
     // Collect components
     std::vector<CompInfo> components;
     components.push_back({
-        "Transform 3D", wrap.trfm3D != nullptr,
-        [&]() { RenderTRFM3D(fs, scene, wrap); },
-        [&scene, handle]() { scene->writeComp<tinyNodeRT::TRFM3D>(handle); },
-        [&scene, handle]() { scene->removeComp<tinyNodeRT::TRFM3D>(handle); }
+        "Transform 3D", wrap.has<rtTRANFM3D>(),
+        [&]() { RenderTRANFM3D(fs, scene, handle); },
+        [&]() { wrap.writeComp<rtTRANFM3D>(); },
+        [&]() { wrap.eraseComp<rtTRANFM3D>(); }
     });
     // components.push_back({
     //     "Mesh Renderer 3D", wrap.meshRD != nullptr,
@@ -1236,18 +1226,18 @@ static void RenderSceneNodeInspector(tinyProject* project) {
     //     [&scene, handle]() { scene->writeComp<tinyNodeRT::BONE3D>(handle); },
     //     [&scene, handle]() { scene->removeComp<tinyNodeRT::BONE3D>(handle); }
     // });
-    components.push_back({
-        "Skeleton 3D", wrap.skel3D != nullptr,
-        [&]() { RenderSKEL3D(fs, scene, wrap); },
-        [&scene, handle]() { scene->writeComp<tinyNodeRT::SKEL3D>(handle); },
-        [&scene, handle]() { scene->removeComp<tinyNodeRT::SKEL3D>(handle); }
-    });
-    components.push_back({
-        "Runtime Script", wrap.script != nullptr,
-        [&]() { RenderSCRIPT(fs, scene, wrap); },
-        [&scene, handle]() { scene->writeComp<tinyNodeRT::SCRIPT>(handle); },
-        [&scene, handle]() { scene->removeComp<tinyNodeRT::SCRIPT>(handle); }
-    });
+    // components.push_back({
+    //     "Skeleton 3D", wrap.skel3D != nullptr,
+    //     [&]() { RenderSKEL3D(fs, scene, wrap); },
+    //     [&scene, handle]() { scene->writeComp<tinyNodeRT::SKEL3D>(handle); },
+    //     [&scene, handle]() { scene->removeComp<tinyNodeRT::SKEL3D>(handle); }
+    // });
+    // components.push_back({
+    //     "Runtime Script", wrap.script != nullptr,
+    //     [&]() { RenderSCRIPT(fs, scene, wrap); },
+    //     [&scene, handle]() { scene->writeComp<tinyNodeRT::SCRIPT>(handle); },
+    //     [&scene, handle]() { scene->removeComp<tinyNodeRT::SCRIPT>(handle); }
+    // });
 
     // Sort: active first
     std::sort(components.begin(), components.end(), [](const CompInfo& a, const CompInfo& b) {
@@ -1259,7 +1249,6 @@ static void RenderSceneNodeInspector(tinyProject* project) {
         RenderCOMP(comp);
     }
 }
-*/
 
 // File inspector
 static void RenderFileInspector(tinyProject* project) {
@@ -1347,7 +1336,7 @@ static void RenderFileInspector(tinyProject* project) {
 }
 
 static void RenderInspector(tinyProject* project) {
-    // RenderSceneNodeInspector(project);
+    RenderSceneNodeInspector(project);
     RenderFileInspector(project);
 }
 
