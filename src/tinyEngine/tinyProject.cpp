@@ -43,8 +43,6 @@ tinyProject::~tinyProject() {
 tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
     parentFolder = parentFolder ? parentFolder : fs_->root();
 
-/*
-
     tinyHandle fnModelFolder = fs_->createFolder(model.name, parentFolder);
 
     // Import textures to registry
@@ -60,6 +58,8 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
             glbTexRHandle.push_back(dataHandle);
         }
     }
+
+/*
 
     std::vector<tinyHandle> glmMatRHandle;
     if (!model.materials.empty()) {
@@ -100,6 +100,7 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
             glmMatRHandle.push_back(dataHandle);
         }
     }
+*/
 
     std::vector<tinyHandle> glbMeshRHandle;
     if (!model.meshes.empty()) {
@@ -108,9 +109,9 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
         for (auto& mMesh : model.meshes) {
             // Remap material indices
             std::vector<tinyMesh::Part>& remapPart = mMesh.mesh.parts();
-            for (auto& part : remapPart) {
-                part.material = linkHandle(part.material.index, glmMatRHandle);
-            }
+            // for (auto& part : remapPart) {
+            //     part.material = linkHandle(part.material.index, glmMatRHandle);
+            // }
 
             tinyMeshVk meshVk;
             meshVk.init(dvk_, sharedRes_.mrphDsDescLayout(), sharedRes_.mrphDsDescPool());
@@ -123,6 +124,7 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
         }
     }
 
+/*
     // Import skeletons to registry
     std::vector<tinyHandle> glbSkeleRHandle;
 
@@ -238,7 +240,6 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
     // Add scene to registry
     tinyHandle fnHandle = fs_->createFile(model.name, std::move(scene), fnModelFolder);
     return fs_->dataHandle(fnHandle); // Return the scene's registry handle
-
 */
 
     return tinyHandle();

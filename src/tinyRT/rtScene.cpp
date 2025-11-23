@@ -10,9 +10,6 @@ void Scene::init(const SceneRes& res) noexcept {
     rootNode.name = "Root";
 
     root_ = nodes_.emplace(std::move(rootNode));
-
-    // Initialize mesh machines
-    meshStatic3D_.init(res.dvk, &fsr().view<tinyMesh>());
 }
 
 void Scene::NWrap::set(Scene* scene, tinyHandle h) noexcept {

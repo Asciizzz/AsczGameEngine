@@ -68,11 +68,9 @@ class Scene {
     tinyPool<Node> nodes_;
     tinyHandle root_;
 
-// Machines vroom vroom, Max Verstappen
-    MeshStatic3D meshStatic3D_;
-
 // Internal helpers
     [[nodiscard]] inline tinyRegistry& fsr() noexcept { return *res_.fsr; }
+
     [[nodiscard]] inline Node* node(tinyHandle nHandle) noexcept { return nodes_.get(nHandle); }
 public:
     Scene() noexcept = default;
@@ -155,7 +153,7 @@ public:
     [[nodiscard]] SceneRes& res() noexcept { return res_; }
     [[nodiscard]] const SceneRes& res() const noexcept { return res_; }
 
-    [[nodiscard]] MeshStatic3D& meshStatic3D() noexcept { return meshStatic3D_; }
+    [[nodiscard]] inline rtMeshStatic3D& meshStatic3D() noexcept { return *res_.meshStatic3D(); }
 
 // Node APIs
     [[nodiscard]] tinyHandle root() const noexcept { return root_; }
