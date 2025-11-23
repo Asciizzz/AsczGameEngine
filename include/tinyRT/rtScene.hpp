@@ -17,7 +17,7 @@ struct Node {
     std::vector<tinyHandle> children;
 
     // Entity data
-    std::unordered_map<tinyType::ID, tinyHandle> comps;
+    std::map<tinyType::ID, tinyHandle> comps;
 
     int whereChild(tinyHandle child) const noexcept {
         for (size_t i = 0; i < children.size(); ++i) {
@@ -108,17 +108,7 @@ public:
 
         template<typename T>
         T* writeComp() noexcept {
-            if (!scene_ || !node_) return nullptr;
-
-            // If already exists, return existing
-            auto it = node_->comps.find(tinyType::TypeID<T>());
-            if (it != node_->comps.end()) return rt().get<T>(it->second);
-
-            T comp{};
-            tinyHandle compHandle = rt().emplace<T>(std::move(comp));
-            node_->comps[tinyType::TypeID<T>()] = compHandle;
-
-            return rt().get<T>(compHandle);
+            return scene_ ? scene_->nWriteComp<T>(handle_) : nullptr;
         }
 
     private:
@@ -159,6 +149,28 @@ public:
     inline tinyHandle nAdd(const std::string& name = "New Node", tinyHandle parent = tinyHandle()) noexcept;
     inline void nErase(tinyHandle nHandle, bool recursive = true, size_t* count = nullptr) noexcept;
     inline tinyHandle nReparent(tinyHandle nHandle, tinyHandle nNewParent) noexcept;
+
+    template<typename T>
+    T* nWriteComp(tinyHandle nHandle) noexcept {
+        Node* node = nodes_.get(nHandle);
+        if (!node) return nullptr;
+
+        // If already exists, return existing
+        auto it = node->comps.find(tinyType::TypeID<T>());
+        if (it != node->comps.end()) return rt_.get<T>(it->second);
+
+        T comp{};
+        tinyHandle compHandle = rt_.emplace<T>(std::move(comp));
+        node->comps[tinyType::TypeID<T>()] = compHandle;
+
+        return rt_.get<T>(compHandle);
+    }
+
+// Special scene methods
+    void cleanse() noexcept {} // Rewire pool into clean DFS order (to be implemented)
+
+// Scene stuff and things idk
+    void update(FrameStart frameStart) noexcept;
 };
 
 } // namespace tinyRT

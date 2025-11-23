@@ -166,7 +166,10 @@ void tinyApp::updateActiveScene() {
     //     renderer->getCurrentFrame(),
     //     fpsManager->deltaTime
     // });
-    // curScene->update();
+    curScene->update({
+        renderer->getCurrentFrame(),
+        fpsManager->deltaTime
+    });
 }
 
 // ===========================================================================

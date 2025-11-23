@@ -164,3 +164,34 @@ tinyHandle Scene::nReparent(tinyHandle nHandle, tinyHandle nNewParent) noexcept 
 
     return nHandle;
 }
+
+// ---------------------------------------------------------------
+// Scene stuff and things idk
+// ---------------------------------------------------------------
+
+void Scene::update(FrameStart frameStart) noexcept {
+    float dt = frameStart.deltaTime;
+    uint32_t frame = frameStart.frameIndex;
+
+    glm::mat4 parentMat = glm::mat4(1.0f);
+
+    std::function<void(tinyHandle)> updateNode = [&](tinyHandle nHandle) {
+        Node* node = nodes_.get(nHandle);
+        if (!node) return;
+
+        // Update components
+        for (auto& [_, compHandle] : node->comps) {
+            if (rtTRANFM3D* tranfm3D = rt_.get<rtTRANFM3D>(compHandle)) {
+                tranfm3D->local.update();
+                tranfm3D->world = parentMat * tranfm3D->local.Mat4;
+                parentMat = tranfm3D->world;
+            }
+        }
+
+        // Recurse into children
+        for (tinyHandle childHandle : node->children) {
+            updateNode(childHandle);
+        }
+    };
+    updateNode(root_);
+}

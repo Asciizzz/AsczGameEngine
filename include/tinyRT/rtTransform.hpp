@@ -20,32 +20,10 @@ struct Tr3D {
 namespace tinyRT {
 
 struct Transform3D {
-    Tr3D& local() {
-        lDirty_ = true;
-        local_.update(); // Late refresh (acceptable)
-        return local_;
-    }
+    Tr3D local;
+    glm::mat4 world{1.0f};
 
-    const glm::mat4& world() const {
-        return world_;
-    }
-
-    const glm::mat4& recalcWorld(const Transform3D* parent) {
-        if (wDirty_ || (parent && parent->wDirty_)) {
-            world_ = parent->world() * local_.Mat4;
-            wDirty_ = false;
-            lDirty_ = false;
-        }
-
-        return world_;
-    }
-
-private:
-    Tr3D local_;
-    bool lDirty_ = true;
-
-    glm::mat4 world_{1.0f};
-    bool wDirty_ = true;
+    // In the future will have more advanced dirty flag system
 };
 
 }
