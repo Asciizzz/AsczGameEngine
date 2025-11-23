@@ -158,6 +158,7 @@ public:
     inline std::vector<tinyHandle> nQueue(tinyHandle start) noexcept;
     inline tinyHandle nAdd(const std::string& name = "New Node", tinyHandle parent = tinyHandle()) noexcept;
     inline void nErase(tinyHandle nHandle, bool recursive = true, size_t* count = nullptr) noexcept;
+    inline tinyHandle nReparent(tinyHandle nHandle, tinyHandle nNewParent) noexcept;
 };
 
 } // namespace tinyRT

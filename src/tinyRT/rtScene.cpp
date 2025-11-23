@@ -58,31 +58,7 @@ tinyHandle Scene::NWrap::parent() const noexcept {
     return node_ ? node_->parent : tinyHandle();
 }
 bool Scene::NWrap::setParent(tinyHandle newParent) noexcept {
-    if (!scene_ || !node_) return false;
-
-    Node* newParentNode = get(newParent);
-    if (!newParentNode) return false;
-
-    // Check for cyclic parentage
-    tinyHandle checkHandle = newParent;
-    while (checkHandle) {
-        if (checkHandle == handle_) return false; // Cycle detected
-
-        Node* checkNode = get(checkHandle);
-        if (!checkNode) break;
-        checkHandle = checkNode->parent;
-    }
-
-    // Remove from current parent
-    if (Node* currentParentNode = get(node_->parent)) {
-        currentParentNode->rmChild(handle_);
-    }
-
-    // Set new parent
-    node_->parent = newParent;
-    newParentNode->addChild(handle_);
-
-    return true;
+    return scene_ && scene_->nReparent(handle_, newParent);
 }
 
 void Scene::NWrap::erase(tinyHandle child, bool recursive, size_t* count) noexcept {
@@ -158,4 +134,33 @@ void Scene::nErase(tinyHandle nHandle, bool recursive, size_t* count) noexcept {
         nodes_.remove(h);
     }
     if (count) (*count) = toErase.size();
+}
+
+tinyHandle Scene::nReparent(tinyHandle nHandle, tinyHandle nNewParent) noexcept {
+    Node* node = nodes_.get(nHandle);
+    if (!node) return tinyHandle();
+
+    Node* newParent = nodes_.get(nNewParent);
+    if (!newParent) return tinyHandle();
+
+    // Check for cyclic parentage
+    tinyHandle checkHandle = nNewParent;
+    while (checkHandle) {
+        if (checkHandle == nHandle) return tinyHandle(); // Cycle detected
+
+        Node* checkNode = nodes_.get(checkHandle);
+        if (!checkNode) break;
+        checkHandle = checkNode->parent;
+    }
+
+    // Remove from current parent
+    if (Node* currentParentNode = nodes_.get(node->parent)) {
+        currentParentNode->rmChild(nHandle);
+    }
+
+    // Set new parent
+    node->parent = nNewParent;
+    newParent->addChild(nHandle);
+
+    return nHandle;
 }
