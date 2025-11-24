@@ -55,7 +55,7 @@ public:
     struct TypeInfo {
         std::string ext;
         uint8_t     color[3] = {255, 255, 255};
-        uint8_t     rmOrder = 0;    // Lower = removed first
+        uint8_t     rmOrder = 0;    // Lower = erased first
 
         [[nodiscard]] const char* c_str() const noexcept { return ext.c_str(); }
     };
@@ -175,11 +175,11 @@ public:
             Node* node = fnodes_.get(h);
             if (!node) return;
 
+            queue.push_back(h);
+
             for (tinyHandle child : node->children) {
                 addToQueue(child);
             }
-
-            queue.push_back(h);
         };
         addToQueue(nodeHandle);
 
@@ -214,16 +214,16 @@ public:
         }
 
         // No need for child-parent updates
-        // since all nodes are being removed anyway
+        // since all nodes are being erased anyway
         for (tinyHandle h : rmQueue) { 
             Node* node = fnodes_.get(h); // Queue ensures validity
-            if (node->isFile()) r().remove(node->data);
+            if (node->isFile()) r().erase(node->data);
 
-            fnodes_.remove(h);
+            fnodes_.erase(h);
         }
     }
 
-    // Remove this node only
+    // erase this node only
     void rmRaw(tinyHandle nodeHandle) {
         if (!nodeHandle) return;
 
@@ -242,11 +242,11 @@ public:
             }
         }
 
-        // Remove the node
+        // erase the node
         parentNode->eraseChild(nodeHandle);
 
-        r().remove(node->data);
-        fnodes_.remove(nodeHandle);
+        r().erase(node->data);
+        fnodes_.erase(nodeHandle);
     }
 
 // ------------------------------- File/folder info -------------------------------

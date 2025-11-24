@@ -111,7 +111,7 @@ struct tinyPool {
         return const_cast<tinyPool*>(this)->get(h);
     }
 
-    void remove(tinyHandle h) noexcept {
+    void erase(tinyHandle h) noexcept {
         if (TINY_UNLIKELY(!h || h.typeID != TYPE_ID)) return;
         if (TINY_UNLIKELY(h.index >= states_.size())) return;
 

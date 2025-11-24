@@ -10,7 +10,7 @@ class tinyRegistry {
     struct IPool {
         virtual ~IPool() noexcept = default;
         virtual void* get(tinyHandle h) noexcept = 0;
-        virtual void remove(tinyHandle h) noexcept = 0;
+        virtual void erase(tinyHandle h) noexcept = 0;
         virtual void clear() noexcept = 0;
     };
 
@@ -21,8 +21,8 @@ class tinyRegistry {
         void* get(tinyHandle h) noexcept override {
             return pool.get(h);
         }
-        void remove(tinyHandle h) noexcept override {
-            pool.remove(h);
+        void erase(tinyHandle h) noexcept override {
+            pool.erase(h);
         }
         void clear() noexcept override {
             pool.clear();
@@ -77,10 +77,10 @@ public:
         return it != pools_.end() ? it->second->get(h) : nullptr;
     }
 
-    void remove(tinyHandle h) noexcept {
+    void erase(tinyHandle h) noexcept {
         if (!h) return;
         auto it = pools_.find(h.typeID);
-        if (it != pools_.end()) it->second->remove(h);
+        if (it != pools_.end()) it->second->erase(h);
     }
 
     // View raw pools

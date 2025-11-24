@@ -261,7 +261,7 @@ void tinyProject::setupFS() {
     // ------------------ Standard files ------------------
 
     tinyFS::TypeInfo* ascn = fs_->typeInfo<rtScene>();
-    ascn->ext = "ascn";
+    ascn->ext = "ascn"; ascn->rmOrder = 10;
     ascn->color[0] = 102; ascn->color[1] = 255; ascn->color[2] = 102;
 
     tinyFS::TypeInfo* amat = fs_->typeInfo<tinyMaterialVk>();

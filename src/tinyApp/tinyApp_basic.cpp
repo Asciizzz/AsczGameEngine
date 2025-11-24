@@ -19,12 +19,12 @@ tinyApp::tinyApp(const char* title, uint32_t width, uint32_t height)
 tinyApp::~tinyApp() {
     vkDeviceWaitIdle(dvk->device);
     tinyUI::Shutdown();
+
+    printf("tinyApp exited successfully. See you next time!\n");
 }
 
 void tinyApp::run() {
     mainLoop();
-
-    printf("tinyApp exited successfully. See you next time!\n");
 }
 
 void tinyApp::initComponents() {

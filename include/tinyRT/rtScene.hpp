@@ -74,6 +74,8 @@ class Scene {
     [[nodiscard]] inline Node* node(tinyHandle nHandle) noexcept { return nodes_.get(nHandle); }
 public:
     Scene() noexcept = default;
+    ~Scene() noexcept;
+    
     void init(const SceneRes& res) noexcept;
 
     Scene(const Scene&) = delete;
@@ -157,12 +159,9 @@ public:
 
 // Node APIs
     [[nodiscard]] tinyHandle root() const noexcept { return root_; }
+    bool rootShift() noexcept;
 
-    [[nodiscard]] NWrap nWrap(tinyHandle h) noexcept {
-        NWrap wrap;
-        wrap.set(this, h);
-        return wrap;
-    }
+    [[nodiscard]] NWrap nWrap(tinyHandle h) noexcept;
 
     inline std::vector<tinyHandle> nQueue(tinyHandle start) noexcept;
     inline tinyHandle nAdd(const std::string& name = "New Node", tinyHandle parent = tinyHandle()) noexcept;
@@ -189,7 +188,7 @@ public:
         Node* node = nodes_.get(nHandle);
         if (!node || !node->has<T>()) return;
 
-        rt_.remove(node->get<T>());
+        rt_.erase(node->get<T>());
         node->erase<T>();
     }
 
