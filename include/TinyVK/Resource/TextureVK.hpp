@@ -102,13 +102,14 @@ struct ImageViewConfig {
 
 // Main ImageVk class
 
+enum class TOwnership {
+    Owned,
+    External
+};
+
 class TextureVk;
 class ImageVk {
 public:
-    enum class Ownership {
-        Owned,
-        External
-    };
 
     ImageVk() noexcept = default;
     ImageVk(VkDevice device) : device(device) {}
@@ -160,7 +161,7 @@ private:
     VkImage image = VK_NULL_HANDLE;
     VkImageView view = VK_NULL_HANDLE;
     VkDeviceMemory memory = VK_NULL_HANDLE;
-    Ownership ownership = Ownership::Owned;
+    TOwnership ownership = TOwnership::Owned;
 
     VkFormat format = VK_FORMAT_UNDEFINED;
     uint32_t width = 0;
@@ -227,6 +228,7 @@ public:
     // =====================
 
     SamplerVk& create(const SamplerConfig& config);
+    SamplerVk& set(VkSampler sampler);
 
     VkSampler get() const { return sampler; }
     operator VkSampler() const { return sampler; } // Implicit conversion
@@ -236,6 +238,8 @@ public:
 private:
     VkDevice device = VK_NULL_HANDLE;
     VkSampler sampler = VK_NULL_HANDLE;
+    
+    TOwnership ownership = TOwnership::Owned;
 
     // Helper to clamp anisotropy to device limits
     static float getMaxAnisotropy(VkPhysicalDevice pDevice, float requested);
@@ -263,6 +267,9 @@ public:
     TextureVk& createImage(const ImageConfig& config);
     TextureVk& createView(const ImageViewConfig& viewConfig);
     TextureVk& createSampler(const SamplerConfig& config);
+
+    TextureVk& setSampler(VkSampler sampler);
+
 
     VkImage getImage() const { return image.getImage(); }
     VkImageView getView() const { return image.getView(); }

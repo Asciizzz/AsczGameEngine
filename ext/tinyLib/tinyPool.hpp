@@ -141,7 +141,7 @@ struct tinyPool {
     }
 
 private:
-    std::deque<T>        denseData_;   // tightly packed elements
+    std::deque<T>         denseData_;   // tightly packed elements
     std::vector<uint32_t> denseIDs_;    // corresponding handle indices
     std::vector<uint32_t> sparse_;      // maps handle index -> dense position, UINT32_MAX = free
     std::vector<uint16_t> versions_;    // version per handle index

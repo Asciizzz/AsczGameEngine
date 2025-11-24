@@ -75,7 +75,7 @@ struct tinyTexture {
     VkImageView view() const noexcept { return textureVk_.getView(); }
     VkSampler sampler() const noexcept { return textureVk_.getSampler(); }
 
-    bool vkCreate(const tinyVk::Device* device) {
+    bool vkCreate(const tinyVk::Device* device, VkSampler sampler = VK_NULL_HANDLE) {
         using namespace tinyVk;
 
         dvk_ = device;
@@ -115,18 +115,20 @@ struct tinyTexture {
             .withAspectMask(ImageAspect::Color)
             .withMipLevels(mipLevel);
 
-        SamplerConfig sampConfig = SamplerConfig()
-            .withAddressModes(vkWrapMode());
-
         textureVk_ = TextureVk(); // Reset texture
-        bool success = textureVk_
+        textureVk_
             .init(dvk_->device)
             .createImage(imageConfig)
-            .createView(viewConfig)
-            .createSampler(sampConfig)
-            .valid();
+            .createView(viewConfig);
 
-        if (!success) return false;
+        if (sampler != VK_NULL_HANDLE) {
+            textureVk_.setSampler(sampler);
+        } else {
+            SamplerConfig sampConfig = SamplerConfig().withAddressModes(vkWrapMode());
+            textureVk_.createSampler(sampConfig);
+        }
+
+        if (!textureVk_.valid()) return false;
 
         TempCmd tempCmd(dvk_, dvk_->graphicsPoolWrapper);
 

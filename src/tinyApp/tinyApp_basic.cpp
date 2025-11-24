@@ -181,7 +181,6 @@ bool tinyApp::checkWindowResize() {
     // pipelineStatic->recreate();
     pipelineTest->recreate();
 
-    
     // Update UI render pass
     UIBackend->updateRenderPass(renderPass);
     UIBackend->rebuildIfNeeded();

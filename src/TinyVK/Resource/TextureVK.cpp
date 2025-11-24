@@ -108,7 +108,7 @@ void ImageVk::cleanup() {
 
     if (view != VK_NULL_HANDLE) vkDestroyImageView(device, view, nullptr);
 
-    if (ownership == Ownership::Owned) {
+    if (ownership == TOwnership::Owned) {
         if (image != VK_NULL_HANDLE)  vkDestroyImage(device, image, nullptr);
         if (memory != VK_NULL_HANDLE) vkFreeMemory(device, memory, nullptr);
     }
@@ -121,7 +121,7 @@ void ImageVk::cleanup() {
     width = height = depth = 0;
     mipLevels = arrayLayers = 1;
     layout = ImageLayout::Undefined;
-    ownership = Ownership::Owned;
+    ownership = TOwnership::Owned;
 }
 
 ImageVk::ImageVk(ImageVk&& other) noexcept
@@ -150,7 +150,7 @@ ImageVk::ImageVk(ImageVk&& other) noexcept
     other.mipLevels = 1;
     other.arrayLayers = 1;
     other.layout = VK_IMAGE_LAYOUT_UNDEFINED;
-    other.ownership = Ownership::Owned;
+    other.ownership = TOwnership::Owned;
 }
 
 ImageVk& ImageVk::operator=(ImageVk&& other) noexcept {
@@ -182,7 +182,7 @@ ImageVk& ImageVk::operator=(ImageVk&& other) noexcept {
         other.mipLevels = 1;
         other.arrayLayers = 1;
         other.layout = VK_IMAGE_LAYOUT_UNDEFINED;
-        other.ownership = Ownership::Owned;
+        other.ownership = TOwnership::Owned;
     }
     return *this;
 }
@@ -293,7 +293,7 @@ ImageVk& ImageVk::wrapExternalImage(VkImage extImage, VkFormat fmt, VkExtent2D e
     mipLevels = 1;
     arrayLayers = 1;
     layout = ImageLayout::PresentSrcKHR;
-    ownership = Ownership::External;
+    ownership = TOwnership::External;
 
     return *this;
 }
@@ -360,9 +360,11 @@ SamplerConfig& SamplerConfig::withPhysicalDevice(VkPhysicalDevice pDevice) {
 SamplerVk::SamplerVk(SamplerVk&& other) noexcept {
     device = other.device;
     sampler = other.sampler;
+    ownership = other.ownership;
 
     other.device = VK_NULL_HANDLE;
     other.sampler = VK_NULL_HANDLE;
+    other.ownership = TOwnership::Owned;
 }
 
 SamplerVk& SamplerVk::operator=(SamplerVk&& other) noexcept {
@@ -371,17 +373,21 @@ SamplerVk& SamplerVk::operator=(SamplerVk&& other) noexcept {
 
         device = other.device;
         sampler = other.sampler;
-        
+        ownership = other.ownership;
+
         other.device = VK_NULL_HANDLE;
         other.sampler = VK_NULL_HANDLE;
+        other.ownership = TOwnership::Owned;
     }
     return *this;
 }
 
 void SamplerVk::cleanup() {
-    if (sampler != VK_NULL_HANDLE && device != VK_NULL_HANDLE) {
+    if (sampler != VK_NULL_HANDLE && device != VK_NULL_HANDLE && ownership == TOwnership::Owned) {
         vkDestroySampler(device, sampler, nullptr);
         sampler = VK_NULL_HANDLE;
+
+        ownership = TOwnership::Owned;
     }
 }
 
@@ -416,6 +422,15 @@ SamplerVk& SamplerVk::create(const SamplerConfig& config) {
         throw std::runtime_error("Failed to create VkSampler");
     }
 
+    ownership = TOwnership::Owned;
+
+    return *this;
+}
+
+SamplerVk& SamplerVk::set(VkSampler sampler) {
+    cleanup();
+    this->sampler = sampler;
+    ownership = TOwnership::External;
     return *this;
 }
 
@@ -457,6 +472,11 @@ TextureVk& TextureVk::createView(const ImageViewConfig& viewConfig) {
 
 TextureVk& TextureVk::createSampler(const SamplerConfig& config) {
     sampler.create(config);
+    return *this;
+}
+
+TextureVk& TextureVk::setSampler(VkSampler sampler) {
+    this->sampler.set(sampler);
     return *this;
 }
 
