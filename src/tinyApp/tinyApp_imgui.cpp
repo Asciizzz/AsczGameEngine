@@ -1519,6 +1519,8 @@ void tinyApp::renderUI() {
     auto& camRef = *project->camera();
 
     sceneRef = project->scene(State::sceneHandle);
+    if (!sceneRef) State::sceneHandle = project->mainSceneHandle;
+    sceneRef = project->scene(State::sceneHandle);
 
     static float frameTime = 1.0f;
     static const float printInterval = 1.0f; // Print fps every second
