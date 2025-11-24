@@ -3,7 +3,7 @@
 using namespace tinyRT;
 using namespace tinyVk;
 
-VkVertexInputBindingDescription Static3D::Data::bindingDesc() {
+VkVertexInputBindingDescription MeshStatic3D::Data::bindingDesc() {
     VkVertexInputBindingDescription bindingDescription{};
     bindingDescription.binding = 1;
     bindingDescription.stride = sizeof(Data);
@@ -11,7 +11,7 @@ VkVertexInputBindingDescription Static3D::Data::bindingDesc() {
     return bindingDescription;
 }
 
-std::vector<VkVertexInputAttributeDescription> Static3D::Data::attrDescs() {
+std::vector<VkVertexInputAttributeDescription> MeshStatic3D::Data::attrDescs() {
     std::vector<VkVertexInputAttributeDescription> attribs(5);
 
     attribs[0] = {3, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Data, model) + sizeof(glm::vec4) * 0};
@@ -28,10 +28,11 @@ void MeshStatic3D::init(const tinyVk::Device* dvk, const tinyPool<tinyMesh>* mes
     meshPool_ = meshPool;
 
     // Create instance buffer with max size
-    size_t bufferSize = MAX_INSTANCES * sizeof(Static3D::Data);
+    size_t bufferSize = MAX_INSTANCES * sizeof(MeshStatic3D::Data);
     instaBuffer_
         .setDataSize(bufferSize)
         .setUsageFlags(BufferUsage::Vertex)
         .setMemPropFlags(MemProp::HostVisibleAndCoherent)
-        .createBuffer(dvk);
+        .createBuffer(dvk)
+        .mapMemory();
 }

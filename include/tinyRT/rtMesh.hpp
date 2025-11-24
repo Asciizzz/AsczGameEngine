@@ -12,7 +12,13 @@
 
 namespace tinyRT {
 
-namespace Static3D {
+struct MeshRender3D { // Node component
+    tinyHandle mesh; // Point to mesh resource in registry
+};
+
+struct MeshStatic3D {
+    static constexpr uint32_t MAX_INSTANCES = 100000; // 8mb - more than enough
+
     struct Data {
         glm::mat4 model = glm::mat4(1.0f); // Model matrix
         glm::vec4 other = glm::vec4(0.0f); // Additional data
@@ -26,14 +32,6 @@ namespace Static3D {
         uint32_t offset = 0;
         uint32_t count = 0;
     };
-};
-
-struct MeshRender3D { // Node component
-    tinyHandle mesh; // Point to mesh resource in registry
-};
-
-struct MeshStatic3D {
-    static constexpr uint32_t MAX_INSTANCES = 100000; // 8mb - more than enough
 
 // ---------------------------------------------------------------
     MeshStatic3D() = default;
@@ -45,23 +43,57 @@ struct MeshStatic3D {
     MeshStatic3D(MeshStatic3D&&) noexcept = default;
     MeshStatic3D& operator=(MeshStatic3D&&) noexcept = default;
 
-    VkBuffer instaBuffer() const { return instaBuffer_; } // Implicit conversion
-
     void reset() {
-        instaData_.clear();
         instaRanges_.clear();
         tempInstaMap_.clear();
     }
+
+    struct Entry {
+        tinyHandle mesh;
+        glm::mat4 model;
+        glm::vec4 other;
+    };
+
+    void submit(Entry entry) {
+        tempInstaMap_[entry.mesh].push_back({ entry.model, entry.other });
+    }
+
+    size_t finalize() {
+        instaRanges_.clear();
+
+        size_t totalInstances = 0;
+        for (const auto& [meshH, dataVec] : tempInstaMap_) {
+            if (totalInstances + dataVec.size() > MAX_INSTANCES) break; // Should astronomically rarely happen
+
+            Range range;
+            range.mesh = meshH;
+            range.offset = static_cast<uint32_t>(totalInstances);
+            range.count = static_cast<uint32_t>(dataVec.size());
+            instaRanges_.push_back(range);
+
+            // Copy data
+            size_t dataOffset = totalInstances * sizeof(Data);
+            size_t dataSize = dataVec.size() * sizeof(Data);
+            instaBuffer_.copyData(dataVec.data(), dataSize, dataOffset);
+
+            totalInstances += dataVec.size();
+        }
+
+        tempInstaMap_.clear();
+        return totalInstances;
+    }
+
+// Renderer need these
+    VkBuffer instaBuffer() const noexcept { return instaBuffer_; }
+    const std::vector<Range>& ranges() const noexcept { return instaRanges_; }
 
 private:
     const tinyPool<tinyMesh>* meshPool_ = nullptr;
 
     tinyVk::DataBuffer instaBuffer_;
+    std::vector<Range> instaRanges_;
 
-    std::vector<Static3D::Data> instaData_;
-    std::vector<Static3D::Range> instaRanges_;
-
-    std::unordered_map<tinyHandle, std::vector<Static3D::Data>> tempInstaMap_;
+    std::unordered_map<tinyHandle, std::vector<Data>> tempInstaMap_;
 };
 
 }

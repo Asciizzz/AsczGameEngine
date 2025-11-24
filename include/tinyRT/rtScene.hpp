@@ -109,6 +109,7 @@ public:
     [[nodiscard]] const SceneRes& res() const noexcept { return res_; }
 
     [[nodiscard]] rtMeshStatic3D& meshStatic3D() noexcept { return *res_.meshStatic3D(); }
+    [[nodiscard]] const rtMeshStatic3D& meshStatic3D() const noexcept { return *res_.meshStatic3D(); }
 
 // Node APIs
     std::string& nName(tinyHandle nHandle) noexcept;

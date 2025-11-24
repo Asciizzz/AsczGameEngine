@@ -35,9 +35,8 @@ VkDescriptorSetLayout SceneRes::mrphDsDescLayout() const { return descLayout(hMr
 VkDescriptorPool SceneRes::mrphWsDescPool() const { return descPool(hMrphWsDescPool); }
 VkDescriptorSetLayout SceneRes::mrphWsDescLayout() const { return descLayout(hMrphWsDescLayout); }
 
-tinyRT::MeshStatic3D* SceneRes::meshStatic3D() {
-    return fsr->get<rtMeshStatic3D>(hMeshStatic3D);
-}
+tinyRT::MeshStatic3D* SceneRes::meshStatic3D() { return fsr->get<rtMeshStatic3D>(hMeshStatic3D); }
+const tinyRT::MeshStatic3D* SceneRes::meshStatic3D() const { return fsr->get<rtMeshStatic3D>(hMeshStatic3D); }
 
 // Default resources accessors
 

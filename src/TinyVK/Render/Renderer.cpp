@@ -223,8 +223,6 @@ void Renderer::drawSky(const tinyProject* project, const PipelineRaster* skyPipe
 
 void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const PipelineRaster* testPipeline) const {
     const SceneRes& sharedRes = scene->res();
-    const std::vector<rtScene::TestRender>& testRenders = scene->testRenders;
-    if (testRenders.empty()) return;
 
     VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
 
@@ -236,8 +234,19 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
     testPipeline->bindCmd(currentCmd);
     testPipeline->bindSets(currentCmd, 0, &glbSet, 1, &offset, 1);
 
-    for (auto& render : testRenders) {
-        const auto* rMesh = sharedRes.fsGet<tinyMesh>(render.mesh);
+    // Use the new instanced static machine
+    const rtMeshStatic3D& msta3D = scene->meshStatic3D();
+
+    VkBuffer instaBuffer = msta3D.instaBuffer();
+    const std::vector<rtMeshStatic3D::Range>& ranges = msta3D.ranges();
+
+    // Bind the instance buffer once then use the ranges to draw
+    VkBuffer buffers[] = { instaBuffer };
+    VkDeviceSize offsets[] = { 0 };
+    vkCmdBindVertexBuffers(currentCmd, 1, 1, buffers, offsets);
+
+    for (const auto& range : ranges) {
+        const auto* rMesh = sharedRes.fsGet<tinyMesh>(range.mesh);
         if (!rMesh) continue; // Mesh not found in registry
 
         // Draw each individual submeshes
@@ -245,108 +254,19 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
             uint32_t indxCount = rMesh->parts()[i].indxCount;
             if (indxCount == 0) continue;
 
-            // Push model matrix only
-            testPipeline->pushConstants(currentCmd, ShaderStage::Vertex, 0, render.model);
-
             // Bind the vertex and index buffers
             VkBuffer vrtxBuffer = rMesh->vrtxBuffer();
             VkBuffer indxBuffer = rMesh->indxBuffer();
             VkIndexType indxType = rMesh->indxType();
-            VkBuffer buffers[] = { vrtxBuffer };
-            VkDeviceSize offsets[] = { 0 };
-            vkCmdBindVertexBuffers(currentCmd, 0, 1, buffers, offsets);
+            VkBuffer vBuffers[] = { vrtxBuffer };
+            VkDeviceSize vOffsets[] = { 0 };
+            vkCmdBindVertexBuffers(currentCmd, 0, 1, vBuffers, vOffsets);
             vkCmdBindIndexBuffer(currentCmd, indxBuffer, 0, indxType);
 
             uint32_t indxOffset = rMesh->parts()[i].indxOffset;
-            vkCmdDrawIndexed(currentCmd, indxCount, 1, indxOffset, 0, 0);
+            vkCmdDrawIndexed(currentCmd, indxCount, range.count, indxOffset, 0, range.offset);
         }
     }
-
-/*
-    for (const auto& [nodeHandle, mr3dHandle] : mapMESHR) {
-        const tinyNodeRT* rtNode = activeScene->node(nodeHandle);
-
-        // Get mesh render component directly from runtime node
-        const auto* mr3DComp = activeScene->rtComp<tinyNodeRT::MESHRD>(nodeHandle);
-        if (!mr3DComp) continue; // No mesh render component
-
-        const auto* rMesh = mr3DComp->rMesh();
-        if (!rMesh) continue; // Mesh not found in registry
-
-        const auto* transform = rtNode->get<tinyNodeRT::TRFM3D>();
-        glm::mat4 transformMat = transform ? transform->global : glm::mat4(1.0f);
-
-        // Draw each individual submeshes
-        VkBuffer vrtxBuffer = rMesh->vrtxBuffer();
-        VkBuffer indxBuffer = rMesh->indxBuffer();
-        VkIndexType indxType = rMesh->indxType();
-        const auto& parts = rMesh->parts();
-
-        VkBuffer buffers[] = { vrtxBuffer };
-        VkDeviceSize offsets[] = { 0 };
-        vkCmdBindVertexBuffers(currentCmd, 0, 1, buffers, offsets);
-        vkCmdBindIndexBuffer(currentCmd, indxBuffer, 0, indxType);
-
-        tinyVertex::Layout vrtxLayout = rMesh->vrtxLayout();
-        bool isRigged = vrtxLayout.type == tinyVertex::Layout::Type::Rigged;
-        const PipelineRaster* rPipeline = isRigged ? plRigged : plStatic;
-        rPipeline->bindCmd(currentCmd);
-
-    // Set 0 for global UBO
-        rPipeline->bindSets(currentCmd, 0, &glbSet, 1, &offset, 1);
-
-        // Retrieve skeleton descriptor set if rigged (with automatic fallback to dummy)
-        tinyRT_SKEL3D* rtSkele = activeScene->rtComp<tinyNodeRT::SKEL3D>(mr3DComp->skeleNodeHandle());
-        VkDescriptorSet skinSet = rtSkele ? rtSkele->descSet() : VK_NULL_HANDLE;
-        uint32_t boneCount = rtSkele ? rtSkele->boneCount() : 0;
-
-    // Set 2 for skeleton
-        if (isRigged) {
-            isRigged = skinSet != VK_NULL_HANDLE;
-
-            skinSet = isRigged ? skinSet : sharedRes.dummySkinDescSet();
-            
-            // In the case of dummy, offset does't matter
-            uint32_t skinOffset = rtSkele ? rtSkele->dynamicOffset(currentFrame) : 0;
-            rPipeline->bindSets(currentCmd, 2, &skinSet, 1, &skinOffset, 1);
-
-            VkDescriptorSet mrphDsSet = mr3DComp->mrphDsDescSet();
-            bool hasMrph = mrphDsSet != VK_NULL_HANDLE;
-
-            mrphDsSet = hasMrph ? mrphDsSet : sharedRes.dummyMeshMrphDsDescSet();
-            rPipeline->bindSets(currentCmd, 3, &mrphDsSet, 1, nullptr, 0);
-
-            VkDescriptorSet mrphWsSet = mr3DComp->mrphWsDescSet();
-            mrphWsSet = hasMrph ? mrphWsSet : sharedRes.dummyMeshMrphWsDescSet();
-
-            uint32_t mrphWsOffset = mr3DComp->mrphWsDynamicOffset(currentFrame) * (hasMrph ? 1 : 0);
-            rPipeline->bindSets(currentCmd, 4, &mrphWsSet, 1, &mrphWsOffset, 1);
-        }
-
-        for (size_t i = 0; i < parts.size(); ++i) {
-            uint32_t indxCount = parts[i].indxCount;
-            if (indxCount == 0) continue;
-
-            tinyHandle matHandle = parts[i].material;
-            const tinyMaterialVk* material = sharedRes.fsGet<tinyMaterialVk>(matHandle);
-
-            VkDescriptorSet matSet = material ? material->descSet() : sharedRes.defaultMaterialVk()->descSet();
-
-            rPipeline->bindSets(currentCmd, 1, &matSet, 1, nullptr, 0);
-
-
-            // Offset 0: global transform
-            // Offset 64: other properties (1)
-            glm::uvec4 props1 = glm::uvec4(boneCount, mr3DComp->mrphCount(), rMesh->vrtxCount(), 0);
-
-            rPipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, 0,  transformMat);
-            rPipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, 64, props1);
-
-            uint32_t indxOffset = parts[i].indxOffset;
-            vkCmdDrawIndexed(currentCmd, indxCount, 1, indxOffset, 0, 0);
-        }
-    }
-*/
 }
 
 // End frame: finalize command buffer, submit, and present

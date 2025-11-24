@@ -166,6 +166,7 @@ void Scene::update(FrameStart frameStart) noexcept {
     testRenders.clear();
 
     const tinyCamera& cam = camera();
+    MeshStatic3D& msta3D = meshStatic3D();
 
     std::function<void(tinyHandle, glm::mat4)> updateNode = [&](tinyHandle nHandle, glm::mat4 parentMat) {
         Node* node = nodes_.get(nHandle);
@@ -184,12 +185,10 @@ void Scene::update(FrameStart frameStart) noexcept {
             if (rtMESHRD3D* meshRD3D = rt_.get<rtMESHRD3D>(compHandle)) {
                 // Frustum culling
                 tinyMesh* mesh = fsr().get<tinyMesh>(meshRD3D->mesh);
-                if (mesh && cam.collideAABB(mesh->ABmin(), mesh->ABmax(), currentWorld)) {
-                    TestRender tr;
-                    tr.model = currentWorld;
-                    tr.mesh = meshRD3D->mesh;
-                    testRenders.push_back(tr);
-                }
+                if (!mesh || !cam.collideAABB(mesh->ABmin(), mesh->ABmax(), currentWorld)) continue;
+
+                // Use the mesh static machine
+                msta3D.submit({ meshRD3D->mesh, currentWorld, glm::vec4(0.0f) });
             }
         }
 
@@ -199,4 +198,6 @@ void Scene::update(FrameStart frameStart) noexcept {
         }
     };
     updateNode(root_, glm::mat4(1.0f));
+
+    msta3D.finalize();
 }

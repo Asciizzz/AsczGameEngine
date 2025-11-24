@@ -66,6 +66,7 @@ struct SceneRes {
     // Mesh machines
     tinyHandle hMeshStatic3D;
     tinyRT::MeshStatic3D* meshStatic3D();
+    const tinyRT::MeshStatic3D* meshStatic3D() const;
 
 // Default resources accessors
 
