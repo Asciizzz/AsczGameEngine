@@ -1,4 +1,5 @@
 #include "tinyRT/rtScene.hpp"
+#include "tinyData/tinyCamera.hpp"
 
 using namespace tinyRT;
 
@@ -164,6 +165,8 @@ void Scene::update(FrameStart frameStart) noexcept {
     // Testing ground
     testRenders.clear();
 
+    const tinyCamera& cam = camera();
+
     std::function<void(tinyHandle, glm::mat4)> updateNode = [&](tinyHandle nHandle, glm::mat4 parentMat) {
         Node* node = nodes_.get(nHandle);
         if (!node) return;
@@ -179,10 +182,14 @@ void Scene::update(FrameStart frameStart) noexcept {
             }
 
             if (rtMESHRD3D* meshRD3D = rt_.get<rtMESHRD3D>(compHandle)) {
-                TestRender tr;
-                tr.model = currentWorld;
-                tr.mesh = meshRD3D->mesh;
-                testRenders.push_back(tr);
+                // Frustum culling
+                tinyMesh* mesh = fsr().get<tinyMesh>(meshRD3D->mesh);
+                if (mesh && cam.collideAABB(mesh->ABmin(), mesh->ABmax(), currentWorld)) {
+                    TestRender tr;
+                    tr.model = currentWorld;
+                    tr.mesh = meshRD3D->mesh;
+                    testRenders.push_back(tr);
+                }
             }
         }
 

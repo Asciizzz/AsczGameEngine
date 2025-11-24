@@ -99,7 +99,7 @@ public:
         }
     }
 
-    bool collideAABB(glm::vec3 abMin, glm::vec3 abMax, glm::mat4 transform) {
+    bool collideAABB(glm::vec3 abMin, glm::vec3 abMax, glm::mat4 transform) const {
         Plane planes[6];
         extractFrustumPlanes(getVP(), planes);
 

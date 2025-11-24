@@ -7,6 +7,7 @@
 #include "tinyVk/Resource/Descriptor.hpp"
 
 #include <string>
+#include <limits>
 
 struct alignas(16) tinyMorph {
     glm::vec3 dPos;
@@ -43,6 +44,15 @@ struct tinyMesh {
 
         vrtxData_.resize(vrtxCount_ * sizeof(VertexT));
         std::memcpy(vrtxData_.data(), verts.data(), vrtxData_.size());
+
+        // Compute AABB
+        ABmin_ = glm::vec3(std::numeric_limits<float>::max());
+        ABmax_ = glm::vec3(std::numeric_limits<float>::lowest());
+        for (const auto& v : verts) {
+            glm::vec3 pos = v.getPos();
+            ABmin_ = glm::min(ABmin_, pos);
+            ABmax_ = glm::max(ABmax_, pos);
+        }
 
         return *this;
     }
@@ -136,6 +146,9 @@ struct tinyMesh {
     const std::vector<Part>& parts() const noexcept { return parts_; }
 
     explicit operator bool() const noexcept { return !vrtxData_.empty() && !indxData_.empty(); }
+
+    const glm::vec3& ABmin() const noexcept { return ABmin_; }
+    const glm::vec3& ABmax() const noexcept { return ABmax_; }
 
     std::string& mrphName(size_t targetIndex) noexcept {
         static std::string emptyStr;
@@ -252,4 +265,8 @@ private:
     tinyVk::DataBuffer mrphBuffer_;
     tinyVk::DescSet mrphDsDescSet_;
     VkIndexType indxType_ = VK_INDEX_TYPE_UINT16;
+
+    // AABB
+    glm::vec3 ABmin_ = glm::vec3(std::numeric_limits<float>::max());
+    glm::vec3 ABmax_ = glm::vec3(std::numeric_limits<float>::lowest());
 };
