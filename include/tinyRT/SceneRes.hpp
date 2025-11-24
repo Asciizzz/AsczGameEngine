@@ -8,14 +8,12 @@ namespace tinyVk {
     class Device;
 }
 
-namespace tinyRT {
-    struct MeshStatic3D;
-}
-
 struct tinyMaterialVk;
 struct tinyTextureVk;
 
 class tinyCamera;
+
+struct tinyMachine;
 
 struct SceneRes {
     uint32_t maxFramesInFlight = 0; // If you messed this up the app just straight up jump off a cliff
@@ -23,6 +21,8 @@ struct SceneRes {
     tinyRegistry* fsr = nullptr; // For stuffs and things
     const tinyVk::Device* dvk = nullptr;   // For GPU resource creation
     tinyCamera* camera = nullptr;    // For global UBOs
+
+    tinyMachine* machine = nullptr;
 
 // File system helper
 
@@ -62,11 +62,6 @@ struct SceneRes {
     tinyHandle hMrphWsDescLayout;
     VkDescriptorPool mrphWsDescPool() const;
     VkDescriptorSetLayout mrphWsDescLayout() const;
-
-    // Mesh machines
-    tinyHandle hMeshStatic3D;
-    tinyRT::MeshStatic3D* meshStatic3D();
-    const tinyRT::MeshStatic3D* meshStatic3D() const;
 
 // Default resources accessors
 

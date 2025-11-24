@@ -137,9 +137,9 @@ void tinyApp::initComponents() {
     testCfg.pushConstantRanges = { testPushConstant };
     testCfg.withShaders("Shaders/bin/Test/Test.vert.spv", "Shaders/bin/Test/Test.frag.spv")
         .withVertexInput({
-            vstaticBind, rtMeshStatic3D::Data::bindingDesc()
+            vstaticBind, MeshStatic3D::Data::bindingDesc()
         }, {
-            vstaticAttrs, rtMeshStatic3D::Data::attrDescs()
+            vstaticAttrs, MeshStatic3D::Data::attrDescs()
         });
 
     pipelineTest = MakeUnique<PipelineRaster>(device, testCfg);

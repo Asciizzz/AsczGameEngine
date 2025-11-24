@@ -79,7 +79,8 @@ file(GLOB_RECURSE SRC_FILES
     # src/tinyRT/tinyRT_Anime3D.cpp
     # src/tinyRT/tinyRT_Script.cpp
 
-    src/tinyRT/rtMesh.cpp
+    src/tinyMachine/MeshMachine.cpp
+    src/tinyMachine/MtlMachine.cpp
 
     src/tinyRT/SceneRes.cpp
     src/tinyRT/rtScene.cpp
@@ -143,8 +144,9 @@ target_include_directories(AsczGame PRIVATE
     ${CMAKE_SOURCE_DIR}/include/tinyData
     ${CMAKE_SOURCE_DIR}/include/tinyRT
     ${CMAKE_SOURCE_DIR}/include/tinyScript
-    ${CMAKE_SOURCE_DIR}/include/tinySystem
+    ${CMAKE_SOURCE_DIR}/include/tinyMachine
     ${CMAKE_SOURCE_DIR}/include/tinyEngine
+    ${CMAKE_SOURCE_DIR}/include/tinySystem
     ${CMAKE_SOURCE_DIR}/include/tinyApp 
 )
 

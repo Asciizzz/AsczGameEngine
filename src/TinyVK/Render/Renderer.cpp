@@ -235,10 +235,10 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
     testPipeline->bindSets(currentCmd, 0, &glbSet, 1, &offset, 1);
 
     // Use the new instanced static machine
-    const rtMeshStatic3D& msta3D = scene->meshStatic3D();
+    const MeshStatic3D& msta3D = scene->meshStatic3D();
 
     VkBuffer instaBuffer = msta3D.instaBuffer();
-    const std::vector<rtMeshStatic3D::Range>& ranges = msta3D.ranges();
+    const std::vector<MeshStatic3D::Range>& ranges = msta3D.ranges();
 
     // Bind the instance buffer once then use the ranges to draw
     VkBuffer buffers[] = { instaBuffer };

@@ -324,14 +324,15 @@ void tinyProject::vkCreateResources() {
     DescPool meshMrphWsDescPool = tinyMesh::createMrphDescPool(device, maxMeshes);
     sharedRes_.hMrphWsDescLayout = rAdd<DescSLayout>(std::move(meshMrphWsDescLayout));
     sharedRes_.hMrphWsDescPool = rAdd<DescPool>(std::move(meshMrphWsDescPool));
-
-    // -------------- Create Mesh Machines --------------
-
-    rtMeshStatic3D meshStatic3D;
-    meshStatic3D.init(dvk_, &fs().r().view<tinyMesh>());
-    sharedRes_.hMeshStatic3D = rAdd<rtMeshStatic3D>(std::move(meshStatic3D));
-
+    
     sharedRes_.camera = camera_.get();
+
+    // -------------- Create Machines --------------
+
+    machine_ = MakeUnique<tinyMachine>();
+    machine_->meshStatic3D.init(dvk_, &fs().r().view<tinyMesh>());
+
+    sharedRes_.machine = machine_.get();
 }
 
 void tinyProject::vkCreateDefault() {

@@ -45,6 +45,8 @@ public:
     tinyRegistry& r() { return fs_->r(); }
     const tinyRegistry& r() const { return fs_->r(); }
 
+    tinyMachine& machine() { return *machine_; }
+
     const SceneRes& sharedRes() const { return sharedRes_; }
     const tinyVk::Device* vkDevice() const { return dvk_; }
 
@@ -77,6 +79,8 @@ private:
     UniquePtr<tinyCamera> camera_;
 
     UniquePtr<tinyFS> fs_;
+
+    UniquePtr<tinyMachine> machine_;
     void setupFS();
 
     template<typename T>

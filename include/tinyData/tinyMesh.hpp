@@ -200,12 +200,12 @@ struct tinyMesh {
 
         // Morph targets
         size_t mrphSize = mrphData_.size();
-        mrphBuffer_
-            .setDataSize(mrphSize)
-            .setUsageFlags(BufferUsage::Storage)
-            .createDeviceLocalBuffer(dvk_, mrphData_.data());
-
-        if (mrphLayout != VK_NULL_HANDLE && mrphPool != VK_NULL_HANDLE) {
+        if (mrphLayout != VK_NULL_HANDLE && mrphPool != VK_NULL_HANDLE && mrphSize > 0) {
+            mrphBuffer_
+                .setDataSize(mrphSize)
+                .setUsageFlags(BufferUsage::Storage)
+                .createDeviceLocalBuffer(dvk_, mrphData_.data());
+            
             mrphDsDescSet_.allocate(dvk_->device, mrphPool, mrphLayout);
 
             DescWrite()

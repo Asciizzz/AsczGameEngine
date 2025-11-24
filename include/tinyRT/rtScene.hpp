@@ -1,10 +1,11 @@
 #pragma once
 
 #include "SceneRes.hpp"
+#include "tinyMachine.hpp"
 
 // Components
-#include "tinyRT/rtMesh.hpp"
 #include "tinyRT/rtTransform.hpp"
+#include "tinyRT/rtMesh.hpp"
 
 namespace tinyRT {
 
@@ -108,8 +109,8 @@ public:
     [[nodiscard]] SceneRes& res() noexcept { return res_; }
     [[nodiscard]] const SceneRes& res() const noexcept { return res_; }
 
-    [[nodiscard]] rtMeshStatic3D& meshStatic3D() noexcept { return *res_.meshStatic3D(); }
-    [[nodiscard]] const rtMeshStatic3D& meshStatic3D() const noexcept { return *res_.meshStatic3D(); }
+    [[nodiscard]] MeshStatic3D& meshStatic3D() noexcept { return res_.machine->meshStatic3D; }
+    [[nodiscard]] const MeshStatic3D& meshStatic3D() const noexcept { return res_.machine->meshStatic3D; }
 
 // Node APIs
     std::string& nName(tinyHandle nHandle) noexcept;
