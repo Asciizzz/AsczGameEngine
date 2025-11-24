@@ -525,10 +525,10 @@ static void RenderSceneNodeHierarchy() {
 
             bool canDelete = h != sceneRef->root();
             if (ImGui::MenuItem("Erase", nullptr, false, canDelete)) wrap.erase(h);
-            if (ImGui::MenuItem("Clear", nullptr, false, wrap.childrenCount() > 0)) {
-                std::vector<tinyHandle> children = wrap.children();
-                for (const auto& childHandle : children) wrap.erase(childHandle);
-            }
+            // if (ImGui::MenuItem("Clear", nullptr, false, wrap.childrenCount() > 0)) {
+            //     std::vector<tinyHandle> children = wrap.children();
+            //     for (const auto& childHandle : children) wrap.erase(childHandle);
+            // }
 
             // if (tinyRT_ANIM3D* anim3D = Wrap.anim3D) {
             //     ImGui::Separator();

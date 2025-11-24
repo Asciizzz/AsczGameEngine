@@ -62,8 +62,10 @@ bool Scene::NWrap::setParent(tinyHandle newParent) noexcept {
     return scene_ && scene_->nReparent(handle_, newParent);
 }
 
-void Scene::NWrap::erase(tinyHandle child, bool recursive, size_t* count) noexcept {
-    if (scene_) scene_->nErase(child, recursive, count);
+void Scene::NWrap::erase(tinyHandle nHandle, bool recursive, size_t* count) noexcept {
+    if (nHandle == handle_) node_ = nullptr; // Invalidate self if erasing self
+
+    if (scene_) scene_->nErase(nHandle, recursive, count);
 }
 
 // ---------------------------------------------------------------
@@ -81,7 +83,6 @@ bool Scene::rootShift() noexcept {
 }
 
 Scene::NWrap Scene::nWrap(tinyHandle h) noexcept {
-
     NWrap wrap;
     wrap.set(this, h);
     return wrap;
@@ -145,13 +146,14 @@ void Scene::nErase(tinyHandle nHandle, bool recursive, size_t* count) noexcept {
         Node* n = nodes_.get(h);
         if (!n) return;
 
-        for (tinyHandle childHandle : n->children) {
-            eraseRec(childHandle);
-        }
-
+        std::vector<tinyHandle> childrenCopy = n->children;
+        
         nEraseAllComps(h);
         nodes_.erase(h);
-        if (count) (*count) += 1;
+
+        for (tinyHandle childHandle : childrenCopy) {
+            eraseRec(childHandle);
+        }
     };
     eraseRec(nHandle);
 }

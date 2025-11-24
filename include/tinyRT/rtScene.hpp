@@ -10,6 +10,7 @@ namespace tinyRT {
 
 struct Node {
     // Empty ahh container 🥀🙏
+    Node() noexcept = default; // Make non-trivial
 
     std::string name;
 

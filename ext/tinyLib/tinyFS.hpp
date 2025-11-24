@@ -22,20 +22,16 @@ public:
 
         [[nodiscard]] tinyType::ID typeID() const noexcept { return data.tID(); }
 
-        [[nodiscard]] tinyHandle findChild(const std::string& childName) const noexcept {
+        int whereChild(tinyHandle childHandle) const noexcept {
             for (size_t i = 0; i < children.size(); ++i) {
-                const Node* child = fs_->fnodes_.get(children[i]);
-                if (child && child->name == childName) {
-                    return children[i];
-                }
+                if (children[i] == childHandle) return static_cast<int>(i);
             }
-            return {};
+            return -1;
         }
 
         int addChild(tinyHandle childHandle) {
-            if (findChild(fs_->fnodes_.get(childHandle)->name)) {
-                return -1;
-            }
+            if (whereChild(childHandle) != -1) return -1;
+
             children.push_back(childHandle);
             return static_cast<int>(children.size() - 1);
         }
@@ -46,10 +42,6 @@ public:
                 children.end()
             );
         }
-
-    private:
-        friend class tinyFS;
-        tinyFS* fs_ = nullptr;
     };
 
     struct TypeInfo {
@@ -65,7 +57,6 @@ public:
         root.name = "root";
         root.parent = {};
         root.data = {};
-        root.fs_ = this;
         rootHandle_ = fnodes_.emplace(std::move(root));
 
         // Ensure void type info exists
@@ -92,7 +83,7 @@ public:
 
     tinyHandle createFolder(std::string name, tinyHandle parent = {}) {
         if (!parent) parent = rootHandle_;
-        Node* p = fnodes_.get(parent);
+        Node* p = node(parent);
         if (!p || p->isFile()) return {};
 
         name = resolveUniqueName(parent, std::move(name));
@@ -101,9 +92,10 @@ public:
         folder.name = std::move(name);
         folder.parent = parent;
         folder.data = {};
-        folder.fs_ = this;
 
         tinyHandle h = fnodes_.emplace(std::move(folder));
+
+        p = node(parent); // To avoid invalidation
         p->children.push_back(h);
         return h;
     }
@@ -112,7 +104,7 @@ public:
     template<typename T>
     tinyHandle createFile(std::string name, T&& data, tinyHandle parent = {}) {
         if (!parent) parent = rootHandle_;
-        Node* p = fnodes_.get(parent);
+        Node* p = node(parent);
         if (!p || p->isFile()) return {};
 
         name = resolveUniqueName(parent, std::move(name));
@@ -124,9 +116,10 @@ public:
         file.name = std::move(name);
         file.parent = parent;
         file.data = dataHandle;
-        file.fs_ = this;
 
         tinyHandle h = fnodes_.emplace(std::move(file));
+
+        p = node(parent);
         p->children.push_back(h);
 
         rDataToFile_[dataHandle] = h;
@@ -338,8 +331,8 @@ public:
     [[nodiscard]] const Node* fNode(tinyHandle fh) const noexcept { return fnodes_.get(fh); }
     [[nodiscard]] const tinyPool<Node>& fNodes() const noexcept { return fnodes_; }
 
-    [[nodiscard]] tinyRegistry& r() noexcept { return registry_; }
-    [[nodiscard]] const tinyRegistry& r() const noexcept { return registry_; }
+    [[nodiscard]] TINY_FORCE_INLINE tinyRegistry& r() noexcept { return registry_; }
+    [[nodiscard]] TINY_FORCE_INLINE const tinyRegistry& r() const noexcept { return registry_; }
 
     // Backward
     tinyHandle rDataToFile(tinyHandle rh) const noexcept {
@@ -374,6 +367,8 @@ private:
     tinyPool<Node> fnodes_;
     tinyRegistry   registry_;
     tinyHandle     rootHandle_;
+
+    TINY_FORCE_INLINE Node* node(tinyHandle nodeHandle) noexcept { return fnodes_.get(nodeHandle); }
 
     std::unordered_map<tinyHandle, std::vector<tinyHandle>> pathCache_;
     std::unordered_map<tinyHandle, tinyHandle> rDataToFile_;

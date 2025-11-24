@@ -152,9 +152,9 @@ struct Anime3D {
         return it->second;
     }
 
-    const std::deque<Clip>& all() const {
-        return clips.data();
-    }
+    // const std::deque<Clip>& all() const {
+    //     return clips.data();
+    // }
 
     // Retrieve the list
     const UnorderedMap<std::string, tinyHandle>& MAL() const {
