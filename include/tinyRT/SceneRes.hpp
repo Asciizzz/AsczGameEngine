@@ -8,9 +8,6 @@ namespace tinyVk {
     class Device;
 }
 
-struct tinyMaterialVk;
-struct tinyTextureVk;
-
 class tinyCamera;
 
 struct tinyMachine;
@@ -39,18 +36,6 @@ struct SceneRes {
     VkDescriptorSetLayout descLayout(tinyHandle handle) const;
     VkDescriptorSet descSet(tinyHandle handle) const;
 
-    // Material (props + textures)
-    tinyHandle hMatDescPool;
-    tinyHandle hMatDescLayout;
-    VkDescriptorPool matDescPool() const;
-    VkDescriptorSetLayout matDescLayout() const;
-
-    // Skin (glm::mat4 bones)
-    tinyHandle hSkinDescPool;
-    tinyHandle hSkinDescLayout;
-    VkDescriptorPool skinDescPool() const;
-    VkDescriptorSetLayout skinDescLayout() const;
-
     // Morph target deltas (tinyMorph - 3 glm::vec3)
     tinyHandle hMrphDsDescPool;
     tinyHandle hMrphDsDescLayout;
@@ -64,21 +49,6 @@ struct SceneRes {
     VkDescriptorSetLayout mrphWsDescLayout() const;
 
 // Default resources accessors
-
-    // Default implies that something is usable by "default"
-    // Dummy just straight up represents a lack of something lol
-
-    // Material and texture
-    tinyHandle hDefaultMaterialVk;
-    const tinyMaterialVk* defaultMaterialVk() const;
-
-    tinyHandle hDefaultTextureVk0;
-    tinyHandle hDefaultTextureVk1;
-    const tinyTextureVk* defaultTextureVk0() const;
-    const tinyTextureVk* defaultTextureVk1() const;
-
-    tinyHandle hDummySkinDescSet;
-    VkDescriptorSet dummySkinDescSet() const;
 
     tinyHandle hDummyMeshMrphDsDescSet;
     tinyHandle hDummyMeshMrphWsDescSet;

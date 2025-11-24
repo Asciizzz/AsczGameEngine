@@ -48,10 +48,9 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
     if (!model.textures.empty()) {
         tinyHandle fnTexFolder = fs_->createFolder("Textures", fnModelFolder);
         for (auto& mTexture : model.textures) {
-            tinyTextureVk textureVk;
-            textureVk.createFrom(std::move(mTexture.texture), dvk_);
+            mTexture.texture.vkCreate(dvk_);
 
-            tinyHandle fnHandle = fs_->createFile(mTexture.name, std::move(textureVk), fnTexFolder);
+            tinyHandle fnHandle = fs_->createFile(mTexture.name, std::move(mTexture.texture), fnTexFolder);
             tinyHandle dataHandle = fs_->dataHandle(fnHandle);
             glbTexRHandle.push_back(dataHandle);
         }
@@ -204,7 +203,7 @@ void tinyProject::setupFS() {
     amat->ext = "amat";
     amat->color[0] = 255; amat->color[1] = 102; amat->color[2] = 255;
 
-    tinyFS::TypeInfo* atex = fs_->typeInfo<tinyTextureVk>();
+    tinyFS::TypeInfo* atex = fs_->typeInfo<tinyTexture>();
     atex->ext = "atex"; atex->rmOrder = 1;
     atex->color[0] = 102; atex->color[1] = 102; atex->color[2] = 255;
 
@@ -264,7 +263,7 @@ void tinyProject::fRemove(tinyHandle fileHandle) {
 
         if (dHandle.is<tinyMesh>() ||
             dHandle.is<tinyMaterialVk>() ||
-            dHandle.is<tinyTextureVk>() ||
+            dHandle.is<tinyTexture>() ||
             dHandle.is<rtScene>())
         {
             deferredRms_[DeferRmType::Vulkan].push_back(h);
@@ -297,37 +296,9 @@ void tinyProject::vkCreateResources() {
     sharedRes_.maxFramesInFlight = 2;
     sharedRes_.fsr = &fs().r();
     sharedRes_.dvk = dvk_;
-
-    // Skin descriptors
-    DescSLayout skinDescLayout;
-    skinDescLayout.create(device, { {0, DescType::StorageBufferDynamic, 1, ShaderStage::Vertex, nullptr} });
-    sharedRes_.hSkinDescLayout = rAdd<DescSLayout>(std::move(skinDescLayout));
-
-    DescPool skinDescPool;
-    skinDescPool.create(device, { {DescType::StorageBufferDynamic, maxSkeletons} }, maxSkeletons);
-    sharedRes_.hSkinDescPool = rAdd<DescPool>(std::move(skinDescPool));
-
-    // Material descriptors
-    DescSLayout matDescLayout = tinyMaterialVk::createDescSetLayout(device);
-    DescPool matDescPool = tinyMaterialVk::createDescPool(device, maxMaterials);
-    sharedRes_.hMatDescLayout = rAdd<DescSLayout>(std::move(matDescLayout));
-    sharedRes_.hMatDescPool = rAdd<DescPool>(std::move(matDescPool));
-
-    // Mesh morph delta descriptors
-    DescSLayout meshMrphDsDescLayout = tinyMesh::createMrphDescSetLayout(device, false);
-    DescPool meshMrphDsDescPool = tinyMesh::createMrphDescPool(device, maxMeshes, false);
-    sharedRes_.hMrphDsDescLayout = rAdd<DescSLayout>(std::move(meshMrphDsDescLayout));
-    sharedRes_.hMrphDsDescPool = rAdd<DescPool>(std::move(meshMrphDsDescPool));
-
-    // Mesh morph weight descriptors
-    DescSLayout meshMrphWsDescLayout = tinyMesh::createMrphDescSetLayout(device);
-    DescPool meshMrphWsDescPool = tinyMesh::createMrphDescPool(device, maxMeshes);
-    sharedRes_.hMrphWsDescLayout = rAdd<DescSLayout>(std::move(meshMrphWsDescLayout));
-    sharedRes_.hMrphWsDescPool = rAdd<DescPool>(std::move(meshMrphWsDescPool));
-    
     sharedRes_.camera = camera_.get();
 
-    // -------------- Create Machines --------------
+    // Create Machine
 
     machine_ = MakeUnique<tinyMachine>();
     machine_->meshStatic3D.init(dvk_, &fs().r().view<tinyMesh>());
@@ -336,53 +307,6 @@ void tinyProject::vkCreateResources() {
 }
 
 void tinyProject::vkCreateDefault() {
-
-//  ---------- Create default material and texture ----------
-
-    tinyTextureVk defaultTextureVk0 = tinyTextureVk::aPixel(dvk_, 255, 255, 255, 255);
-    sharedRes_.hDefaultTextureVk0 = rAdd<tinyTextureVk>(std::move(defaultTextureVk0));
-
-    tinyTextureVk defaultTextureVk1 = tinyTextureVk::aPixel(dvk_, 0, 0, 0, 0);
-    sharedRes_.hDefaultTextureVk1 = rAdd<tinyTextureVk>(std::move(defaultTextureVk1));
-
-    tinyMaterialVk defaultMaterialVk;
-    defaultMaterialVk.init(
-        dvk_,
-        sharedRes_.defaultTextureVk0(),
-        sharedRes_.defaultTextureVk1(),
-        sharedRes_.matDescLayout(),
-        sharedRes_.matDescPool()
-    );
-
-    sharedRes_.hDefaultMaterialVk = rAdd<tinyMaterialVk>(std::move(defaultMaterialVk));
-
-//  -------------- Create dummy skin resources --------------
-
-    DataBuffer dummySkinBuffer;
-    DescSet dummySkinDescSet;
-
-    dummySkinDescSet.allocate(dvk_->device, sharedRes_.skinDescPool(), sharedRes_.skinDescLayout());
-    // tinyRT_SKEL3D::vkWrite(dvk_, &dummySkinBuffer, &dummySkinDescSet, sharedRes_.maxFramesInFlight, 1);
-
-    rAdd<DataBuffer>(std::move(dummySkinBuffer)); // No need to store handle
-    sharedRes_.hDummySkinDescSet = rAdd<DescSet>(std::move(dummySkinDescSet));
-
-// -------------- Create dummy morph target resources --------------
-
-    DataBuffer dummyMrphDsBuffer, dummyMrphWsBuffer;
-    DescSet dummyMrphDsDescSet, dummyMrphWsDescSet;
-
-    // dummyMrphDsDescSet.allocate(dvk_->device, sharedRes_.mrphDsDescPool(), sharedRes_.mrphDsDescLayout());
-    // tinyRT_MESHRD::vkWrite(dvk_, &dummyMrphDsBuffer, &dummyMrphDsDescSet, 1, 1); // Non-dynamic
-
-    // dummyMrphWsDescSet.allocate(dvk_->device, sharedRes_.mrphWsDescPool(), sharedRes_.mrphWsDescLayout());
-    // tinyRT_MESHRD::vkWrite(dvk_, &dummyMrphWsBuffer, &dummyMrphWsDescSet, sharedRes_.maxFramesInFlight, 1);
-
-    rAdd<DataBuffer>(std::move(dummyMrphDsBuffer));
-    sharedRes_.hDummyMeshMrphDsDescSet = rAdd<DescSet>(std::move(dummyMrphDsDescSet));
-
-    rAdd<DataBuffer>(std::move(dummyMrphWsBuffer));
-    sharedRes_.hDummyMeshMrphWsDescSet = rAdd<DescSet>(std::move(dummyMrphWsDescSet));
 
 // ------------------ Create Main Scene ------------------
 

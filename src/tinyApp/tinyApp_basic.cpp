@@ -79,13 +79,14 @@ void tinyApp::initComponents() {
     
     pipelineSky = MakeUnique<PipelineRaster>(device, skyCfg);
 
+/*
     // ===== Pipeline 2: Rigged Mesh =====
     RasterCfg riggedCfg;
     riggedCfg.renderPass = renderPass;
     riggedCfg.setLayouts = {
         project->descSLayout_Global(),
-        sharedRes.matDescLayout(),
-        sharedRes.skinDescLayout(),
+        // sharedRes.matDescLayout(),
+        // sharedRes.skinDescLayout(),
         sharedRes.mrphDsDescLayout(),
         sharedRes.mrphWsDescLayout()
     };
@@ -107,7 +108,7 @@ void tinyApp::initComponents() {
     staticCfg.renderPass = renderPass;
     staticCfg.setLayouts = { 
         project->descSLayout_Global(),
-        sharedRes.matDescLayout()
+        // sharedRes.matDescLayout()
     };
     
     // Push constants for static mesh (80 bytes)
@@ -121,6 +122,7 @@ void tinyApp::initComponents() {
         .withVertexInput({ vstaticBind }, { vstaticAttrs });
     
     pipelineStatic = MakeUnique<PipelineRaster>(device, staticCfg);
+*/
 
     // ===== Pipeline 4: Test =====
 
@@ -169,14 +171,14 @@ bool tinyApp::checkWindowResize() {
 
     // Update render pass for all pipeline configs
     pipelineSky->cfg.renderPass = renderPass;
-    pipelineRigged->cfg.renderPass = renderPass;
-    pipelineStatic->cfg.renderPass = renderPass;
+    // pipelineRigged->cfg.renderPass = renderPass;
+    // pipelineStatic->cfg.renderPass = renderPass;
     pipelineTest->cfg.renderPass = renderPass;
 
     // Recreate pipelines
     pipelineSky->recreate();
-    pipelineRigged->recreate();
-    pipelineStatic->recreate();
+    // pipelineRigged->recreate();
+    // pipelineStatic->recreate();
     pipelineTest->recreate();
 
     
@@ -249,9 +251,9 @@ void tinyApp::mainLoop() {
 
                     if (ext == "png" || ext == "jpg" || ext == "jpeg" || ext == "bmp") {
                         tinyTexture texture = tinyLoader::loadTexture(droppedFile);
-                        tinyTextureVk texVk = tinyTextureVk(std::move(texture), dvk.get());
+                        texture.vkCreate(dvk.get());
 
-                        project->fs().createFile(name, std::move(texVk));
+                        project->fs().createFile(name, std::move(texture));
                     }
 
                 } break;

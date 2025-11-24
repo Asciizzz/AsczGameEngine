@@ -224,23 +224,6 @@ struct tinyMesh {
         return true;
     }
 
-    // Static helpers
-    static tinyVk::DescSLayout createMrphDescSetLayout(VkDevice device, bool dynamic = true) {
-        using namespace tinyVk;
-        DescSLayout layout; layout.create(device, {
-            {0, dynamic ? DescType::StorageBufferDynamic : DescType::StorageBuffer, 1, ShaderStage::Vertex, nullptr}
-        });
-        return layout;
-    }
-
-    static tinyVk::DescPool createMrphDescPool(VkDevice device, uint32_t maxMeshes, bool dynamic = true) {
-        using namespace tinyVk;
-        DescPool pool; pool.create(device, {
-            {dynamic ? DescType::StorageBufferDynamic : DescType::StorageBuffer, maxMeshes}
-        }, maxMeshes);
-        return pool;
-    }
-
 private:
 
     tinyVertex::Layout vrtxLayout_;

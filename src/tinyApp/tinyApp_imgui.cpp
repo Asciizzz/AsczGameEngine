@@ -90,7 +90,7 @@ namespace Texture {
 
     static UnorderedMap<uint64_t, ImTextureID> textureCache;
 
-    static void Render(tinyTextureVk* texture) {
+    static void Render(tinyTexture* texture) {
         uint64_t cacheKey = (uint64_t)texture->view();
 
         ImTextureID texId;
@@ -1276,8 +1276,8 @@ static void RenderFileInspector(tinyProject* project) {
         if (ImGui::Button("Open in Editor", ImVec2(-1, 0))) {
             Editor::selected = handle;
         }
-    } else if (dHandle.is<tinyTextureVk>()) {
-        tinyTextureVk* texture = fs.r().get<tinyTextureVk>(dHandle);
+    } else if (dHandle.is<tinyTexture>()) {
+        tinyTexture* texture = fs.r().get<tinyTexture>(dHandle);
 
         Texture::Render(texture);
     }

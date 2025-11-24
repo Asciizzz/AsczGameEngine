@@ -120,7 +120,8 @@ tinyTexture tinyLoader::loadTexture(const std::string& filePath) {
     stbi_image_free(stbiData);
 
     // Always create texture with 4 channels (RGBA)
-    return texture.create(std::move(rgbaData), width, height, 4);
+    texture.create(std::move(rgbaData), width, height, 4);
+    return texture;
 }
 
 // =================================== 3D MODELS ===================================
@@ -384,7 +385,7 @@ void loadTextures(std::vector<tinyModel::Texture>& textures, tinygltf::Model& mo
             );
             
             // Always create texture with 4 channels (RGBA)
-            texture = tinyTexture().create(std::move(rgbaData), image.width, image.height, 4);
+            texture.create(std::move(rgbaData), image.width, image.height, 4);
         }
         
         // Load sampler settings (address mode)

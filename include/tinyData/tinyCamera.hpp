@@ -99,34 +99,37 @@ public:
         }
     }
 
-    bool collideAABB(glm::vec3 abMin, glm::vec3 abMax, glm::mat4 transform) const {
+    bool collideAABB(glm::vec3 abMin, glm::vec3 abMax, glm::mat4 model) const {
+        // Extract planes once outside if calling per object many times.
         Plane planes[6];
-        extractFrustumPlanes(getVP(), planes);
+        extractFrustumPlanes(getVP(), planes); // ensure these are normalized inside
 
-        // Transform camera frustum planes into the AABB's local space
-        glm::mat4 invTrans = glm::transpose(glm::inverse(transform));
-        for (int i = 0; i < 6; ++i) planes[i].eq = invTrans * planes[i].eq;
+        // Compute AABB center & half extents in local space
+        glm::vec3 localCenter = (abMin + abMax) * 0.5f;
+        glm::vec3 localHalf   = (abMax - abMin) * 0.5f;
 
-        // Now test the *local* AABB against those transformed planes
+        // Transform center to world
+        glm::vec4 wc = model * glm::vec4(localCenter, 1.0f);
+        glm::vec3 worldCenter = glm::vec3(wc);
+
+        // Transform half extents by absolute value of 3x3 upper-left of model
+        glm::mat3 rotScale = glm::mat3(model); // upper-left 3x3
+        glm::mat3 absRS = glm::mat3(
+            glm::abs(rotScale[0]),
+            glm::abs(rotScale[1]),
+            glm::abs(rotScale[2])
+        );
+        glm::vec3 worldHalf = absRS * localHalf;
+
+        // Test against planes (plane eq is normalized)
         for (int i = 0; i < 6; ++i) {
             glm::vec3 n = glm::vec3(planes[i].eq);
             float d = planes[i].eq.w;
-
-            // Choose the vertex most likely to be outside the plane
-            glm::vec3 p = abMin;
-            if (n.x >= 0) p.x = abMax.x;
-            if (n.y >= 0) p.y = abMax.y;
-            if (n.z >= 0) p.z = abMax.z;
-
-            // Signed distance from plane
-            float dist = glm::dot(n, p) + d;
-
-            // If it's completely outside any plane, there’s no collision
-            if (dist < 0.0f)
-                return false;
+            float radius = worldHalf.x * fabs(n.x) + worldHalf.y * fabs(n.y) + worldHalf.z * fabs(n.z);
+            float distance = glm::dot(n, worldCenter) + d;
+            if (distance + radius < 0.0f) return false; // outside
         }
-
-        // Otherwise it intersects or is fully inside the frustum
         return true;
     }
+
 };
