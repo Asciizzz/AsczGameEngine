@@ -4,6 +4,7 @@
 #include "tinyVk/Resource/Descriptor.hpp"
 
 #include "tinyRT/rtMesh.hpp" // In the future rename this to mesh machine
+#include "tinyCamera.hpp"
 
 // Descriptor accessors
 

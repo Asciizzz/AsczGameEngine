@@ -81,6 +81,7 @@ class Scene {
 
 // Internal helpers
     [[nodiscard]] inline tinyRegistry& fsr() noexcept { return *res_.fsr; }
+    [[nodiscard]] inline tinyCamera& camera() noexcept { return *res_.camera; }
 
 public:
     Scene() noexcept = default;

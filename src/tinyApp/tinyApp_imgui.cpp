@@ -841,7 +841,7 @@ static void RenderMESHRD3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle)
     if (!meshRD) return;
 
     tinyHandle meshHandle = meshRD->mesh;
-    const tinyMeshVk* meshVk = fs.r().get<tinyMeshVk>(meshHandle);
+    const tinyMesh* mesh = fs.r().get<tinyMesh>(meshHandle);
 
     tinyHandle meshFHandle = fs.rDataToFile(meshHandle);
 
@@ -849,11 +849,11 @@ static void RenderMESHRD3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle)
         [&fs, meshFHandle]() { return fs.nameCStr(meshFHandle); },
         "No Mesh Assigned",
         [&]() { 
-            if (!meshVk) return ImVec4(0.5f, 0.5f, 0.5f, 1.0f);
-            return IMVEC4_COLOR3(fs.typeInfo<tinyMeshVk>()->color, 1.0);
+            if (!mesh) return ImVec4(0.5f, 0.5f, 0.5f, 1.0f);
+            return IMVEC4_COLOR3(fs.typeInfo<tinyMesh>()->color, 1.0);
         },
         ImVec4(0.2f, 0.2f, 0.2f, 1.0f),
-        [meshVk]() { return meshVk != nullptr; },
+        [mesh]() { return mesh != nullptr; },
         [&fs, meshRD]() {
             if (ImGui::BeginDragDropTarget()) {
                 if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PAYLOAD")) {
@@ -863,7 +863,7 @@ static void RenderMESHRD3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle)
                     tinyHandle fHandle = data->handle;
                     tinyHandle dHandle = fs.dataHandle(fHandle);
 
-                    if (!dHandle.is<tinyMeshVk>()) { ImGui::EndDragDropTarget(); return; }
+                    if (!dHandle.is<tinyMesh>()) { ImGui::EndDragDropTarget(); return; }
                     meshRD->mesh = dHandle;
                     ImGui::EndDragDropTarget();
                 }
@@ -1037,7 +1037,7 @@ static void RenderSCRIPT(const tinyFS& fs, rtScene* scene, rtScene::NWrap& wrap)
                     if (val.is<tinyNodeRT>())  type = "Node"; else
                     if (val.is<rtScene>()) type = "Scene"; else
                     if (val.is<tinyScript>())  type = "Script"; else
-                    if (val.is<tinyMeshVk>())  type = "Mesh";
+                    if (val.is<tinymesh>())  type = "Mesh";
 
                     RenderDragField(
                         [&]() {

@@ -161,26 +161,26 @@ void Scene::update(FrameStart frameStart) noexcept {
     float dt = frameStart.deltaTime;
     uint32_t frame = frameStart.frameIndex;
 
-    glm::mat4 parentMat = glm::mat4(1.0f);
-
     // Testing ground
     testRenders.clear();
 
-    std::function<void(tinyHandle)> updateNode = [&](tinyHandle nHandle) {
+    std::function<void(tinyHandle, glm::mat4)> updateNode = [&](tinyHandle nHandle, glm::mat4 parentMat) {
         Node* node = nodes_.get(nHandle);
         if (!node) return;
+
+        glm::mat4 currentWorld = parentMat;
 
         // Update components
         for (auto& [_, compHandle] : node->comps) {
             if (rtTRANFM3D* tranfm3D = rt_.get<rtTRANFM3D>(compHandle)) {
                 tranfm3D->local.update();
                 tranfm3D->world = parentMat * tranfm3D->local.Mat4;
-                parentMat = tranfm3D->world;
+                currentWorld = tranfm3D->world;
             }
 
             if (rtMESHRD3D* meshRD3D = rt_.get<rtMESHRD3D>(compHandle)) {
                 TestRender tr;
-                tr.model = parentMat;
+                tr.model = currentWorld;
                 tr.mesh = meshRD3D->mesh;
                 testRenders.push_back(tr);
             }
@@ -188,8 +188,8 @@ void Scene::update(FrameStart frameStart) noexcept {
 
         // Recurse into children
         for (tinyHandle childHandle : node->children) {
-            updateNode(childHandle);
+            updateNode(childHandle, currentWorld);
         }
     };
-    updateNode(root_);
+    updateNode(root_, glm::mat4(1.0f));
 }

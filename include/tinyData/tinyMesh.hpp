@@ -22,6 +22,12 @@ struct tinyMorphTarget {
 struct tinyMesh {
     tinyMesh() noexcept = default;
 
+    tinyMesh(const tinyMesh&) = delete;
+    tinyMesh& operator=(const tinyMesh&) = delete;
+
+    tinyMesh(tinyMesh&&) noexcept = default;
+    tinyMesh& operator=(tinyMesh&&) noexcept = default;
+
     struct Part {
         uint32_t indxOffset = 0;
         uint32_t indxCount = 0;
@@ -140,115 +146,72 @@ struct tinyMesh {
         return const_cast<tinyMesh*>(this)->mrphName(targetIndex);
     }
 
-private:
-
-    tinyVertex::Layout vrtxLayout_;
-    std::vector<uint8_t> vrtxData_; // raw bytes
-    size_t vrtxCount_ = 0;
-
-    std::vector<uint8_t> indxData_; // raw bytes
-    size_t indxCount_ = 0;
-    size_t indxStride_ = 0;
-
-    // Optional
-    std::vector<std::string> mrphNames_;
-    std::vector<uint8_t> mrphData_; // raw bytes
-    size_t mrphCount_ = 0;
-
-    std::vector<Part> parts_;
-};
-
-struct tinyMeshVk {
-    tinyMeshVk() noexcept = default;
-    void init(const tinyVk::Device* dvk, VkDescriptorSetLayout mrphDsDescSetLayout, VkDescriptorPool mrphDsDescPool) {
-        dvk_ = dvk;
-        mrphDsDescSet_.allocate(dvk->device, mrphDsDescPool, mrphDsDescSetLayout);
-    }
-
-    tinyMeshVk(const tinyMeshVk&) = delete;
-    tinyMeshVk& operator=(const tinyMeshVk&) = delete;
-
-    tinyMeshVk(tinyMeshVk&&) noexcept = default;
-    tinyMeshVk& operator=(tinyMeshVk&&) noexcept = default;
-
+// -----------------------------------------
+// Vulkan API
 // -----------------------------------------
 
     VkBuffer vrtxBuffer() const noexcept { return vrtxBuffer_; }
     VkBuffer indxBuffer() const noexcept { return indxBuffer_; }
+    VkBuffer mrphBuffer() const noexcept { return mrphBuffer_; }
     VkIndexType indxType() const noexcept { return indxType_; }
-
-    tinyMesh& cpu() noexcept { return mesh_; }
-    const tinyMesh& cpu() const noexcept { return mesh_; }
-
-    std::vector<tinyMesh::Part>& parts() noexcept { return mesh_.parts(); }
-    const std::vector<tinyMesh::Part>& parts() const noexcept { return mesh_.parts(); }
-
-    const tinyVertex::Layout& vrtxLayout() const noexcept { return mesh_.vrtxLayout(); }
-
-    size_t vrtxCount() const noexcept { return mesh_.vrtxCount(); }
-    size_t indxCount() const noexcept { return mesh_.indxCount(); }
-    size_t mrphCount() const noexcept { return mesh_.mrphCount(); }
     VkDescriptorSet mrphDsDescSet() const noexcept {
-        return mesh_.mrphCount() ? mrphDsDescSet_.get() : VK_NULL_HANDLE;
+        return mrphCount() ? mrphDsDescSet_.get() : VK_NULL_HANDLE;
     }
 
-// -----------------------------------------
+    bool vkCreate(const tinyVk::Device* device, VkDescriptorSetLayout mrphLayout = VK_NULL_HANDLE, VkDescriptorPool mrphPool = VK_NULL_HANDLE) {
+        dvk_ = device;
 
-    tinyMeshVk& set(tinyMesh&& mesh) {
-        mesh_ = std::move(mesh);
-        return *this;
-    }
-
-    bool create() {
         using namespace tinyVk;
 
         vrtxBuffer_
-            .setDataSize(mesh_.vrtxData().size())
+            .setDataSize(vrtxData_.size())
             .setUsageFlags(BufferUsage::Vertex)
-            .createDeviceLocalBuffer(dvk_, mesh_.vrtxData().data());
+            .createDeviceLocalBuffer(dvk_, vrtxData_.data());
 
         indxBuffer_ 
-            .setDataSize(mesh_.indxData().size())
+            .setDataSize(indxData_.size())
             .setUsageFlags(BufferUsage::Index)
-            .createDeviceLocalBuffer(dvk_, mesh_.indxData().data());
+            .createDeviceLocalBuffer(dvk_, indxData_.data());
 
-        switch (mesh_.indxStride()) {
+        switch (indxStride_) {
             case sizeof(uint8_t):  indxType_ = VK_INDEX_TYPE_UINT8;  break;
             case sizeof(uint16_t): indxType_ = VK_INDEX_TYPE_UINT16; break;
             case sizeof(uint32_t): indxType_ = VK_INDEX_TYPE_UINT32; break;
-            default:               indxType_ = VK_INDEX_TYPE_MAX_ENUM; break; // (your problem lol)
+            default:               indxType_ = VK_INDEX_TYPE_MAX_ENUM; break;
         }
 
-        if (mesh_.mrphCount() == 0) return true; // No morph targets
+        if (mrphCount() == 0) {
+            clearData();
+            return true;
+        }
 
-        size_t mrphSize = mesh_.mrphData().size();
-        mrphDsBuffer_
+        // Morph targets
+        size_t mrphSize = mrphData_.size();
+        mrphBuffer_
             .setDataSize(mrphSize)
             .setUsageFlags(BufferUsage::Storage)
-            .createDeviceLocalBuffer(dvk_, mesh_.mrphData().data());
+            .createDeviceLocalBuffer(dvk_, mrphData_.data());
 
-        DescWrite()
-            .setDstSet(mrphDsDescSet_)
-            .setType(DescType::StorageBuffer) // NOT DYNAMIC
-            .setDescCount(1)
-            .setBufferInfo({ VkDescriptorBufferInfo{
-                mrphDsBuffer_,
-                0,
-                mrphSize
-            } })
-            .updateDescSets(dvk_->device);
+        if (mrphLayout != VK_NULL_HANDLE && mrphPool != VK_NULL_HANDLE) {
+            mrphDsDescSet_.allocate(dvk_->device, mrphPool, mrphLayout);
 
-        // Clear the cpu mesh data
-        mesh_.clearData();
+            DescWrite()
+                .setDstSet(mrphDsDescSet_)
+                .setType(DescType::StorageBuffer)
+                .setDescCount(1)
+                .setBufferInfo({ VkDescriptorBufferInfo{
+                    mrphBuffer_,
+                    0,
+                    mrphSize
+                } })
+                .updateDescSets(dvk_->device);
+        }
 
+        clearData();
         return true;
     }
 
-    tinyMeshVk& createFrom(tinyMesh&& mesh) {
-        return set(std::forward<tinyMesh>(mesh)).create(), *this;
-    }
-
-    // Both weights and deltas uses SSBO, so no need for 2 separate desc sets creation functions
+    // Static helpers
     static tinyVk::DescSLayout createMrphDescSetLayout(VkDevice device, bool dynamic = true) {
         using namespace tinyVk;
         DescSLayout layout; layout.create(device, {
@@ -266,14 +229,27 @@ struct tinyMeshVk {
     }
 
 private:
-    const tinyVk::Device* dvk_;
-    tinyMesh mesh_;
 
+    tinyVertex::Layout vrtxLayout_;
+    std::vector<uint8_t> vrtxData_; // raw bytes
+    size_t vrtxCount_ = 0;
+
+    std::vector<uint8_t> indxData_; // raw bytes
+    size_t indxCount_ = 0;
+    size_t indxStride_ = 0;
+
+    // Optional
+    std::vector<std::string> mrphNames_;
+    std::vector<uint8_t> mrphData_; // raw bytes
+    size_t mrphCount_ = 0;
+
+    std::vector<Part> parts_;
+
+    // Vulkan parts
+    const tinyVk::Device* dvk_ = nullptr;
     tinyVk::DataBuffer vrtxBuffer_;
     tinyVk::DataBuffer indxBuffer_;
-
-    tinyVk::DataBuffer mrphDsBuffer_;
+    tinyVk::DataBuffer mrphBuffer_;
     tinyVk::DescSet mrphDsDescSet_;
-
     VkIndexType indxType_ = VK_INDEX_TYPE_UINT16;
 };

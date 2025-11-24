@@ -237,7 +237,7 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
     testPipeline->bindSets(currentCmd, 0, &glbSet, 1, &offset, 1);
 
     for (auto& render : testRenders) {
-        const auto* rMesh = sharedRes.fsGet<tinyMeshVk>(render.mesh);
+        const auto* rMesh = sharedRes.fsGet<tinyMesh>(render.mesh);
         if (!rMesh) continue; // Mesh not found in registry
 
         // Draw each individual submeshes

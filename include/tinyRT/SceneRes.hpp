@@ -15,11 +15,14 @@ namespace tinyRT {
 struct tinyMaterialVk;
 struct tinyTextureVk;
 
+class tinyCamera;
+
 struct SceneRes {
     uint32_t maxFramesInFlight = 0; // If you messed this up the app just straight up jump off a cliff
 
     tinyRegistry* fsr = nullptr; // For stuffs and things
     const tinyVk::Device* dvk = nullptr;   // For GPU resource creation
+    tinyCamera* camera = nullptr;    // For global UBOs
 
 // File system helper
 

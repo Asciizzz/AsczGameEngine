@@ -111,12 +111,11 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
             //     part.material = linkHandle(part.material.index, glmMatRHandle);
             // }
 
-            tinyMeshVk meshVk;
-            meshVk.init(dvk_, sharedRes_.mrphDsDescLayout(), sharedRes_.mrphDsDescPool());
+            // tinyMeshVk meshVk;
+            // meshVk.init(dvk_, sharedRes_.mrphDsDescLayout(), sharedRes_.mrphDsDescPool());
+            mMesh.mesh.vkCreate(dvk_, sharedRes_.mrphDsDescLayout(), sharedRes_.mrphDsDescPool());
 
-            meshVk.createFrom(std::move(mMesh.mesh));
-
-            tinyHandle fnHandle = fs_->createFile(mMesh.name, std::move(meshVk), fnMeshFolder);
+            tinyHandle fnHandle = fs_->createFile(mMesh.name, std::move(mMesh.mesh), fnMeshFolder);
             tinyHandle dataHandle = fs_->dataHandle(fnHandle);
             glbMeshRHandle.push_back(dataHandle);
         }
@@ -209,7 +208,7 @@ void tinyProject::setupFS() {
     atex->ext = "atex"; atex->rmOrder = 1;
     atex->color[0] = 102; atex->color[1] = 102; atex->color[2] = 255;
 
-    tinyFS::TypeInfo* amsh = fs_->typeInfo<tinyMeshVk>();
+    tinyFS::TypeInfo* amsh = fs_->typeInfo<tinyMesh>();
     amsh->ext = "amsh";
     amsh->color[0] = 255; amsh->color[1] = 255; amsh->color[2] = 102;
 
@@ -263,7 +262,7 @@ void tinyProject::fRemove(tinyHandle fileHandle) {
     for (tinyHandle h : rmQueue) {
         tinyHandle dHandle = fs_->dataHandle(h);
 
-        if (dHandle.is<tinyMeshVk>() ||
+        if (dHandle.is<tinyMesh>() ||
             dHandle.is<tinyMaterialVk>() ||
             dHandle.is<tinyTextureVk>() ||
             dHandle.is<rtScene>())
@@ -315,21 +314,24 @@ void tinyProject::vkCreateResources() {
     sharedRes_.hMatDescPool = rAdd<DescPool>(std::move(matDescPool));
 
     // Mesh morph delta descriptors
-    DescSLayout meshMrphDsDescLayout = tinyMeshVk::createMrphDescSetLayout(device, false);
-    DescPool meshMrphDsDescPool = tinyMeshVk::createMrphDescPool(device, maxMeshes, false);
+    DescSLayout meshMrphDsDescLayout = tinyMesh::createMrphDescSetLayout(device, false);
+    DescPool meshMrphDsDescPool = tinyMesh::createMrphDescPool(device, maxMeshes, false);
     sharedRes_.hMrphDsDescLayout = rAdd<DescSLayout>(std::move(meshMrphDsDescLayout));
     sharedRes_.hMrphDsDescPool = rAdd<DescPool>(std::move(meshMrphDsDescPool));
 
     // Mesh morph weight descriptors
-    DescSLayout meshMrphWsDescLayout = tinyMeshVk::createMrphDescSetLayout(device);
-    DescPool meshMrphWsDescPool = tinyMeshVk::createMrphDescPool(device, maxMeshes);
+    DescSLayout meshMrphWsDescLayout = tinyMesh::createMrphDescSetLayout(device);
+    DescPool meshMrphWsDescPool = tinyMesh::createMrphDescPool(device, maxMeshes);
     sharedRes_.hMrphWsDescLayout = rAdd<DescSLayout>(std::move(meshMrphWsDescLayout));
     sharedRes_.hMrphWsDescPool = rAdd<DescPool>(std::move(meshMrphWsDescPool));
 
     // -------------- Create Mesh Machines --------------
+
     rtMeshStatic3D meshStatic3D;
     meshStatic3D.init(dvk_, &fs().r().view<tinyMesh>());
     sharedRes_.hMeshStatic3D = rAdd<rtMeshStatic3D>(std::move(meshStatic3D));
+
+    sharedRes_.camera = camera_.get();
 }
 
 void tinyProject::vkCreateDefault() {
