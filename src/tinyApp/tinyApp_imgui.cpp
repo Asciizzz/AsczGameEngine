@@ -698,7 +698,7 @@ static void RenderFileNodeHierarchy() {
 
             if (!node->isFolder()) { // Write colored extension
                 ImGui::SameLine();
-                tinyFS::TypeInfo* typeInfo = fs.typeInfo(fs.dataHandle(h).tID());
+                tinyFS::TypeInfo* typeInfo = fs.typeInfo(fs.typeID(h));
                 ImGui::TextColored(IMVEC4_COLOR3(typeInfo->color, 1.0f), ".%s", typeInfo->c_str());
             }
 
@@ -1530,6 +1530,8 @@ static void RenderSkeleNodeEditor() {
 void tinyApp::renderUI() {
     auto& fpsRef = *fpsManager;
     auto& camRef = *project->camera();
+
+    sceneRef = project->scene(State::sceneHandle);
 
     static float frameTime = 1.0f;
     static const float printInterval = 1.0f; // Print fps every second

@@ -38,8 +38,6 @@ tinyProject::~tinyProject() {
     fs_.reset();
 }
 
-
-
 tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
     parentFolder = parentFolder ? parentFolder : fs_->root();
 
@@ -141,108 +139,39 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
     // If scene has no nodes, return early
     if (model.nodes.empty()) return tinyHandle();
 
+*/
+
     // Create scene with nodes - preserve hierarchy but remap resource references
     rtScene scene;
-    scene.setSharedRes(sharedRes_);
+    scene.init(sharedRes_);
 
-    // First pass: Insert empty nodes and store their handles
-    // Note: Normally we would've used a unordered_map
-    //       but I trust the model to be imported from the
-    //       tinyLoader which guarantees index stability.
-    std::vector<tinyHandle> nodeHandles;
+    // Recursively add nodes
+    std::function<void(int, tinyHandle)> addNodeRecursive = [&](int nodeIndex, tinyHandle parentHandle) {
+        const tinyModel::Node& ogNode = model.nodes[nodeIndex];
 
-    for (const auto& node : model.nodes) {
-        nodeHandles.push_back(scene.addNodeRaw(node.name));
-    }
-
-    // Set the root node to the first node's actual handle
-    // This in theory should be correct if you load the proper model
-    if (!nodeHandles.empty()) scene.setRoot(nodeHandles[0]);
-
-    // Second pass: Remap parent/child relationships and add components
-    for (size_t i = 0; i < model.nodes.size(); ++i) {
-        tinyHandle nodeHandle = nodeHandles[i];
-
-        tinyHandle parentHandle;
-        std::vector<tinyHandle> childrenHandles;
-
-        // const tinyNodeRT& originalNode = model.nodes[i];
-        const tinyModel::Node& ogNode = model.nodes[i];
-
-        // Remap parent handle
-        if (validIndex(ogNode.parent, nodeHandles)) {
-            parentHandle = nodeHandles[ogNode.parent];
-        };
-
-        // Remap children handles
-        for (int child : ogNode.children) {
-            if (validIndex(child, nodeHandles)) {
-                childrenHandles.push_back(nodeHandles[child]);
-            }
-        }
-
-        scene.setNodeParent(nodeHandle, parentHandle);
-        scene.setNodeChildren(nodeHandle, childrenHandles);
+        // Ignore the root node for naming purposes
+        tinyHandle nodeHandle = nodeIndex ? scene.nAdd(ogNode.name, parentHandle) : scene.root();
 
         if (ogNode.hasTRFM3D()) {
-            auto* newTransform = scene.writeComp<tinyNodeRT::TRFM3D>(nodeHandle);
-            newTransform->init(ogNode.TRFM3D);
+            rtTRANFM3D* trfm = scene.nWriteComp<rtTRANFM3D>(nodeHandle);
+            trfm->local.T = glm::vec3(ogNode.TRFM3D[3]);
+            trfm->local.R = glm::quat_cast(ogNode.TRFM3D);
+            trfm->local.S = glm::vec3(
+                glm::length(glm::vec3(ogNode.TRFM3D[0])),
+                glm::length(glm::vec3(ogNode.TRFM3D[1])),
+                glm::length(glm::vec3(ogNode.TRFM3D[2]))
+            );
         }
 
-        if (ogNode.hasMESHR()) {
-            auto* newMeshRender = scene.writeComp<tinyNodeRT::MESHRD>(nodeHandle);
-
-            if (validIndex(ogNode.MESHRD_meshIndx, glbMeshRHandle)) {
-                newMeshRender->setMesh(glbMeshRHandle[ogNode.MESHRD_meshIndx]);
-            }
-
-            if (validIndex(ogNode.MESHRD_skeleNodeIndx, nodeHandles)) {
-                newMeshRender->setSkeleNode(nodeHandles[ogNode.MESHRD_skeleNodeIndx]);
-            }
+        for (int childIndex : ogNode.children) {
+            addNodeRecursive(childIndex, nodeHandle);
         }
-
-        if (ogNode.hasBONE3D()) {
-            auto* newBoneAttach = scene.writeComp<tinyNodeRT::BONE3D>(nodeHandle);
-
-            if (validIndex(ogNode.BONE3D_skeleNodeIndx, nodeHandles)) {
-                newBoneAttach->skeleNodeHandle = nodeHandles[ogNode.BONE3D_skeleNodeIndx];
-            }
-
-            newBoneAttach->boneIndex = ogNode.BONE3D_boneIndx;
-        }
-
-        if (ogNode.hasSKEL3D()) {
-            auto* newSkeleRT = scene.writeComp<tinyNodeRT::SKEL3D>(nodeHandle);
-
-            if (validIndex(ogNode.SKEL3D_skeleIndx, glbSkeleRHandle)) {
-                // Construct new skeleton runtime from the original skeleton
-                newSkeleRT->set(glbSkeleRHandle[ogNode.SKEL3D_skeleIndx]);
-            }
-        }
-
-        if (ogNode.hasANIM3D()) {
-            auto* newAnimeComp = scene.writeComp<tinyNodeRT::ANIM3D>(nodeHandle);
-
-            *newAnimeComp = model.animations[ogNode.ANIM3D_animeIndx];
-
-            for (auto& anime : newAnimeComp->MAL()) {
-                auto* toAnime = newAnimeComp->get(anime.second);
-                if (!toAnime) continue; // Should not happen
-
-                for (auto& channel : toAnime->channels) {
-                    if (!validHandle(channel.node, nodeHandles)) continue;
-                    channel.node = nodeHandles[channel.node.index];
-                }
-            }
-        }
-    }
+    };
+    addNodeRecursive(0, tinyHandle());
 
     // Add scene to registry
     tinyHandle fnHandle = fs_->createFile(model.name, std::move(scene), fnModelFolder);
     return fs_->dataHandle(fnHandle); // Return the scene's registry handle
-*/
-
-    return tinyHandle();
 }
 
 void tinyProject::addSceneInstance(tinyHandle fromHandle, tinyHandle toHandle, tinyHandle parentHandle) {

@@ -134,12 +134,18 @@ public:
     template<typename T>
     tinyHandle nAddComp(tinyHandle nHandle) noexcept { // Generic component addition (without data)
         Node* node = nodes_.get(nHandle);
-        if (!node) return tinyHandle();
+        if (!node || node->has<T>()) return tinyHandle();
 
         tinyHandle compHandle = rt_.emplace<T>();
         node->add<T>(compHandle);
 
         return compHandle;
+    }
+
+    template<typename T>
+    T* nWriteComp(tinyHandle nHandle) noexcept { // Automatic resolver
+        tinyHandle compHandle = nAddComp<T>(nHandle);
+        return rt_.get<T>(compHandle);
     }
 
     template<typename T>
