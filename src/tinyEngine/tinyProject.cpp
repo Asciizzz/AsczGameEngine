@@ -146,11 +146,14 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
     scene.init(sharedRes_);
 
     // Recursively add nodes
+    std::unordered_map<int, tinyHandle> nodeMap; // Original index to new handle
+
     std::function<void(int, tinyHandle)> addNodeRecursive = [&](int nodeIndex, tinyHandle parentHandle) {
         const tinyModel::Node& ogNode = model.nodes[nodeIndex];
 
         // Ignore the root node for naming purposes
         tinyHandle nodeHandle = nodeIndex ? scene.nAdd(ogNode.name, parentHandle) : scene.root();
+        nodeMap[nodeIndex] = nodeHandle;
 
         if (ogNode.hasTRFM3D()) {
             rtTRANFM3D* trfm = scene.nWriteComp<rtTRANFM3D>(nodeHandle);
@@ -161,6 +164,11 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
                 glm::length(glm::vec3(ogNode.TRFM3D[1])),
                 glm::length(glm::vec3(ogNode.TRFM3D[2]))
             );
+        }
+
+        if (ogNode.hasMESHR()) {
+            rtMESHRD3D* meshrd = scene.nWriteComp<rtMESHRD3D>(nodeHandle);
+            meshrd->mesh = linkHandle(ogNode.MESHRD_meshIndx, glbMeshRHandle);
         }
 
         for (int childIndex : ogNode.children) {

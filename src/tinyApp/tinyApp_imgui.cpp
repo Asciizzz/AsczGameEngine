@@ -478,14 +478,15 @@ static void RenderSceneNodeHierarchy() {
         // Children
         [](tinyHandle h) -> std::vector<tinyHandle> {
             const rtNode* node = sceneRef->node(h);
+            if (!node) return {};
 
             std::vector<tinyHandle> children = node->children;
             std::sort(children.begin(), children.end(), [](tinyHandle a, tinyHandle b) {
                 const rtNode* nodeA = sceneRef->node(a);
                 const rtNode* nodeB = sceneRef->node(b);
 
-                bool aHasChildren = nodeA->childrenCount() > 0;
-                bool bHasChildren = nodeB->childrenCount() > 0;
+                bool aHasChildren = nodeA && nodeA->childrenCount() > 0;
+                bool bHasChildren = nodeB && nodeB->childrenCount() > 0;
                 if (aHasChildren != bHasChildren) return aHasChildren > bHasChildren;
                 return nodeA->name < nodeB->name;
             });
@@ -493,13 +494,11 @@ static void RenderSceneNodeHierarchy() {
         },
         // LClick
         [](tinyHandle h) {
-
             State::selected = h;
             State::setExpanded(h, !State::isExpanded(h));
         },
         // RClick
         [](tinyHandle h) {
-            // rtScene::NWrap wrap = sceneRef->nWrap(h);
             rtNode* node = sceneRef->node(h);
             if (!node) {
                 ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid Node!");
@@ -523,22 +522,6 @@ static void RenderSceneNodeHierarchy() {
 
             bool canDelete = h != sceneRef->root();
             if (ImGui::MenuItem("Erase", nullptr, false, canDelete)) sceneRef->nErase(h);
-            if (ImGui::MenuItem("Clear", nullptr, false, node->childrenCount() > 0)) {
-                std::vector<tinyHandle> children = node->children;
-                for (const auto& childHandle : children) sceneRef->nErase(childHandle);
-            }
-
-            // if (tinyRT_ANIM3D* anim3D = Wrap.anim3D) {
-            //     ImGui::Separator();
-            //     for (auto& anime : anim3D->MAL()) {
-            //         if (ImGui::MenuItem(anime.first.c_str())) {
-            //             anim3D->play(anime.first, true);
-            //         }
-            //     }
-            // }
-            // if (tinyRT_SCRIPT* script = Wrap.script) {
-            //     // Do nothing
-            // }
         },
         // DbClick - Do nothing for now
         [scene](tinyHandle h) {
@@ -1158,6 +1141,10 @@ static void RenderSceneNodeInspector(tinyProject* project) {
 
     // rtScene::NWrap wrap = scene->nWrap(handle);
     const rtNode* node = scene->node(handle);
+    if (!node) {
+        ImGui::Text("Invalid node.");
+        return;
+    }
 
     ImGui::Text("%s", node->cname());
     ImGui::Separator();
@@ -1617,6 +1604,7 @@ void tinyApp::renderUI() {
     }
 
     // ===== HIERARCHY WINDOW - Scene & File System =====
+
     if (tinyUI::Begin("Hierarchy", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse)) {
         tinyHandle sceneHandle = State::sceneHandle;
 
@@ -1634,6 +1622,7 @@ void tinyApp::renderUI() {
 
             ImGui::Text("[HDL %u.%u]", sceneHandle.index, sceneHandle.version);
             ImGui::Separator();
+
             RenderSceneNodeHierarchy();
 
             ImGui::EndChild();
@@ -1648,6 +1637,7 @@ void tinyApp::renderUI() {
             
             ImGui::Text("File System");
             ImGui::Separator();
+
             RenderFileNodeHierarchy();
 
             ImGui::EndChild();

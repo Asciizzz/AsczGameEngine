@@ -92,20 +92,24 @@ void Scene::nErase(tinyHandle nHandle, bool recursive, size_t* count) noexcept {
         return;
     }
 
+    size_t count_ = 0;
     std::function<void(tinyHandle)> eraseRec = [&](tinyHandle h) {
         Node* n = nodes_.get(h);
         if (!n) return;
 
         std::vector<tinyHandle> childrenCopy = n->children;
-        
+
         nEraseAllComps(h);
         nodes_.erase(h);
+        count_++;
 
         for (tinyHandle childHandle : childrenCopy) {
             eraseRec(childHandle);
         }
     };
     eraseRec(nHandle);
+
+    if (count) (*count) = count_;
 }
 
 tinyHandle Scene::nReparent(tinyHandle nHandle, tinyHandle nNewParent) noexcept {
