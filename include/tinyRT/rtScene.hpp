@@ -13,6 +13,7 @@ struct Node {
     Node() noexcept = default; // Make non-trivial
 
     std::string name;
+    const char* cname() const noexcept { return name.c_str(); }
 
     tinyHandle parent;
     std::vector<tinyHandle> children;
@@ -21,6 +22,10 @@ struct Node {
     std::map<tinyType::ID, tinyHandle> comps;
 
 // Some helpers
+
+    size_t childrenCount() const noexcept {
+        return children.size();
+    }
 
     int whereChild(tinyHandle child) const noexcept {
         for (size_t i = 0; i < children.size(); ++i) {
@@ -72,11 +77,10 @@ class Scene {
 // Internal helpers
     [[nodiscard]] inline tinyRegistry& fsr() noexcept { return *res_.fsr; }
 
-    [[nodiscard]] inline Node* node(tinyHandle nHandle) noexcept { return nodes_.get(nHandle); }
 public:
     Scene() noexcept = default;
     ~Scene() noexcept;
-    
+
     void init(const SceneRes& res) noexcept;
 
     Scene(const Scene&) = delete;
@@ -91,64 +95,6 @@ public:
         float deltaTime = 0.0f;
     };
 
-    // A node wrapper struct for easier manipulation
-    struct NWrap {
-        void set(Scene* scene, tinyHandle h) noexcept;
-        const Node* node() const noexcept { return node_; }
-
-        explicit operator bool() const noexcept { return node_ != nullptr; }
-        
-        template<typename T>
-        bool has() const noexcept {
-            if (!scene_ || !node_) return false;
-            return node_->has<T>();
-        }
-
-    // Name APIs
-        [[nodiscard]] std::string& name() noexcept;
-        [[nodiscard]] const char* cname() const noexcept;
-        void rename(const std::string& newName) noexcept;
-
-    // Hierarchy APIs
-        const std::vector<tinyHandle>& children() const noexcept;
-        size_t childrenCount() const noexcept;
-        tinyHandle addChild(const std::string& name = "New Node") noexcept;
-
-        tinyHandle parent() const noexcept;
-        bool setParent(tinyHandle newParent) noexcept;
-
-    // Indirect APIs
-
-        void erase(tinyHandle nHandle, bool recursive = true, size_t* count = nullptr) noexcept;
-
-    // Component APIs
-
-        template<typename T>
-        T* writeComp() noexcept {
-            return scene_ ? scene_->nWriteComp<T>(handle_) : nullptr;
-        }
-
-        template<typename T>
-        void eraseComp() noexcept {
-            if (scene_) scene_->nEraseComp<T>(handle_);
-        }
-
-    private:
-        friend class Scene;
-        Scene* scene_ = nullptr;
-
-        tinyHandle handle_;
-        Node* node_ = nullptr;
-
-        Node* get(tinyHandle h) noexcept {
-            return scene_ ? scene_->nodes_.get(h) : nullptr;
-        }
-
-        [[nodiscard]] tinyRegistry& rt() noexcept {
-            return scene_->rt_;
-        }
-    };
-
 // Getters
     [[nodiscard]] tinyRegistry& rt() noexcept { return rt_; }
     [[nodiscard]] const tinyRegistry& rt() const noexcept { return rt_; }
@@ -156,18 +102,21 @@ public:
     [[nodiscard]] SceneRes& res() noexcept { return res_; }
     [[nodiscard]] const SceneRes& res() const noexcept { return res_; }
 
-    [[nodiscard]] inline rtMeshStatic3D& meshStatic3D() noexcept { return *res_.meshStatic3D(); }
+    [[nodiscard]] rtMeshStatic3D& meshStatic3D() noexcept { return *res_.meshStatic3D(); }
 
 // Node APIs
+    std::string& nName(tinyHandle nHandle) noexcept;
+
     [[nodiscard]] tinyHandle root() const noexcept { return root_; }
     bool rootShift() noexcept;
 
-    [[nodiscard]] NWrap nWrap(tinyHandle h) noexcept;
+    [[nodiscard]] Node* node(tinyHandle nHandle) noexcept { return nodes_.get(nHandle); }
+    [[nodiscard]] const Node* node(tinyHandle nHandle) const noexcept { return nodes_.get(nHandle); }
 
-    inline std::vector<tinyHandle> nQueue(tinyHandle start) noexcept;
-    inline tinyHandle nAdd(const std::string& name = "New Node", tinyHandle parent = tinyHandle()) noexcept;
-    inline void nErase(tinyHandle nHandle, bool recursive = true, size_t* count = nullptr) noexcept;
-    inline tinyHandle nReparent(tinyHandle nHandle, tinyHandle nNewParent) noexcept;
+    [[nodiscard]] std::vector<tinyHandle> nQueue(tinyHandle start) noexcept;
+    tinyHandle nAdd(const std::string& name = "New Node", tinyHandle parent = tinyHandle()) noexcept;
+    void nErase(tinyHandle nHandle, bool recursive = true, size_t* count = nullptr) noexcept;
+    tinyHandle nReparent(tinyHandle nHandle, tinyHandle nNewParent) noexcept;
 
     template<typename T>
     T* nWriteComp(tinyHandle nHandle) noexcept { // Automatic creation

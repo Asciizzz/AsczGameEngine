@@ -430,16 +430,15 @@ static void RenderSceneNodeHierarchy() {
         scene->root(), 0,
         // Div
         [scene](tinyHandle h, int depth) {
-            // const tinyNodeRT* node = scene->node(h);
-            rtScene::NWrap wrap = scene->nWrap(h);
-            if (!wrap) {
+            rtNode* node = scene->node(h);
+            if (!node) {
                 ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "<Invalid>");
                 return;
             }
 
-            std::string name = wrap.name();
+            std::string name = node->name;
 
-            bool hasChildren = wrap.childrenCount() > 0;
+            bool hasChildren = node->childrenCount() > 0;
             bool isExpanded = State::isExpanded(h) && hasChildren;
 
             short state = hasChildren + isExpanded; // 0: no children, 1: collapsed, 2: expanded
@@ -453,7 +452,7 @@ static void RenderSceneNodeHierarchy() {
             if (State::renamed == h) {
                 bool enter = ImGui::InputText("##rename", State::renameBuffer, sizeof(State::renameBuffer), ImGuiInputTextFlags_EnterReturnsTrue);
                 if (enter || ImGui::IsItemDeactivatedAfterEdit()) {
-                    wrap.rename(State::renameBuffer);
+                    node->name = std::string(State::renameBuffer);
                     State::renamed = tinyHandle();
                 }
             } else {
@@ -464,8 +463,7 @@ static void RenderSceneNodeHierarchy() {
                     : ImVec4(0.8f, 0.8f, 0.8f, 1.0f);
                 ImGui::TextColored(colorName, "%s", name.c_str());
 
-                // Children count if > 0
-                size_t childCount = wrap.childrenCount();
+                size_t childCount = node->childrenCount();
                 if (childCount > 0) {
                     ImGui::SameLine();
                     ImVec4 infoColor = ImVec4(0.6f, 0.8f, 1.0f, 1.0f);
@@ -479,18 +477,17 @@ static void RenderSceneNodeHierarchy() {
         [](tinyHandle h) -> bool { return State::selected == h; },
         // Children
         [](tinyHandle h) -> std::vector<tinyHandle> {
-            rtScene::NWrap wrap = sceneRef->nWrap(h);
-            std::vector<tinyHandle> children = wrap.children();
-            std::sort(children.begin(), children.end(), [](tinyHandle a, tinyHandle b) {
-                // const tinyNodeRT* nodeA = sceneRef->node(a);
-                // const tinyNodeRT* nodeB = sceneRef->node(b);
-                rtScene::NWrap wrapA = sceneRef->nWrap(a);
-                rtScene::NWrap wrapB = sceneRef->nWrap(b);
+            const rtNode* node = sceneRef->node(h);
 
-                bool aHasChildren = wrapA.childrenCount() > 0;
-                bool bHasChildren = wrapB.childrenCount() > 0;
+            std::vector<tinyHandle> children = node->children;
+            std::sort(children.begin(), children.end(), [](tinyHandle a, tinyHandle b) {
+                const rtNode* nodeA = sceneRef->node(a);
+                const rtNode* nodeB = sceneRef->node(b);
+
+                bool aHasChildren = nodeA->childrenCount() > 0;
+                bool bHasChildren = nodeB->childrenCount() > 0;
                 if (aHasChildren != bHasChildren) return aHasChildren > bHasChildren;
-                return wrapA.name() < wrapB.name();
+                return nodeA->name < nodeB->name;
             });
             return children;
         },
@@ -502,33 +499,34 @@ static void RenderSceneNodeHierarchy() {
         },
         // RClick
         [](tinyHandle h) {
-            rtScene::NWrap wrap = sceneRef->nWrap(h);
-            if (!wrap) {
+            // rtScene::NWrap wrap = sceneRef->nWrap(h);
+            rtNode* node = sceneRef->node(h);
+            if (!node) {
                 ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid Node!");
             }
 
             State::selected = h;
 
-            ImGui::Text("Node: %s", wrap.cname());
+            ImGui::Text("Node: %s", node->cname());
             ImGui::Separator();
             if (ImGui::MenuItem("Add Child")) {
-                wrap.addChild("New Node");
+                sceneRef->nAdd("New Node", h);
                 State::setExpanded(h, true);
             }
             ImGui::Separator();
 
             if (ImGui::MenuItem("Rename")) {
-                strcpy(State::renameBuffer, wrap.cname());
+                strcpy(State::renameBuffer, node->cname());
                 State::renamed = h;
             }
             ImGui::Separator();
 
             bool canDelete = h != sceneRef->root();
-            if (ImGui::MenuItem("Erase", nullptr, false, canDelete)) wrap.erase(h);
-            // if (ImGui::MenuItem("Clear", nullptr, false, wrap.childrenCount() > 0)) {
-            //     std::vector<tinyHandle> children = wrap.children();
-            //     for (const auto& childHandle : children) wrap.erase(childHandle);
-            // }
+            if (ImGui::MenuItem("Erase", nullptr, false, canDelete)) sceneRef->nErase(h);
+            if (ImGui::MenuItem("Clear", nullptr, false, node->childrenCount() > 0)) {
+                std::vector<tinyHandle> children = node->children;
+                for (const auto& childHandle : children) sceneRef->nErase(childHandle);
+            }
 
             // if (tinyRT_ANIM3D* anim3D = Wrap.anim3D) {
             //     ImGui::Separator();
@@ -549,12 +547,12 @@ static void RenderSceneNodeHierarchy() {
         // Hover
         [scene](tinyHandle h) {
             if (ImGui::BeginTooltip()) {
-                if (rtScene::NWrap wrap = scene->nWrap(h)) {
-                    ImGui::Text("%s", wrap.cname());
+                if (const rtNode* node = scene->node(h)) {
+                    ImGui::Text("%s", node->cname());
                     ImGui::Separator();
                     std::string compList = "";
-                    if (wrap.has<rtTRANFM3D>()) compList += "[Tranfm 3D] ";
-                    if (wrap.has<rtMESHRD3D>()) compList += "[Mesh Rd 3D] ";
+                    if (node->has<rtTRANFM3D>()) compList += "[Tranfm 3D] ";
+                    if (node->has<rtMESHRD3D>()) compList += "[Mesh Rd 3D] ";
                     compList = compList.empty() ? "[None]" : compList;
                     ImGui::Text("%s", compList.c_str());
                 } else {
@@ -565,11 +563,10 @@ static void RenderSceneNodeHierarchy() {
         },
         // Drag
         [scene](tinyHandle h) {
-            // const tinyNodeRT* node = scene->node(h);
-            rtScene::NWrap wrap = scene->nWrap(h);
-            if (!wrap) return;
+            const rtNode* node = scene->node(h);
+            if (!node) return;
 
-            Payload payload = Payload::make(h, wrap.name());
+            Payload payload = Payload::make(h, node->name);
             ImGui::SetDragDropPayload("PAYLOAD", &payload, sizeof(payload));
             ImGui::Text("Dragging: %s", payload.name);
         },
@@ -580,10 +577,7 @@ static void RenderSceneNodeHierarchy() {
 
                 // Node = reparenting
                 if (data->is<rtNode>()) {
-                    rtScene::NWrap wrap = scene->nWrap(data->handle);
-                    wrap.setParent(h);
-
-                    // Auto-expand the parent node
+                    scene->nReparent(data->handle, h);
                     State::setExpanded(h, true);
                 }
 
@@ -699,7 +693,7 @@ static void RenderFileNodeHierarchy() {
 
             State::selected = h;
 
-            const char* name = node->name.c_str();
+            const char* name = node->cname();
             ImGui::Text("%s", name);
 
             if (!node->isFolder()) { // Write colored extension
@@ -734,7 +728,7 @@ static void RenderFileNodeHierarchy() {
             }
             ImGui::Separator();
             if (ImGui::MenuItem("Rename", nullptr, nullptr, State::renamed == tinyHandle())) {
-                strcpy(State::renameBuffer, node->name.c_str());
+                strcpy(State::renameBuffer, node->cname());
                 State::renamed = h;
             }
 
@@ -766,7 +760,7 @@ static void RenderFileNodeHierarchy() {
                     return;
                 }
 
-                ImGui::Text("%s", node->name.c_str());
+                ImGui::Text("%s", node->cname());
                 if (node->isFolder()) {
                     ImGui::Separator();
                     ImGui::Text("Folder (%zu items)", node->children.size());
@@ -788,7 +782,7 @@ static void RenderFileNodeHierarchy() {
             Payload payload = Payload::make(h, node->name);
 
             ImGui::SetDragDropPayload("PAYLOAD", &payload, sizeof(payload));
-            ImGui::Text("Dragging: %s", node->name.c_str());
+            ImGui::Text("Dragging: %s", node->cname());
             ImGui::Separator();
 
             const tinyFS::TypeInfo* typeInfo = fs.typeInfo(fs.dataHandle(h).tID());
@@ -1162,9 +1156,10 @@ static void RenderSceneNodeInspector(tinyProject* project) {
     tinyHandle handle = State::selected;
     if (!handle.is<rtNode>()) return;
 
-    rtScene::NWrap wrap = scene->nWrap(handle);
-    
-    ImGui::Text("%s", wrap.cname());
+    // rtScene::NWrap wrap = scene->nWrap(handle);
+    const rtNode* node = scene->node(handle);
+
+    ImGui::Text("%s", node->cname());
     ImGui::Separator();
 
     ImGui::SameLine();
@@ -1175,16 +1170,16 @@ static void RenderSceneNodeInspector(tinyProject* project) {
     // Collect components
     std::vector<CompInfo> components;
     components.push_back({
-        "Transform 3D", wrap.has<rtTRANFM3D>(),
+        "Transform 3D", node->has<rtTRANFM3D>(),
         [&]() { RenderTRANFM3D(fs, scene, handle); },
-        [&]() { wrap.writeComp<rtTRANFM3D>(); },
-        [&]() { wrap.eraseComp<rtTRANFM3D>(); }
+        [&]() { scene->nWriteComp<rtTRANFM3D>(handle); },
+        [&]() { scene->nEraseComp<rtTRANFM3D>(handle); }
     });
     components.push_back({
-        "Mesh Render 3D", wrap.has<rtMESHRD3D>(),
+        "Mesh Render 3D", node->has<rtMESHRD3D>(),
         [&]() { RenderMESHRD3D(fs, scene, handle); },
-        [&]() { wrap.writeComp<rtMESHRD3D>(); },
-        [&]() { wrap.eraseComp<rtMESHRD3D>(); }
+        [&]() { scene->nWriteComp<rtMESHRD3D>(handle); },
+        [&]() { scene->nEraseComp<rtMESHRD3D>(handle); }
     });
     // components.push_back({
     //     "Bone 3D", wrap.bone3D != nullptr,
@@ -1233,7 +1228,7 @@ static void RenderFileInspector(tinyProject* project) {
     tinyHandle dHandle = fs.dataHandle(handle);
 
     ImGui::BeginGroup();
-    ImGui::Text("%s", node->name.c_str());
+    ImGui::Text("%s", node->cname());
 
     const tinyFS::TypeInfo* typeInfo = fs.typeInfo(handle);
     if (!typeInfo->ext.empty()) {
@@ -1339,7 +1334,7 @@ static void RenderScriptEditor() {
     
     tinyDebug& debug = script->debug();
 
-    ImGui::TextColored(ImVec4(0.6f, 0.6f, 1.0f, 1.0f), "Script: %s", node->name.c_str());
+    ImGui::TextColored(ImVec4(0.6f, 0.6f, 1.0f, 1.0f), "Script: %s", node->cname());
     ImGui::SameLine();
     if (script->valid()) {
         ImGui::TextColored(ImVec4(0.2f, 0.8f, 0.2f, 1.0f), "[Compiled v%u]", script->version());
@@ -1357,7 +1352,7 @@ static void RenderScriptEditor() {
     if (CodeEditor::IsTextChanged() && script) {
         script->code = CodeEditor::GetText();
     }
-    CodeEditor::Render(node->name.c_str());
+    CodeEditor::Render(node->cname());
 
     ImGui::EndChild();
     ImGui::PopStyleColor();

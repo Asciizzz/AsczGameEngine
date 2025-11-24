@@ -16,61 +16,16 @@ void Scene::init(const SceneRes& res) noexcept {
     root_ = nodes_.emplace(std::move(rootNode));
 }
 
-void Scene::NWrap::set(Scene* scene, tinyHandle h) noexcept {
-    scene_ = scene;
-    handle_ = h;
-    node_ = get(h);
-}
-
 // ---------------------------------------------------------------
-// Name APIs
+// Node APIs
 // ---------------------------------------------------------------
 
-std::string& Scene::NWrap::name() noexcept {
-    static std::string empty;
-    return node_ ? node_->name : empty;
-}
+#include <stdexcept>
 
-const char* Scene::NWrap::cname() const noexcept {
-    return node_ ? node_->name.c_str() : "<Invalid>";
+std::string& Scene::nName(tinyHandle nHandle) noexcept {
+    Node* node = nodes_.get(nHandle);
+    return node->name;
 }
-
-void Scene::NWrap::rename(const std::string& newName) noexcept {
-    if (node_) node_->name = newName;
-}
-
-// ---------------------------------------------------------------
-// Hierarchy APIs
-// ---------------------------------------------------------------
-
-const std::vector<tinyHandle>& Scene::NWrap::children() const noexcept {
-    static const std::vector<tinyHandle> empty;
-    return node_ ? node_->children : empty;
-}
-size_t Scene::NWrap::childrenCount() const noexcept {
-    return node_ ? node_->children.size() : 0;
-}
-tinyHandle Scene::NWrap::addChild(const std::string& name) noexcept {
-    return scene_ ? scene_->nAdd(name, handle_) : tinyHandle();
-}
-
-
-tinyHandle Scene::NWrap::parent() const noexcept {
-    return node_ ? node_->parent : tinyHandle();
-}
-bool Scene::NWrap::setParent(tinyHandle newParent) noexcept {
-    return scene_ && scene_->nReparent(handle_, newParent);
-}
-
-void Scene::NWrap::erase(tinyHandle nHandle, bool recursive, size_t* count) noexcept {
-    if (nHandle == handle_) node_ = nullptr; // Invalidate self if erasing self
-
-    if (scene_) scene_->nErase(nHandle, recursive, count);
-}
-
-// ---------------------------------------------------------------
-// Actual scene APIs
-// ---------------------------------------------------------------
 
 bool Scene::rootShift() noexcept {
     // Shift the root to the child if root only has one child
@@ -80,12 +35,6 @@ bool Scene::rootShift() noexcept {
     nErase(root_, false);
     root_ = rootNode->children[0];
     return true;
-}
-
-Scene::NWrap Scene::nWrap(tinyHandle h) noexcept {
-    NWrap wrap;
-    wrap.set(this, h);
-    return wrap;
 }
 
 std::vector<tinyHandle> Scene::nQueue(tinyHandle start) noexcept {
@@ -104,15 +53,16 @@ std::vector<tinyHandle> Scene::nQueue(tinyHandle start) noexcept {
 }
 
 tinyHandle Scene::nAdd(const std::string& name, tinyHandle parent) noexcept {
+    parent = parent ? parent : root_;
     Node* nParent = nodes_.get(parent);
-    if (!nParent) nParent = nodes_.get(root_);
+    if (!nParent) return tinyHandle();
 
     Node newNode;
     newNode.name = name;
     newNode.parent = parent;
 
     tinyHandle nHandle = nodes_.emplace(std::move(newNode));
-    nParent->addChild(nHandle);
+    nodes_.get(parent)->addChild(nHandle);
 
     return nHandle;
 }

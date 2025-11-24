@@ -17,6 +17,8 @@ public:
         std::vector<tinyHandle> children;
         tinyHandle              data;
 
+        const char* cname() const noexcept { return name.c_str(); }
+
         [[nodiscard]] bool isFile() const noexcept   { return data.valid(); }
         [[nodiscard]] bool isFolder() const noexcept { return !data.valid(); }
 
