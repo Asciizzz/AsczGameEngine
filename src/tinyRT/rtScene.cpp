@@ -166,7 +166,7 @@ void Scene::update(FrameStart frameStart) noexcept {
     testRenders.clear();
 
     const tinyCamera& cam = camera();
-    MeshStatic3D& msta3D = meshStatic3D();
+    tinyDrawable& draw = drawable();
 
     std::function<void(tinyHandle, glm::mat4)> updateNode = [&](tinyHandle nHandle, glm::mat4 parentMat) {
         Node* node = nodes_.get(nHandle);
@@ -188,7 +188,7 @@ void Scene::update(FrameStart frameStart) noexcept {
                 if (!mesh || !cam.collideAABB(mesh->ABmin(), mesh->ABmax(), currentWorld)) continue;
 
                 // Use the mesh static machine
-                msta3D.submit({ meshRD3D->mesh, currentWorld, glm::vec4(0.0f) });
+                draw.submit({ meshRD3D->mesh, currentWorld, glm::vec4(0.0f) });
             }
         }
 
@@ -199,5 +199,5 @@ void Scene::update(FrameStart frameStart) noexcept {
     };
     updateNode(root_, glm::mat4(1.0f));
 
-    msta3D.finalize();
+    draw.finalize();
 }

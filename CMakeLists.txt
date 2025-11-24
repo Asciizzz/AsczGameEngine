@@ -88,6 +88,7 @@ file(GLOB_RECURSE SRC_FILES
     src/tinyEngine/tinyGlobal.cpp
     src/tinyEngine/tinyProject.cpp
     src/tinyEngine/tinyLoader.cpp
+    src/tinyEngine/tinyDrawable.cpp
 
     src/tinySystem/tinyChrono.cpp
     src/tinySystem/tinyWindow.cpp

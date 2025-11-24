@@ -8,12 +8,10 @@
 #include "tinyCamera.hpp"
 #include "tinyEngine/tinyGlobal.hpp"
 
+#include "tinyDrawable.hpp"
+
 class tinyProject {
 public:
-    static constexpr size_t maxSkeletons = 4096; // This is frighteningly high
-    static constexpr size_t maxMaterials = 65536; // Lol
-    static constexpr size_t maxMeshes    = 65536; 
-
     tinyProject(const tinyVk::Device* dvk_);
     ~tinyProject();
 
@@ -45,7 +43,7 @@ public:
     tinyRegistry& r() { return fs_->r(); }
     const tinyRegistry& r() const { return fs_->r(); }
 
-    tinyMachine& machine() { return *machine_; }
+    tinyDrawable& drawable() { return *drawable_; }
 
     const SceneRes& sharedRes() const { return sharedRes_; }
     const tinyVk::Device* vkDevice() const { return dvk_; }
@@ -79,8 +77,9 @@ private:
     UniquePtr<tinyCamera> camera_;
 
     UniquePtr<tinyFS> fs_;
+    UniquePtr<tinyDrawable> drawable_;
 
-    UniquePtr<tinyMachine> machine_;
+    // UniquePtr<tinyMachine> machine_;
     void setupFS();
 
     template<typename T>

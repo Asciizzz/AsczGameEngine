@@ -1,16 +1,10 @@
 #pragma once
 
+
 #include "tinyRegistry.hpp"
-#include <vulkan/vulkan.h>
-
-// Forward declarations
-namespace tinyVk {
-    class Device;
-}
-
-class tinyCamera;
-
-struct tinyMachine;
+#include "tinyVk/System/Device.hpp"
+#include "tinyCamera.hpp"
+#include "tinyDrawable.hpp"
 
 struct SceneRes {
     uint32_t maxFramesInFlight = 0; // If you messed this up the app just straight up jump off a cliff
@@ -18,8 +12,7 @@ struct SceneRes {
     tinyRegistry* fsr = nullptr; // For stuffs and things
     const tinyVk::Device* dvk = nullptr;   // For GPU resource creation
     tinyCamera* camera = nullptr;    // For global UBOs
-
-    tinyMachine* machine = nullptr;
+    tinyDrawable* drawable = nullptr;
 
 // File system helper
 

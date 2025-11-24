@@ -1,7 +1,6 @@
 #pragma once
 
 #include "SceneRes.hpp"
-#include "tinyMachine.hpp"
 
 // Components
 #include "tinyRT/rtTransform.hpp"
@@ -109,8 +108,8 @@ public:
     [[nodiscard]] SceneRes& res() noexcept { return res_; }
     [[nodiscard]] const SceneRes& res() const noexcept { return res_; }
 
-    [[nodiscard]] MeshStatic3D& meshStatic3D() noexcept { return res_.machine->meshStatic3D; }
-    [[nodiscard]] const MeshStatic3D& meshStatic3D() const noexcept { return res_.machine->meshStatic3D; }
+    [[nodiscard]] tinyDrawable& drawable() noexcept { return *res_.drawable; }
+    [[nodiscard]] const tinyDrawable& drawable() const noexcept { return *res_.drawable; }
 
 // Node APIs
     std::string& nName(tinyHandle nHandle) noexcept;

@@ -63,7 +63,7 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
         tinyHandle fnMatFolder = fs_->createFolder("Materials", fnModelFolder);
 
         for (const auto& mMaterial : model.materials) {
-            tinyMaterialVk materialVk;
+            tinyMaterial materialVk;
             materialVk.init(
                 dvk_,
                 sharedRes_.defaultTextureVk0(),
@@ -199,7 +199,7 @@ void tinyProject::setupFS() {
     ascn->ext = "ascn"; ascn->rmOrder = 10;
     ascn->color[0] = 102; ascn->color[1] = 255; ascn->color[2] = 102;
 
-    tinyFS::TypeInfo* amat = fs_->typeInfo<tinyMaterialVk>();
+    tinyFS::TypeInfo* amat = fs_->typeInfo<tinyMaterial>();
     amat->ext = "amat";
     amat->color[0] = 255; amat->color[1] = 102; amat->color[2] = 255;
 
@@ -262,7 +262,7 @@ void tinyProject::fRemove(tinyHandle fileHandle) {
         tinyHandle dHandle = fs_->dataHandle(h);
 
         if (dHandle.is<tinyMesh>() ||
-            dHandle.is<tinyMaterialVk>() ||
+            dHandle.is<tinyMaterial>() ||
             dHandle.is<tinyTexture>() ||
             dHandle.is<rtScene>())
         {
@@ -298,12 +298,14 @@ void tinyProject::vkCreateResources() {
     sharedRes_.dvk = dvk_;
     sharedRes_.camera = camera_.get();
 
-    // Create Machine
+    // Create Drawable
+    drawable_ = MakeUnique<tinyDrawable>();
+    drawable_->init({
+        sharedRes_.maxFramesInFlight,
+        &fs().r(), dvk_,
+    });
 
-    machine_ = MakeUnique<tinyMachine>();
-    machine_->meshStatic3D.init(dvk_, &fs().r().view<tinyMesh>());
-
-    sharedRes_.machine = machine_.get();
+    sharedRes_.drawable = drawable_.get();
 }
 
 void tinyProject::vkCreateDefault() {
