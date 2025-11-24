@@ -809,7 +809,7 @@ static void RenderFileNodeHierarchy() {
 
 // Scene node inspector
 static void RenderTRANFM3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle) {
-    rtTRANFM3D* trfm3D = scene->nWriteComp<rtTRANFM3D>(nHandle);
+    rtTRANFM3D* trfm3D = scene->nGetComp<rtTRANFM3D>(nHandle);
     if (!trfm3D) return;
 
     Tr3D& local = trfm3D->local;
@@ -854,7 +854,7 @@ static void RenderTRANFM3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle)
 }
 
 static void RenderMESHRD3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle) {
-    rtMESHRD3D* meshRD = scene->nWriteComp<rtMESHRD3D>(nHandle);
+    rtMESHRD3D* meshRD = scene->nGetComp<rtMESHRD3D>(nHandle);
     if (!meshRD) return;
 
     tinyHandle meshHandle = meshRD->mesh;
@@ -1172,13 +1172,13 @@ static void RenderSceneNodeInspector(tinyProject* project) {
     components.push_back({
         "Transform 3D", node->has<rtTRANFM3D>(),
         [&]() { RenderTRANFM3D(fs, scene, handle); },
-        [&]() { scene->nWriteComp<rtTRANFM3D>(handle); },
+        [&]() { scene->nAddComp<rtTRANFM3D>(handle); },
         [&]() { scene->nEraseComp<rtTRANFM3D>(handle); }
     });
     components.push_back({
         "Mesh Render 3D", node->has<rtMESHRD3D>(),
         [&]() { RenderMESHRD3D(fs, scene, handle); },
-        [&]() { scene->nWriteComp<rtMESHRD3D>(handle); },
+        [&]() { scene->nAddComp<rtMESHRD3D>(handle); },
         [&]() { scene->nEraseComp<rtMESHRD3D>(handle); }
     });
     // components.push_back({

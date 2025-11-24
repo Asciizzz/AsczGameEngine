@@ -64,6 +64,11 @@ struct Node {
         auto it = comps.find(tinyType::TypeID<T>());
         if (it != comps.end()) comps.erase(it);
     }
+
+    template<typename T>
+    void add(tinyHandle h) noexcept {
+        comps[tinyType::TypeID<T>()] = h;
+    }
 };
 
 class Scene {
@@ -119,18 +124,22 @@ public:
     tinyHandle nReparent(tinyHandle nHandle, tinyHandle nNewParent) noexcept;
 
     template<typename T>
-    T* nWriteComp(tinyHandle nHandle) noexcept { // Automatic creation
+    T* nGetComp(tinyHandle nHandle) noexcept { // Automatic creation
         Node* node = nodes_.get(nHandle);
-        if (!node) return nullptr;
+        if (!node || !node->has<T>()) return nullptr;
 
-        // If already exists, return existing
-        if (node->has<T>()) return rt_.get<T>(node->get<T>());
+        return rt_.get<T>(node->get<T>());
+    }
 
-        T comp{};
-        tinyHandle compHandle = rt_.emplace<T>(std::move(comp));
-        node->comps[tinyType::TypeID<T>()] = compHandle;
+    template<typename T>
+    tinyHandle nAddComp(tinyHandle nHandle) noexcept { // Generic component addition (without data)
+        Node* node = nodes_.get(nHandle);
+        if (!node) return tinyHandle();
 
-        return rt_.get<T>(compHandle);
+        tinyHandle compHandle = rt_.emplace<T>();
+        node->add<T>(compHandle);
+
+        return compHandle;
     }
 
     template<typename T>
