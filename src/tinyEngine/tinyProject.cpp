@@ -104,14 +104,6 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
         tinyHandle fnMeshFolder = fs_->createFolder("Meshes", fnModelFolder);
 
         for (auto& mMesh : model.meshes) {
-            // Remap material indices
-            std::vector<tinyMesh::Part>& remapPart = mMesh.mesh.parts();
-            // for (auto& part : remapPart) {
-            //     part.material = linkHandle(part.material.index, glmMatRHandle);
-            // }
-
-            // tinyMeshVk meshVk;
-            // meshVk.init(dvk_, sharedRes_.mrphDsDescLayout(), sharedRes_.mrphDsDescPool());
             mMesh.mesh.vkCreate(dvk_, sharedRes_.mrphDsDescLayout(), sharedRes_.mrphDsDescPool());
 
             tinyHandle fnHandle = fs_->createFile(mMesh.name, std::move(mMesh.mesh), fnMeshFolder);

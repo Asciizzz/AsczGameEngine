@@ -1,19 +1,13 @@
 #pragma once
 
-#include "tinyRegistry.hpp"
-
-#include "tinyVk/Resource/DataBuffer.hpp"
-#include "tinyVk/Resource/Descriptor.hpp"
-
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-
-#include "tinyData/tinyMesh.hpp"
+#include "tinyType.hpp"
 
 namespace tinyRT {
 
-struct MeshRender3D { // Node component
-    tinyHandle mesh; // Point to mesh resource in registry
+struct MeshRender3D {
+    tinyHandle mesh;
+    tinyHandle material;
+    tinyHandle shader;
 };
 
 }

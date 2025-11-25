@@ -263,14 +263,7 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
             vkCmdBindVertexBuffers(currentCmd, 0, 1, vBuffers, vOffsets);
             vkCmdBindIndexBuffer(currentCmd, indxBuffer, 0, indxType);
 
-            // Draw each individual submeshes
-            for (size_t i = 0; i < rMesh->parts().size(); ++i) {
-                uint32_t indxCount = rMesh->parts()[i].indxCount;
-                if (indxCount == 0) continue;
-
-                uint32_t indxOffset = rMesh->parts()[i].indxOffset;
-                vkCmdDrawIndexed(currentCmd, indxCount, range.count, indxOffset, 0, range.offset);
-            }
+            vkCmdDrawIndexed(currentCmd, rMesh->indxCount(), range.count, 0, 0, range.offset);
         }
     }
 

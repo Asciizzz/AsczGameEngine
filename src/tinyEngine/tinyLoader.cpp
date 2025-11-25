@@ -625,13 +625,6 @@ void loadMesh(tinyMesh& mesh,
         for (uint32_t idx : p.indices)
             allIndices.push_back(idx + vtxOffset);
 
-        // ---- part -----------------------------------------------------------
-        tinyMesh::Part part;
-        part.indxOffset = idxOffset;
-        part.indxCount  = static_cast<uint32_t>(p.indices.size());
-        part.material   = (p.materialIndex >= 0) ? tinyHandle(p.materialIndex) : tinyHandle();
-        mesh.addPart(part);
-
         vtxOffset += static_cast<uint32_t>(p.vrtxCount);
         idxOffset += static_cast<uint32_t>(p.indices.size());
     }
@@ -1424,11 +1417,11 @@ tinyModel tinyLoader::loadModelFromOBJ(const std::string& filePath) {
         mesh.setVrtxs(vertices);
         mesh.setIndxs(indices);
 
-        tinyMesh::Part mPart;
-        mPart.indxOffset = 0;
-        mPart.indxCount = static_cast<uint32_t>(indices.size());
-        mPart.material = (materialId >= 0) ? tinyHandle(materialId) : tinyHandle();
-        mesh.addPart(mPart);
+        // tinyMesh::Part mPart;
+        // mPart.indxOffset = 0;
+        // mPart.indxCount = static_cast<uint32_t>(indices.size());
+        // mPart.material = (materialId >= 0) ? tinyHandle(materialId) : tinyHandle();
+        // mesh.addPart(mPart);
 
         tinyModel::Mesh meshEntry;
         meshEntry.mesh = std::move(mesh);
