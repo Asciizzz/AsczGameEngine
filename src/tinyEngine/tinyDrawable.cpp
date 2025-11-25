@@ -238,7 +238,23 @@ void tinyDrawable::finalize() {
     size_t matDataSize = matData_.size() * sizeof(tinyMaterial::Data); // True size
     matBuffer_.copyData(matData_.data(), matDataSize, matDataOffset);
 
+    if (curInstances == 0) return; // No instances, skip
+
     // Print the entire shader groups for debugging 
     if (count >= maxCount) return;
     count++;
+
+    for (const auto& [shaderHandle, shaderGroupVec] : shaderGroups_) {
+        printf("Shader Handle [%u, %u, %u]: 0x%016llX\n", shaderHandle.idx(), shaderHandle.ver(), shaderHandle.tID(), shaderHandle.raw());
+        for (const MeshGroup& meshGroup : shaderGroupVec) {
+            printf("  Mesh Handle [%u, %u, %u]\n", meshGroup.mesh.idx(), meshGroup.mesh.ver(), meshGroup.mesh.tID());
+            printf("    Submeshes: ");
+            for (uint32_t submeshIdx : meshGroup.submeshes) {
+                printf("%u ", submeshIdx);
+            }
+            printf("\n");
+            printf("    Instance Offset: %u\n", meshGroup.instaOffset);
+            printf("    Instance Count: %u\n", meshGroup.instaCount);
+        }
+    }
 }
