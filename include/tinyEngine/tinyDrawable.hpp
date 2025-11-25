@@ -11,8 +11,8 @@ namespace Mesh3D {
         glm::mat4 model = glm::mat4(1.0f); // Model matrix
         glm::uvec4 other = glm::uvec4(0); // Additional data
 
-        static VkVertexInputBindingDescription bindingDesc();
-        static std::vector<VkVertexInputAttributeDescription> attrDescs();
+        static VkVertexInputBindingDescription bindingDesc(uint32_t binding = 1);
+        static std::vector<VkVertexInputAttributeDescription> attrDescs(uint32_t binding = 1, uint32_t locationOffset = 3);
     };
 
     struct InstaRange {
@@ -92,6 +92,7 @@ public:
     struct MeshEntry {
         tinyHandle mesh;
         tinyHandle mat;
+        tinyHandle shader;
         glm::mat4 model = glm::mat4(1.0f);
     };
 

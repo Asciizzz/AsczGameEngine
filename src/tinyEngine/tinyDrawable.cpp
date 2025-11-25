@@ -4,22 +4,22 @@ using namespace Mesh3D;
 
 using namespace tinyVk;
 
-VkVertexInputBindingDescription Insta::bindingDesc() {
+VkVertexInputBindingDescription Insta::bindingDesc(uint32_t binding) {
     VkVertexInputBindingDescription bindingDescription{};
-    bindingDescription.binding = 1;
+    bindingDescription.binding = binding;
     bindingDescription.stride = sizeof(Insta);
     bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
     return bindingDescription;
 }
 
-std::vector<VkVertexInputAttributeDescription> Insta::attrDescs() {
+std::vector<VkVertexInputAttributeDescription> Insta::attrDescs(uint32_t binding, uint32_t locationOffset) {
     std::vector<VkVertexInputAttributeDescription> attribs(5);
 
-    attribs[0] = {3, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Insta, model) + sizeof(glm::vec4) * 0};
-    attribs[1] = {4, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Insta, model) + sizeof(glm::vec4) * 1};
-    attribs[2] = {5, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Insta, model) + sizeof(glm::vec4) * 2};
-    attribs[3] = {6, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Insta, model) + sizeof(glm::vec4) * 3};
-    attribs[4] = {7, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Insta, other)};
+    attribs[0] = {locationOffset + 0, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Insta, model) + sizeof(glm::vec4) * 0};
+    attribs[1] = {locationOffset + 1, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Insta, model) + sizeof(glm::vec4) * 1};
+    attribs[2] = {locationOffset + 2, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Insta, model) + sizeof(glm::vec4) * 2};
+    attribs[3] = {locationOffset + 3, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Insta, model) + sizeof(glm::vec4) * 3};
+    attribs[4] = {locationOffset + 4, 1, VK_FORMAT_R32G32B32A32_UINT,  offsetof(Insta, other)};
     return attribs;
 }
 
@@ -73,36 +73,49 @@ void tinyDrawable::startFrame(uint32_t frameIndex) noexcept {
 
     matData_.clear();
     matIdxMap_.clear();
+
+// Some initialization if needed
+    matData_.emplace_back(); // First material is always default
+    matIdxMap_[tinyHandle()] = 0;
 }
 
 void tinyDrawable::submit(const MeshEntry& entry) noexcept {
     const tinyMesh* rMesh = fsr_->get<tinyMesh>(entry.mesh);
     const tinyMaterial* rMat = fsr_->get<tinyMaterial>(entry.mat);
 
-    tinyHandle shaderHandle = rMat ? rMat->shader : tinyHandle();
+    uint32_t matIndex = 0;
+    auto matIt = matIdxMap_.find(entry.mat);
+
+    if (matIt != matIdxMap_.end()) {
+        matIndex = matIt->second;
+    } else if (rMat) {
+        matIndex = static_cast<uint32_t>(matData_.size());
+
+        tinyMaterial::Data matData;
+        matData.base = glm::vec4(matIndex, 0, 0, 0); // Testing
+
+        matIdxMap_[entry.mat] = matIndex;
+        matData_.push_back(matData);
+    }
+
+    tinyHandle shaderHandle = entry.shader;
 
     auto shaderIt = shaderIdxMap_.find(shaderHandle);
-
     if (shaderIt == shaderIdxMap_.end()) {
         shaderIdxMap_[shaderHandle] = static_cast<uint32_t>(shaderGroups_.size());
+
         shaderGroups_.emplace_back();
         shaderIt = shaderIdxMap_.find(shaderHandle);
     }
 
-    auto matIt = matIdxMap_.find(entry.mat);
-
-    uint32_t matIndex = UINT32_MAX;
-    if (matIt == matIdxMap_.end() && rMat) {
-        matIndex = static_cast<uint32_t>(matData_.size());
-
-        matIdxMap_[entry.mat] = matIndex;
-        matData_.push_back(rMat->data);
-    }
-
     ShaderGroup& shaderGroup = shaderGroups_[shaderIt->second];
-    shaderGroup.instaMap[entry.mesh].push_back({
+    shaderGroup.shader = shaderHandle;
+
+    // std::unordered_map<tinyHandle, std::vector<Mesh3D::Insta>>& instaMap = shaderGroup.instaMap;
+    std::vector<Mesh3D::Insta>& instaVec = shaderGroup.instaMap[entry.mesh];
+    instaVec.push_back({
         entry.model,
-        glm::uvec4(matIndex, 0, 0, 0)
+        glm::uvec4(instaVec.size(), 0, 0, 0)
     });
 }
 
