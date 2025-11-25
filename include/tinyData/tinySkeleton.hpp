@@ -14,16 +14,14 @@ struct tinyBone {
     int parent = -1; // -1 if root
     std::vector<int> children;
 
-    glm::mat4 bindInverse = glm::mat4(1.0f); // From mesh space to bone local space
-    glm::mat4 bindPose = glm::mat4(1.0f); // Local transform in bind pose
+    glm::mat4 bindInverse = glm::mat4(1.0f);
+    glm::mat4 bindPose = glm::mat4(1.0f);
 };
 
 struct tinySkeleton {
     tinySkeleton() noexcept = default;
-
-    tinySkeleton(const tinySkeleton&) = delete;
-    tinySkeleton& operator=(const tinySkeleton&) = delete;
-
+    tinySkeleton(const tinySkeleton&) = default;
+    tinySkeleton& operator=(const tinySkeleton&) = default;
     tinySkeleton(tinySkeleton&&) noexcept = default;
     tinySkeleton& operator=(tinySkeleton&&) noexcept = default;
 

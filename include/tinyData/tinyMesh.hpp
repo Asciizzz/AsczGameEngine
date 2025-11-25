@@ -88,28 +88,63 @@ struct tinyMesh {
         using namespace tinyVk;
         dvk_ = device;
 
+        // Just in case of some weirdness
+        vrtxCount_ = vstaticData_.size(); 
+        indxCount_ = indxRaw_.size() / indxStride_;
+        mrphCount_ = mrphTargets_.size();
+    
+    // Vertex buffers
+
         vstaticBuffer_
             .setDataSize(vstaticData_.size() * sizeof(tinyVertex::Static))
             .setUsageFlags(BufferUsage::Vertex)
             .createDeviceLocalBuffer(dvk_, vstaticData_.data());
 
         if (!isRigged_) vriggedData_.push_back(tinyVertex::Rigged()); // Dummy entry to avoid errors
-
         vriggedBuffer_
             .setDataSize(vriggedData_.size() * sizeof(tinyVertex::Rigged))
             .setUsageFlags(BufferUsage::Vertex)
             .createDeviceLocalBuffer(dvk_, vriggedData_.data());
 
+    // Index buffer
+
         indxBuffer_ 
             .setDataSize(indxRaw_.size())
             .setUsageFlags(BufferUsage::Index)
             .createDeviceLocalBuffer(dvk_, indxRaw_.data());
+
+        if (mrphTargets_.empty() || mrphLayout == VK_NULL_HANDLE || mrphPool == VK_NULL_HANDLE) {
+            clearData(); // Optional
+            return;
+        }
+
+    // Morph delta buffer
+
+        mrphDeltas_.resize(mrphCount_ * vrtxCount_);
+        for (size_t i = 0; i < mrphCount_; ++i) {
+            // Should not happen, hopefully
+            assert(mrphTargets_[i].deltas.size() == vrtxCount_ && "Morph target delta count must match vertex count");
+
+            std::memcpy(
+                mrphDeltas_.data() + i * vrtxCount_,
+                mrphTargets_[i].deltas.data(),
+                vrtxCount_ * sizeof(tinyMorph::Delta)
+            );
+        }
+
+        mrphDsBuffer_
+            .setDataSize(mrphDeltas_.size() * sizeof(tinyMorph::Delta))
+            .setUsageFlags(BufferUsage::Vertex)
+            .createDeviceLocalBuffer(dvk_, mrphDeltas_.data());
     }
 
     void clearData() noexcept {
         vstaticData_.clear();
         vriggedData_.clear();
         indxRaw_.clear();
+        mrphDeltas_.clear();
+        // Clear the targets but keep names
+        for (auto& target : mrphTargets_) target.deltas.clear();
     }
 
 // -----------------------------------------
@@ -118,8 +153,10 @@ struct tinyMesh {
     size_t indxCount() const noexcept { return indxCount_; }
     size_t indxStride() const noexcept { return indxStride_; }
     VkIndexType indxType() const noexcept { return indxType_; }
+    size_t mrphCount() const noexcept { return mrphCount_; }
 
     bool isRigged() const noexcept { return isRigged_; }
+    bool hasMorphs() const noexcept { return hasMorphs_; }
 
     VkBuffer vstaticBuffer() const noexcept { return vstaticBuffer_; }
     VkBuffer vriggedBuffer() const noexcept { return vriggedBuffer_; }
@@ -136,24 +173,27 @@ struct tinyMesh {
 private:
     std::vector<tinyVertex::Static> vstaticData_;
     std::vector<tinyVertex::Rigged> vriggedData_;
-    std::vector<uint8_t>            indxRaw_; // Raw bytes
+    std::vector<uint8_t>            indxRaw_;     // Raw bytes
     std::vector<Submesh>            submeshes_;
+
+    std::vector<tinyMorph::Target>  mrphTargets_;
+    std::vector<tinyMorph::Delta>   mrphDeltas_;  // Size: mrphCount_ * vrtxCount_
 
 // Vulkan stuff and shit idk
     const tinyVk::Device* dvk_ = nullptr;
     tinyVk::DataBuffer    vstaticBuffer_;
     tinyVk::DataBuffer    vriggedBuffer_;
     tinyVk::DataBuffer    indxBuffer_;
+    tinyVk::DataBuffer    mrphDsBuffer_; // Delta buffer
 
-    // Delta buffer
-    tinyVk::DataBuffer    mrphDsBuffer_;
-    tinyVk::DescSet       mrphDsDescSet_;
-
-    size_t      vrtxCount_ = 0;
-    size_t      indxCount_ = 0;
+    size_t      vrtxCount_  = 0;
+    size_t      indxCount_  = 0;
     size_t      indxStride_ = 0;
-    VkIndexType indxType_ = VK_INDEX_TYPE_UINT16;
-    bool        isRigged_ = false;
+    VkIndexType indxType_   = VK_INDEX_TYPE_UINT16;
+    size_t      mrphCount_  = 0;
+
+    bool        isRigged_  = false;
+    bool        hasMorphs_ = false;
 
     // AABB (demo)
     glm::vec3 ABmin_ = glm::vec3(std::numeric_limits<float>::max());

@@ -75,7 +75,7 @@ struct tinyTexture {
     VkImage image() const noexcept { return imageVk_.image(); }
     VkImageView view() const noexcept { return imageVk_.view(); }
 
-    bool vkCreate(const tinyVk::Device* device, VkSampler sampler = VK_NULL_HANDLE) {
+    bool vkCreate(const tinyVk::Device* device) {
         using namespace tinyVk;
 
         dvk_ = device;

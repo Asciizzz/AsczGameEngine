@@ -57,8 +57,8 @@ void tinyDrawable::init(const CreateInfo& info) {
 
     instaBuffer_
         .setDataSize(instaSize_x1_.aligned * maxFramesInFlight_)
-        .setUsageFlags(tinyVk::BufferUsage::Vertex)
-        .setMemPropFlags(tinyVk::MemProp::HostVisibleAndCoherent)
+        .setUsageFlags(BufferUsage::Vertex)
+        .setMemPropFlags(MemProp::HostVisibleAndCoherent)
         .createBuffer(dvk_)
         .mapMemory();
 
@@ -69,17 +69,17 @@ void tinyDrawable::init(const CreateInfo& info) {
 
     matBuffer_
         .setDataSize(matSize_x1_.aligned * maxFramesInFlight_)
-        .setUsageFlags(tinyVk::BufferUsage::Storage)
-        .setMemPropFlags(tinyVk::MemProp::HostVisibleAndCoherent)
+        .setUsageFlags(BufferUsage::Storage)
+        .setMemPropFlags(MemProp::HostVisibleAndCoherent)
         .createBuffer(dvk_)
         .mapMemory();
 
     matDescLayout_.create(dvk_->device, {
-        {0, tinyVk::DescType::StorageBufferDynamic, 1, ShaderStage::Fragment, nullptr}
+        {0, DescType::StorageBufferDynamic, 1, ShaderStage::Fragment, nullptr}
     });
 
     matDescPool_.create(dvk_->device, {
-        {tinyVk::DescType::StorageBufferDynamic, 1}
+        {DescType::StorageBufferDynamic, 1}
     }, 1);
 
     matDescSet_.allocate(dvk_->device, matDescPool_, matDescLayout_);
@@ -105,17 +105,17 @@ void tinyDrawable::init(const CreateInfo& info) {
 
     skinBuffer_
         .setDataSize(skinSize_x1_.aligned * maxFramesInFlight_)
-        .setUsageFlags(tinyVk::BufferUsage::Storage)
-        .setMemPropFlags(tinyVk::MemProp::HostVisibleAndCoherent)
+        .setUsageFlags(BufferUsage::Storage)
+        .setMemPropFlags(MemProp::HostVisibleAndCoherent)
         .createBuffer(dvk_)
         .mapMemory();
 
     skinDescLayout_.create(dvk_->device, {
-        {0, tinyVk::DescType::StorageBufferDynamic, 1, ShaderStage::Vertex, nullptr}
+        {0, DescType::StorageBufferDynamic, 1, ShaderStage::Vertex, nullptr}
     });
 
     skinDescPool_.create(dvk_->device, {
-        {tinyVk::DescType::StorageBufferDynamic, 1}
+        {DescType::StorageBufferDynamic, 1}
     }, 1);
 
     skinDescSet_.allocate(dvk_->device, skinDescPool_, skinDescLayout_);

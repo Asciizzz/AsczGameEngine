@@ -7,7 +7,7 @@
 using namespace tinyVk;
 
 
-Renderer::Renderer (Device* dvk, VkSurfaceKHR surface, SDL_Window* window, uint32_t maxFramesInFlight)
+Renderer::Renderer(Device* dvk, VkSurfaceKHR surface, SDL_Window* window, uint32_t maxFramesInFlight)
 : dvk(dvk), maxFramesInFlight(maxFramesInFlight) {
 
     swapchain = MakeUnique<Swapchain>(dvk, surface, window);
