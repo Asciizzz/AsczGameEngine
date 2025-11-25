@@ -132,6 +132,8 @@ struct tinyMesh {
             );
         }
 
+        mrphWeights_ = std::vector<float>(mrphCount_, 0.0f);
+
         mrphDsBuffer_
             .setDataSize(mrphDeltas_.size() * sizeof(tinyMorph::Delta))
             .setUsageFlags(BufferUsage::Vertex)
@@ -161,6 +163,7 @@ struct tinyMesh {
     VkBuffer vstaticBuffer() const noexcept { return vstaticBuffer_; }
     VkBuffer vriggedBuffer() const noexcept { return vriggedBuffer_; }
     VkBuffer indxBuffer() const noexcept { return indxBuffer_; }
+    VkBuffer mrphDsBuffer() const noexcept { return mrphDsBuffer_; }
 
     const std::vector<tinyVertex::Static>& vstaticData() const noexcept { return vstaticData_; }
     const std::vector<tinyVertex::Rigged>& vriggedData() const noexcept { return vriggedData_; }
@@ -170,6 +173,11 @@ struct tinyMesh {
 
     glm::vec3& ABmin() noexcept { return ABmin_; }
     glm::vec3& ABmax() noexcept { return ABmax_; }
+    
+    // No non-const access
+    const std::vector<tinyMorph::Target>& mrphTargets() const noexcept { return mrphTargets_; }
+    const std::vector<float>& mrphWeights() const noexcept { return mrphWeights_; }
+
 private:
     std::vector<tinyVertex::Static> vstaticData_;
     std::vector<tinyVertex::Rigged> vriggedData_;
@@ -178,6 +186,8 @@ private:
 
     std::vector<tinyMorph::Target>  mrphTargets_;
     std::vector<tinyMorph::Delta>   mrphDeltas_;  // Size: mrphCount_ * vrtxCount_
+
+    std::vector<float> mrphWeights_; // A copyable weights for CPU use
 
 // Vulkan stuff and shit idk
     const tinyVk::Device* dvk_ = nullptr;

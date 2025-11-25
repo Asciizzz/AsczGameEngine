@@ -852,7 +852,7 @@ static void RenderMESHRD3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle)
     rtMESHRD3D* meshRD = scene->nGetComp<rtMESHRD3D>(nHandle);
     if (!meshRD) return;
 
-    tinyHandle meshHandle = meshRD->mesh;
+    tinyHandle meshHandle = meshRD->meshHandle();
     const tinyMesh* mesh = fs.r().get<tinyMesh>(meshHandle);
 
     tinyHandle meshFHandle = fs.rDataToFile(meshHandle);
@@ -875,8 +875,11 @@ static void RenderMESHRD3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle)
                     tinyHandle fHandle = data->handle;
                     tinyHandle dHandle = fs.dataHandle(fHandle);
 
-                    if (!dHandle.is<tinyMesh>()) { ImGui::EndDragDropTarget(); return; }
-                    meshRD->mesh = dHandle;
+                    const tinyMesh* rMesh = fs.r().get<tinyMesh>(dHandle);
+                    if (!rMesh) { ImGui::EndDragDropTarget(); return; }
+
+                    meshRD->assignMesh(dHandle, rMesh->mrphWeights());
+
                     ImGui::EndDragDropTarget();
                 }
             }

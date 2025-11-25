@@ -141,10 +141,20 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
 
         if (ogNode.hasMESHR()) {
             rtMESHRD3D* meshrd = scene.nWriteComp<rtMESHRD3D>(nodeHandle);
-            meshrd->mesh = linkHandle(ogNode.MESHRD_meshIndx, glbMeshRHandle);
-            meshrd->skeleNode = 
-                nodeMap.count(ogNode.MESHRD_skeleNodeIndx) ?
-                nodeMap[ogNode.MESHRD_skeleNodeIndx] : tinyHandle();
+            // meshrd->mesh = linkHandle(ogNode.MESHRD_meshIndx, glbMeshRHandle);
+            // meshrd->skeleNode = 
+            //     nodeMap.count(ogNode.MESHRD_skeleNodeIndx) ?
+            //     nodeMap[ogNode.MESHRD_skeleNodeIndx] : tinyHandle();'
+
+            tinyHandle meshHandle = linkHandle(ogNode.MESHRD_meshIndx, glbMeshRHandle);
+            if (const tinyMesh* meshPtr = fs().r().get<tinyMesh>(meshHandle)) {
+                meshrd->
+                    assignMesh(meshHandle, meshPtr->mrphWeights()).
+                    assignSkeleNode(
+                        nodeMap.count(ogNode.MESHRD_skeleNodeIndx) ?
+                        nodeMap[ogNode.MESHRD_skeleNodeIndx] : tinyHandle()
+                    );
+            }
         }
 
         if (ogNode.hasSKEL3D()) {

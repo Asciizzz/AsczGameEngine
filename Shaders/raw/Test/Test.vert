@@ -20,10 +20,10 @@ layout(location = 2) in vec4  inTangent;
 layout(location = 3) in uvec4 inBoneIDs;
 layout(location = 4) in vec4  inBoneWs;
 
-layout(location = 5) in vec4  mat4_0;
-layout(location = 6) in vec4  mat4_1;
-layout(location = 7) in vec4  mat4_2;
-layout(location = 8) in vec4  mat4_3;
+layout(location = 5) in vec4  model4_0;
+layout(location = 6) in vec4  model4_1;
+layout(location = 7) in vec4  model4_2;
+layout(location = 8) in vec4  model4_3;
 layout(location = 9) in uvec4 other;
 
 layout(location = 0) out vec3 fragWorld;
@@ -33,7 +33,7 @@ layout(location = 3) out vec3 fragTangent;
 layout(location = 4) out vec4 fragOther;
 
 void main() {
-    mat4 model = mat4(mat4_0, mat4_1, mat4_2, mat4_3);
+    mat4 model = mat4(model4_0, model4_1, model4_2, model4_3);
 
     vec3 basePos    = inPos_Tu.xyz;
     vec3 baseNormal = inNrml_Tv.xyz;

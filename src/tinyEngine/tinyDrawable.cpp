@@ -130,6 +130,38 @@ void tinyDrawable::init(const CreateInfo& info) {
             skinSize_x1_.unaligned // true size
         } })
         .updateDescSets(dvk_->device);
+
+// Setup morph weights data
+    mrphWsSize_x1_.unaligned = MAX_MORPH_WS * sizeof(float);
+    mrphWsSize_x1_.aligned = dvk_->alignSizeSSBO(mrphWsSize_x1_.unaligned);
+
+    mrphWsBuffer_
+        .setDataSize(mrphWsSize_x1_.aligned * maxFramesInFlight_)
+        .setUsageFlags(BufferUsage::Storage)
+        .setMemPropFlags(MemProp::HostVisibleAndCoherent)
+        .createBuffer(dvk_)
+        .mapMemory();
+
+    mrphWsDescLayout_.create(dvk_->device, {
+        {0, DescType::StorageBufferDynamic, 1, ShaderStage::Vertex, nullptr}
+    });
+
+    mrphWsDescPool_.create(dvk_->device, {
+        {DescType::StorageBufferDynamic, 1}
+    }, 1);
+
+    mrphWsDescSet_.allocate(dvk_->device, mrphWsDescPool_, mrphWsDescLayout_);
+
+    DescWrite()
+        .setDstSet(mrphWsDescSet_)
+        .setType(DescType::StorageBufferDynamic)
+        .setDescCount(1)
+        .setBufferInfo({ VkDescriptorBufferInfo{
+            mrphWsBuffer_,
+            0,
+            mrphWsSize_x1_.unaligned // true size
+        } })
+        .updateDescSets(dvk_->device);
 }
 
 
@@ -144,7 +176,8 @@ void tinyDrawable::startFrame(uint32_t frameIndex) noexcept {
     matData_.clear();
     matIdxMap_.clear();
 
-    boneCount_ = 0;
+    skinCount_ = 0;
+    mrphWsCount_ = 0;
 
 // Some initialization if needed
 
@@ -201,17 +234,28 @@ void tinyDrawable::submit(const MeshEntry& entry) noexcept {
     instaData.model = entry.model;
 
     // If mesh entry has bone
-    if (entry.skins) {
-        uint32_t skinSize = static_cast<uint32_t>(entry.skins->size());
+    if (entry.skinData) {
+        uint32_t thisCount = static_cast<uint32_t>(entry.skinData->size());
 
-        size_t skinDataSize = skinSize * sizeof(glm::mat4);
-        size_t skinDataOffset = boneCount_ * sizeof(glm::mat4) + skinOffset(frameIndex_);
-        skinBuffer_.copyData(entry.skins->data(), skinDataSize, skinDataOffset);
+        size_t skinDataSize = thisCount * sizeof(glm::mat4);
+        size_t skinDataOffset = skinCount_ * sizeof(glm::mat4) + skinOffset(frameIndex_);
+        skinBuffer_.copyData(entry.skinData->data(), skinDataSize, skinDataOffset);
+        
+        instaData.other.x = skinCount_;
+        instaData.other.y = thisCount;
+        skinCount_ += thisCount;
+    }
 
-        instaData.other = glm::uvec4(boneCount_, skinSize, 0, 0);
+    if (entry.mrphWeights) {
+        uint32_t thisCount = static_cast<uint32_t>(entry.mrphWeights->size());
 
-        boneCount_ += skinSize;
+        size_t mrphWsDataSize = thisCount * sizeof(float);
+        size_t mrphWsDataOffset = mrphWsCount_ * sizeof(float) + mrphWsOffset(frameIndex_);
+        mrphWsBuffer_.copyData(entry.mrphWeights->data(), mrphWsDataSize, mrphWsDataOffset);
 
+        instaData.other.z = mrphWsCount_;
+        instaData.other.w = thisCount;
+        mrphWsCount_ += thisCount;
     }
 
     meshIt->second.push_back(instaData);

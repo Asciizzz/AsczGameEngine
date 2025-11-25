@@ -5,6 +5,8 @@
 build/
 AsczGame_Release/
 AsczGame_Debug/
+AsczGame_debug.exe
+AsczGame_release.exe
 
 GovernmentData/
 US_SocialSecurity_Lists/
@@ -19,6 +21,5 @@ Guides/
 docs/
 
 backup_script.py
-AsczGame_Debug.exe
 
 *.ascz
