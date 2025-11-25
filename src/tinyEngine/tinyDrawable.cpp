@@ -234,7 +234,7 @@ void tinyDrawable::submit(const MeshEntry& entry) noexcept {
     instaData.model = entry.model;
 
     // If mesh entry has bone
-    if (entry.skinData) {
+    if (entry.skinData && !entry.skinData->empty()) {
         uint32_t thisCount = static_cast<uint32_t>(entry.skinData->size());
 
         size_t skinDataSize = thisCount * sizeof(glm::mat4);
@@ -246,7 +246,7 @@ void tinyDrawable::submit(const MeshEntry& entry) noexcept {
         skinCount_ += thisCount;
     }
 
-    if (entry.mrphWeights) {
+    if (entry.mrphWeights && !entry.mrphWeights->empty()) {
         uint32_t thisCount = static_cast<uint32_t>(entry.mrphWeights->size());
 
         size_t mrphWsDataSize = thisCount * sizeof(float);

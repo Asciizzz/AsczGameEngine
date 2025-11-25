@@ -22,7 +22,7 @@ public:
 
     // Return the scene handle in the registry
     tinyHandle addModel(tinyModel& model, tinyHandle parentFolder = tinyHandle()); // Returns scene handle - much simpler now!
-    
+
     void addSceneInstance(tinyHandle fromHandle, tinyHandle toHandle, tinyHandle parentHandle = tinyHandle());
 
     // Descriptor accessors
