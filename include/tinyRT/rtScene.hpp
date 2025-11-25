@@ -2,10 +2,6 @@
 
 #include "SceneRes.hpp"
 
-// Components
-#include "tinyRT/rtTransform.hpp"
-#include "tinyRT/rtMesh.hpp"
-
 namespace tinyRT {
 
 struct Node {

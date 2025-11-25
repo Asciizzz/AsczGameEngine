@@ -6,8 +6,7 @@ namespace tinyRT {
 
 struct MeshRender3D {
     tinyHandle mesh;
-    tinyHandle material;
-    tinyHandle shader;
+    tinyHandle skeleNode; // NOT skeleton, it's skeleton node
 };
 
 }

@@ -8,6 +8,14 @@
 #include "tinyData/tinyMaterial.hpp"
 #include "tinyData/tinyTexture.hpp"
 
+/* TO DO
+
+Redesign the structure, submesh will be the new atomic unit instead of mesh
+
+Im going to bed, see you tomorrow
+
+*/
+
 namespace Mesh3D {
     struct Insta {
         glm::mat4 model = glm::mat4(1.0f); // Model matrix
@@ -19,15 +27,25 @@ namespace Mesh3D {
 
     struct InstaRange {
         tinyHandle mesh;
+        std::vector<uint32_t> submesh;
         uint32_t offset = 0;
         uint32_t count = 0;
     };
 }
 
+struct MeshGroup {
+    std::vector<Mesh3D::Insta> instaData;
+    std::vector<uint32_t> submeshIndex;
+    /*List of submesh indices for that shader
+        Every submesh uses different material which can potentially use different shader.
+        This will ruin the batching if we group by mesh only.
+    */
+};
+
 struct ShaderGroup {
     tinyHandle shader;
 
-    std::unordered_map<tinyHandle, std::vector<Mesh3D::Insta>> instaMap;
+    std::unordered_map<tinyHandle, MeshGroup> meshGroups;
     std::vector<Mesh3D::InstaRange> instaRanges;
 };
 
@@ -74,7 +92,7 @@ public:
 
     uint32_t matIndex(tinyHandle matHandle) const noexcept {
         auto it = matIdxMap_.find(matHandle);
-        return (it != matIdxMap_.end()) ? it->second : UINT32_MAX;
+        return (it != matIdxMap_.end()) ? it->second : 0;
     }
 
     struct Size_x1 { // Per-frame
@@ -97,8 +115,6 @@ public:
 
     struct MeshEntry {
         tinyHandle mesh;
-        tinyHandle mat;
-        tinyHandle shader;
         glm::mat4 model = glm::mat4(1.0f);
     };
 

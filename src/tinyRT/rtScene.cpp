@@ -1,5 +1,9 @@
 #include "tinyRT/rtScene.hpp"
-#include "tinyData/tinyCamera.hpp"
+
+// Components
+#include "tinyRT/rtTransform.hpp"
+#include "tinyRT/rtMesh.hpp"
+#include "tinyRT/rtSkeleton.hpp"
 
 using namespace tinyRT;
 
@@ -191,8 +195,6 @@ void Scene::update(FrameStart frameStart) noexcept {
 
                 draw.submit({
                     meshRD3D->mesh,
-                    meshRD3D->material,
-                    tinyHandle(),
                     currentWorld
                 });
             }

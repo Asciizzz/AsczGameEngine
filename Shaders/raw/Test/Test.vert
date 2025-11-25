@@ -1,7 +1,7 @@
 #version 450
 
 layout(push_constant) uniform PushConstant {
-    mat4 ignore;
+    vec4 props;
 } pConst;
 
 layout(set = 0, binding = 0) uniform GlobalUBO {
@@ -20,8 +20,7 @@ layout(location = 5) in vec4  mat4_2;
 layout(location = 6) in vec4  mat4_3;
 layout(location = 7) in uvec4 other;
 
-layout(location = 0) out vec3 fragNrml; // only need normal
-layout(location = 1) out flat uvec4 fragOther;
+layout(location = 0) out vec3 fragNrml;
 
 void main() {
     mat4 model = mat4(mat4_0, mat4_1, mat4_2, mat4_3);
@@ -30,7 +29,6 @@ void main() {
 
     mat3 normalMat = transpose(inverse(mat3(model)));
     fragNrml = normalMat * inNrml_Tv.xyz;
-    fragOther = other;
 
     gl_Position = glb.proj * glb.view * worldPos4;
 }

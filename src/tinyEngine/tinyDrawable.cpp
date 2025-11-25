@@ -92,48 +92,59 @@ void tinyDrawable::startFrame(uint32_t frameIndex) noexcept {
     matIdxMap_.clear();
 
 // Some initialization if needed
-    matData_.emplace_back(); // First material is always default
+
+    matData_.emplace_back();
     matIdxMap_[tinyHandle()] = 0;
 }
 
 void tinyDrawable::submit(const MeshEntry& entry) noexcept {
     const tinyMesh* rMesh = fsr_->get<tinyMesh>(entry.mesh);
-    const tinyMaterial* rMat = fsr_->get<tinyMaterial>(entry.mat);
+    if (!rMesh) return;
 
-    uint32_t matIndex = 0;
-    auto matIt = matIdxMap_.find(entry.mat);
-
-    if (matIt != matIdxMap_.end()) {
-        matIndex = matIt->second;
-    } else if (rMat) {
-        matIndex = static_cast<uint32_t>(matData_.size());
-
-        tinyMaterial::Data matData;
-        matData.float1 = rMat->data.float1;
-        // In the future there will be specific conversion (like texture mapping, not just raw data copy)
-
-        matIdxMap_[entry.mat] = matIndex;
-        matData_.push_back(matData);
+    std::unordered_map<tinyHandle, std::vector<uint32_t>> uniqueMatInSubmesh;
+    const std::vector<tinyMesh::Part>& meshParts = rMesh->parts();
+    for (size_t i = 0; i < meshParts.size(); ++i) {
+        const tinyMesh::Part& part = meshParts[i];
+        uniqueMatInSubmesh[part.material].push_back(static_cast<uint32_t>(i));
     }
 
-    tinyHandle shaderHandle = entry.shader;
+    // Append unique materials if not in the list yet
+    for (const auto& [matHandle, _] : uniqueMatInSubmesh) {
+        if (matIdxMap_.find(matHandle) == matIdxMap_.end()) {
+            const tinyMaterial* rMat = fsr_->get<tinyMaterial>(matHandle);
+            if (!rMat) continue;
 
-    auto shaderIt = shaderIdxMap_.find(shaderHandle);
-    if (shaderIt == shaderIdxMap_.end()) {
-        shaderIdxMap_[shaderHandle] = static_cast<uint32_t>(shaderGroups_.size());
+            tinyMaterial::Data matData = rMat->data;
 
-        shaderGroups_.emplace_back();
-        shaderIt = shaderIdxMap_.find(shaderHandle);
+            matIdxMap_[matHandle] = static_cast<uint32_t>(matData_.size());
+            matData_.push_back(matData);
+        }
     }
 
-    ShaderGroup& shaderGroup = shaderGroups_[shaderIt->second];
-    shaderGroup.shader = shaderHandle;
+    for (const auto& [matHandle, submeshIndices] : uniqueMatInSubmesh) {
+        const tinyMaterial* rMat = fsr_->get<tinyMaterial>(matHandle);
 
-    std::vector<Mesh3D::Insta>& instaVec = shaderGroup.instaMap[entry.mesh];
-    instaVec.push_back({
-        entry.model,
-        glm::uvec4(matIndex, 0, 0, 0)
-    });
+        tinyHandle shaderHandle = rMat ? rMat->shader : tinyHandle();
+
+        auto shaderIt = shaderIdxMap_.find(shaderHandle);
+        if (shaderIt == shaderIdxMap_.end()) {
+            shaderIdxMap_[shaderHandle] = static_cast<uint32_t>(shaderGroups_.size());
+
+            shaderGroups_.emplace_back();
+            shaderIt = shaderIdxMap_.find(shaderHandle);
+        }
+
+        ShaderGroup& shaderGroup = shaderGroups_[shaderIt->second];
+        shaderGroup.shader = shaderHandle;
+
+        MeshGroup& meshGroup = shaderGroup.meshGroups[entry.mesh];
+
+        meshGroup.submeshIndex = submeshIndices;
+        meshGroup.instaData.push_back({
+            entry.model,
+            glm::uvec4(0, 0, 0, 0)
+        });
+    }
 }
 
 
@@ -143,11 +154,14 @@ void tinyDrawable::finalize(uint32_t* totalInstances, uint32_t* totalMaterials) 
     for (ShaderGroup& shaderGroup : shaderGroups_) {
         shaderGroup.instaRanges.clear();
 
-        for (const auto& [meshH, dataVec] : shaderGroup.instaMap) {
+        for (const auto& [meshH, meshGroup] : shaderGroup.meshGroups) {
+            const std::vector<Mesh3D::Insta>& dataVec = meshGroup.instaData;
+
             if (curInstances + dataVec.size() > MAX_INSTANCES) break; // Should astronomically rarely happen
 
             Mesh3D::InstaRange range;
             range.mesh = meshH;
+            range.submesh = meshGroup.submeshIndex;
             range.offset = curInstances;
             range.count = dataVec.size();
             shaderGroup.instaRanges.push_back(range);
@@ -159,7 +173,7 @@ void tinyDrawable::finalize(uint32_t* totalInstances, uint32_t* totalMaterials) 
 
             curInstances += static_cast<uint32_t>(dataVec.size());
         }
-        shaderGroup.instaMap.clear();
+        shaderGroup.meshGroups.clear();
     }
 
     // Update the material buffer

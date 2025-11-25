@@ -422,6 +422,11 @@ static void RenderGenericNodeHierarchy(
 // HIERARCHY WINDOW - Scene & File Trees
 // ============================================================================
 
+
+#include "tinyRT/rtTransform.hpp"
+#include "tinyRT/rtMesh.hpp"
+#include "tinyRT/rtSkeleton.hpp"
+
 static void RenderSceneNodeHierarchy() {
     rtScene* scene = sceneRef;
     tinyFS& fs = projRef->fs();

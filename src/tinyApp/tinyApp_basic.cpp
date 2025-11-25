@@ -134,9 +134,9 @@ void tinyApp::initComponents() {
     };
     // Push constants for mesh only (80 bytes)
     VkPushConstantRange testPushConstant{};
-    testPushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    testPushConstant.stageFlags = ShaderStage::VertexAndFragment;
     testPushConstant.offset = 0;
-    testPushConstant.size = 64;
+    testPushConstant.size = 16;
     testCfg.pushConstantRanges = { testPushConstant };
     testCfg.withShaders("Shaders/bin/Test/Test.vert.spv", "Shaders/bin/Test/Test.frag.spv")
         .withVertexInput({

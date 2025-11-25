@@ -265,7 +265,16 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
             vkCmdBindVertexBuffers(currentCmd, 0, 1, vBuffers, vOffsets);
             vkCmdBindIndexBuffer(currentCmd, indxBuffer, 0, indxType);
 
-            vkCmdDrawIndexed(currentCmd, rMesh->indxCount(), range.count, 0, 0, range.offset);
+            // vkCmdDrawIndexed(currentCmd, rMesh->indxCount(), range.count, 0, 0, range.offset);
+            for (uint32_t submeshIdx : range.submesh) {
+                const auto& part = rMesh->parts()[submeshIdx];
+
+                uint32_t matIdx = draw.matIndex(part.material);
+
+                testPipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, 0, glm::uvec4(matIdx, 0, 0, 0));
+            
+                vkCmdDrawIndexed(currentCmd, part.indxCount, range.count, part.indxOffset, 0, range.offset);
+            }
         }
     }
 }

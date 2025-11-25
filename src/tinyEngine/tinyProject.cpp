@@ -38,6 +38,12 @@ tinyProject::~tinyProject() {
     fs_.reset();
 }
 
+
+
+#include "tinyRT/rtTransform.hpp"
+#include "tinyRT/rtMesh.hpp"
+#include "tinyRT/rtSkeleton.hpp"
+
 tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
     parentFolder = parentFolder ? parentFolder : fs_->root();
 
@@ -72,8 +78,6 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
         }
     }
 
-    UnorderedMap<tinyHandle, tinyHandle> meshMatMap; // Mesh to material mapping
-
     std::vector<tinyHandle> glbMeshRHandle;
     if (!model.meshes.empty()) {
         tinyHandle fnMeshFolder = fs_->createFolder("Meshes", fnModelFolder);
@@ -81,22 +85,22 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
         for (auto& mMesh : model.meshes) {
             mMesh.mesh.vkCreate(dvk_, sharedRes_.mrphDsDescLayout(), sharedRes_.mrphDsDescPool());
 
+            for (auto& part : mMesh.mesh.parts()) {
+                if (validIndex(part.material.index, glmMatRHandle)) {
+                    part.material = glmMatRHandle[part.material.index];
+                } else {
+                    part.material = tinyHandle();
+                }
+            }
+
             tinyHandle fnHandle = fs_->createFile(mMesh.name, std::move(mMesh.mesh), fnMeshFolder);
             tinyHandle dataHandle = fs_->dataHandle(fnHandle);
             glbMeshRHandle.push_back(dataHandle);
-
-            // Link material
-            int mMatIdx = mMesh.matIdx;
-            if (validIndex(mMatIdx, glmMatRHandle)) {
-                meshMatMap[dataHandle] = glmMatRHandle[mMatIdx];
-            }
         }
     }
 
-/*
     // Import skeletons to registry
     std::vector<tinyHandle> glbSkeleRHandle;
-
     if (!model.skeletons.empty()) {
         tinyHandle fnSkeleFolder = fs_->createFolder("Skeletons", fnModelFolder);
         for (auto& mSkeleton : model.skeletons) {
@@ -109,8 +113,6 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
 
     // If scene has no nodes, return early
     if (model.nodes.empty()) return tinyHandle();
-
-*/
 
     // Create scene with nodes - preserve hierarchy but remap resource references
     rtScene scene;
@@ -140,9 +142,14 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
         if (ogNode.hasMESHR()) {
             rtMESHRD3D* meshrd = scene.nWriteComp<rtMESHRD3D>(nodeHandle);
             meshrd->mesh = linkHandle(ogNode.MESHRD_meshIndx, glbMeshRHandle);
+            meshrd->skeleNode = 
+                nodeMap.count(ogNode.MESHRD_skeleNodeIndx) ?
+                nodeMap[ogNode.MESHRD_skeleNodeIndx] : tinyHandle();
+        }
 
-            auto it = meshMatMap.find(meshrd->mesh);
-            if (it != meshMatMap.end()) meshrd->material = it->second;
+        if (ogNode.hasSKEL3D()) {
+            rtSKELE3D* skele3D = scene.nWriteComp<rtSKELE3D>(nodeHandle);
+            skele3D->init(&r().view<tinySkeleton>(), linkHandle(ogNode.SKEL3D_skeleIndx, glbSkeleRHandle));
         }
 
         for (int childIndex : ogNode.children) {

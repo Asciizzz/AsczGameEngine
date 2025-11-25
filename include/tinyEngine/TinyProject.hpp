@@ -1,13 +1,14 @@
 #pragma once
 
-#include "tinyFS.hpp"
 
 #include "tinyModel.hpp"
-#include "rtScene.hpp"
 
 #include "tinyCamera.hpp"
-#include "tinyEngine/tinyGlobal.hpp"
+#include "tinyGlobal.hpp"
 
+#include "tinyFS.hpp"
+
+#include "tinyRT/rtScene.hpp"
 #include "tinyDrawable.hpp"
 
 class tinyProject {
