@@ -61,6 +61,7 @@ struct tinyModel {
 
     struct Mesh {
         tinyMesh mesh;
+        int matIdx = -1;
         std::string name;
     };
 

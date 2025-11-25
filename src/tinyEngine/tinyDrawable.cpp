@@ -76,7 +76,10 @@ void tinyDrawable::startFrame(uint32_t frameIndex) noexcept {
 }
 
 void tinyDrawable::submit(const MeshEntry& entry) noexcept {
-    tinyHandle shaderHandle = tinyHandle();
+    const tinyMesh* rMesh = fsr_->get<tinyMesh>(entry.mesh);
+    const tinyMaterial* rMat = fsr_->get<tinyMaterial>(entry.mat);
+
+    tinyHandle shaderHandle = rMat ? rMat->shader : tinyHandle();
 
     auto shaderIt = shaderIdxMap_.find(shaderHandle);
 
@@ -86,21 +89,21 @@ void tinyDrawable::submit(const MeshEntry& entry) noexcept {
         shaderIt = shaderIdxMap_.find(shaderHandle);
     }
 
-    ShaderGroup& shaderGroup = shaderGroups_[shaderIt->second];
-    shaderGroup.instaMap[entry.mesh].push_back({ entry.model, entry.other });
+    auto matIt = matIdxMap_.find(entry.mat);
 
-    // Push material
-    tinyHandle matHandle = tinyHandle();
+    uint32_t matIndex = UINT32_MAX;
+    if (matIt == matIdxMap_.end() && rMat) {
+        matIndex = static_cast<uint32_t>(matData_.size());
 
-    auto matIt = matIdxMap_.find(matHandle);
-    if (matIt == matIdxMap_.end()) {
-        uint32_t newIndex = static_cast<uint32_t>(matData_.size());
-
-        matIdxMap_[matHandle] = newIndex;
-        matData_.push_back(tinyMaterial::Data());
-
-        shaderGroup.meshToMatIndex[entry.mesh] = newIndex;
+        matIdxMap_[entry.mat] = matIndex;
+        matData_.push_back(rMat->data);
     }
+
+    ShaderGroup& shaderGroup = shaderGroups_[shaderIt->second];
+    shaderGroup.instaMap[entry.mesh].push_back({
+        entry.model,
+        glm::uvec4(matIndex, 0, 0, 0)
+    });
 }
 
 
@@ -115,7 +118,6 @@ void tinyDrawable::finalize(uint32_t* totalInstances, uint32_t* totalMaterials) 
 
             Mesh3D::InstaRange range;
             range.mesh = meshH;
-            range.matIndex = shaderGroup.meshToMatIndex[meshH];
             range.offset = curInstances;
             range.count = dataVec.size();
             shaderGroup.instaRanges.push_back(range);

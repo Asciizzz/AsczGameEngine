@@ -225,7 +225,7 @@ private:
     std::vector<uint8_t> mrphData_; // raw bytes
     size_t mrphCount_ = 0;
 
-    // Vulkan parts
+    // Vulkan
     const tinyVk::Device* dvk_ = nullptr;
     tinyVk::DataBuffer vrtxBuffer_;
     tinyVk::DataBuffer indxBuffer_;

@@ -534,7 +534,7 @@ static bool readDeltaAccessor(const tinygltf::Model& model,
     return true;
 }
 
-void loadMesh(tinyMesh& mesh,
+void loadMesh(tinyMesh& mesh, int& matIdx,
               const tinygltf::Model& gltfModel,
               const tinygltf::Mesh& gltfMesh,
               const std::vector<tinygltf::Primitive>& primitives,
@@ -732,7 +732,7 @@ void loadMeshes(std::vector<tinyModel::Mesh>& meshes, tinygltf::Model& gltfModel
         tinyModel::Mesh meshEntry;
         meshEntry.name = sanitizeAsciiz(gltfMesh.name, "mesh", meshIndex);
 
-        loadMesh(meshEntry.mesh, gltfModel, gltfMesh, gltfMesh.primitives, !forceStatic);
+        loadMesh(meshEntry.mesh, meshEntry.matIdx, gltfModel, gltfMesh, gltfMesh.primitives, !forceStatic);
 
         meshes.push_back(std::move(meshEntry));
     }
@@ -1417,14 +1417,9 @@ tinyModel tinyLoader::loadModelFromOBJ(const std::string& filePath) {
         mesh.setVrtxs(vertices);
         mesh.setIndxs(indices);
 
-        // tinyMesh::Part mPart;
-        // mPart.indxOffset = 0;
-        // mPart.indxCount = static_cast<uint32_t>(indices.size());
-        // mPart.material = (materialId >= 0) ? tinyHandle(materialId) : tinyHandle();
-        // mesh.addPart(mPart);
-
         tinyModel::Mesh meshEntry;
         meshEntry.mesh = std::move(mesh);
+        meshEntry.matIdx = materialId;
         meshEntry.name = materialId >= 0 ? result.materials[materialId].name : "Mesh";
 
         result.meshes.push_back(std::move(meshEntry));

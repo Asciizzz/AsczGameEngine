@@ -9,7 +9,7 @@
 namespace Mesh3D {
     struct Insta {
         glm::mat4 model = glm::mat4(1.0f); // Model matrix
-        glm::vec4 other = glm::vec4(0.0f); // Additional data
+        glm::uvec4 other = glm::uvec4(0); // Additional data
 
         static VkVertexInputBindingDescription bindingDesc();
         static std::vector<VkVertexInputAttributeDescription> attrDescs();
@@ -17,7 +17,6 @@ namespace Mesh3D {
 
     struct InstaRange {
         tinyHandle mesh;
-        uint32_t matIndex = 0;
         uint32_t offset = 0;
         uint32_t count = 0;
     };
@@ -25,8 +24,6 @@ namespace Mesh3D {
 
 struct ShaderGroup {
     tinyHandle shader;
-    
-    std::unordered_map<tinyHandle, uint32_t> meshToMatIndex;
 
     std::unordered_map<tinyHandle, std::vector<Mesh3D::Insta>> instaMap;
     std::vector<Mesh3D::InstaRange> instaRanges;
@@ -94,9 +91,8 @@ public:
 
     struct MeshEntry {
         tinyHandle mesh;
-        tinyHandle shader;
+        tinyHandle mat;
         glm::mat4 model = glm::mat4(1.0f);
-        glm::vec4 other = glm::vec4(0.0f);
     };
 
     void startFrame(uint32_t frameIndex) noexcept;
