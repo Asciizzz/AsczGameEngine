@@ -52,14 +52,25 @@ void tinyDrawable::init(const CreateInfo& info) {
 
     // Create pool and layout
     matDescLayout_.create(dvk_->device, {
-        {0, tinyVk::DescType::StorageBuffer, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}
+        {0, tinyVk::DescType::StorageBufferDynamic, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}
     });
 
     matDescPool_.create(dvk_->device, {
-        {tinyVk::DescType::StorageBuffer, MAX_MATERIALS}
-    }, MAX_MATERIALS);
+        {tinyVk::DescType::StorageBufferDynamic, 1}
+    }, 1);
 
     matDescSet_.allocate(dvk_->device, matDescPool_, matDescLayout_);
+
+    DescWrite()
+        .setDstSet(matDescSet_)
+        .setType(DescType::StorageBufferDynamic)
+        .setDescCount(1)
+        .setBufferInfo({ VkDescriptorBufferInfo{
+            matBuffer_,
+            0,
+            matSize_x1_.unaligned // true size
+        } })
+        .updateDescSets(dvk_->device);
 }
 
 
@@ -146,6 +157,11 @@ void tinyDrawable::finalize(uint32_t* totalInstances, uint32_t* totalMaterials) 
         }
         shaderGroup.instaMap.clear();
     }
+
+    // Update the material buffer
+    size_t matDataOffset = matOffset(frameIndex_); // Aligned
+    size_t matDataSize = matData_.size() * sizeof(tinyMaterial::Data); // True size
+    matBuffer_.copyData(matData_.data(), matDataSize, matDataOffset);
 
     if (totalInstances) *totalInstances = curInstances;
     if (totalMaterials) *totalMaterials = static_cast<uint32_t>(matData_.size());

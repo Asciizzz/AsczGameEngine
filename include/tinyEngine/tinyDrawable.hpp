@@ -36,6 +36,8 @@ public:
     static constexpr size_t MAX_BONES     = 102400; // 6.5mb ~ 400 model x 256 bones x 64 bytes (mat4) - plenty
     static constexpr size_t MAX_MATERIALS = 10000;  // ~0.8-0.96mb, plenty
 
+    // Total ~ 8mb + (6.5mb + 1mb) * frames(2 or 3) = at worst ~ 30mb, small fries for like 99% of hardware
+
 // ---------------------------------------------------------------
 
     struct CreateInfo {
