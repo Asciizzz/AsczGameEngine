@@ -168,6 +168,8 @@ void Scene::update(FrameStart frameStart) noexcept {
     const tinyCamera& cam = camera();
     tinyDrawable& draw = drawable();
 
+    draw.startFrame(frame);
+
     std::function<void(tinyHandle, glm::mat4)> updateNode = [&](tinyHandle nHandle, glm::mat4 parentMat) {
         Node* node = nodes_.get(nHandle);
         if (!node) return;

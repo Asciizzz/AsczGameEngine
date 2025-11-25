@@ -231,42 +231,74 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
     uint32_t offset = currentFrame * global->alignedSize;
 
     // Bind pipeline and descriptor sets once
-    testPipeline->bindCmd(currentCmd);
-    testPipeline->bindSets(currentCmd, 0, &glbSet, 1, &offset, 1);
 
     // Use the new instanced static machine
     const tinyDrawable& draw = *sharedRes.drawable;
+    const std::vector<ShaderGroup>& shaderGroups = draw.shaderGroups();
 
-    VkBuffer instaBuffer = draw.instaBuffer();
-    const std::vector<Mesh3D::InstaRange>& ranges = draw.instaRanges();
+    for (const auto& shaderGroup : shaderGroups) {
+        const auto& ranges = shaderGroup.instaRanges;
+        if (ranges.empty()) continue;
 
-    // Bind the instance buffer once then use the ranges to draw
-    VkBuffer buffers[] = { instaBuffer };
-    VkDeviceSize offsets[] = { 0 };
-    vkCmdBindVertexBuffers(currentCmd, 1, 1, buffers, offsets);
+        // Bind this specific shader pipeline
+        /* For the time being we only have one pipeline, so no need to switch. */
+        testPipeline->bindCmd(currentCmd);
+        testPipeline->bindSets(currentCmd, 0, &glbSet, 1, &offset, 1);
 
-    for (const auto& range : ranges) {
-        const auto* rMesh = sharedRes.fsGet<tinyMesh>(range.mesh);
-        if (!rMesh) continue; // Mesh not found in registry
+        // Bind the instance buffer once then use the ranges to draw
+        VkBuffer buffers[] = { draw.instaBuffer() };
+        VkDeviceSize offsets[] = { 0 };
+        vkCmdBindVertexBuffers(currentCmd, 1, 1, buffers, offsets);
 
-        // Bind the vertex and index buffers
-        VkBuffer vrtxBuffer = rMesh->vrtxBuffer();
-        VkBuffer indxBuffer = rMesh->indxBuffer();
-        VkIndexType indxType = rMesh->indxType();
-        VkBuffer vBuffers[] = { vrtxBuffer };
-        VkDeviceSize vOffsets[] = { 0 };
-        vkCmdBindVertexBuffers(currentCmd, 0, 1, vBuffers, vOffsets);
-        vkCmdBindIndexBuffer(currentCmd, indxBuffer, 0, indxType);
+        for (const auto& range : ranges) {
+            const auto* rMesh = sharedRes.fsGet<tinyMesh>(range.mesh);
+            if (!rMesh) continue; // Mesh not found in registry
 
-        // Draw each individual submeshes
-        for (size_t i = 0; i < rMesh->parts().size(); ++i) {
-            uint32_t indxCount = rMesh->parts()[i].indxCount;
-            if (indxCount == 0) continue;
+            // Bind the vertex and index buffers
+            VkBuffer vrtxBuffer = rMesh->vrtxBuffer();
+            VkBuffer indxBuffer = rMesh->indxBuffer();
+            VkIndexType indxType = rMesh->indxType();
+            VkBuffer vBuffers[] = { vrtxBuffer };
+            VkDeviceSize vOffsets[] = { 0 };
+            vkCmdBindVertexBuffers(currentCmd, 0, 1, vBuffers, vOffsets);
+            vkCmdBindIndexBuffer(currentCmd, indxBuffer, 0, indxType);
 
-            uint32_t indxOffset = rMesh->parts()[i].indxOffset;
-            vkCmdDrawIndexed(currentCmd, indxCount, range.count, indxOffset, 0, range.offset);
+            // Draw each individual submeshes
+            for (size_t i = 0; i < rMesh->parts().size(); ++i) {
+                uint32_t indxCount = rMesh->parts()[i].indxCount;
+                if (indxCount == 0) continue;
+
+                uint32_t indxOffset = rMesh->parts()[i].indxOffset;
+                vkCmdDrawIndexed(currentCmd, indxCount, range.count, indxOffset, 0, range.offset);
+            }
         }
     }
+
+
+
+
+    // for (const auto& range : ranges) {
+    //     const auto* rMesh = sharedRes.fsGet<tinyMesh>(range.mesh);
+    //     if (!rMesh) continue; // Mesh not found in registry
+
+    //     // Bind the vertex and index buffers
+    //     VkBuffer vrtxBuffer = rMesh->vrtxBuffer();
+    //     VkBuffer indxBuffer = rMesh->indxBuffer();
+    //     VkIndexType indxType = rMesh->indxType();
+    //     VkBuffer vBuffers[] = { vrtxBuffer };
+    //     VkDeviceSize vOffsets[] = { 0 };
+    //     vkCmdBindVertexBuffers(currentCmd, 0, 1, vBuffers, vOffsets);
+    //     vkCmdBindIndexBuffer(currentCmd, indxBuffer, 0, indxType);
+
+    //     // Draw each individual submeshes
+    //     for (size_t i = 0; i < rMesh->parts().size(); ++i) {
+    //         uint32_t indxCount = rMesh->parts()[i].indxCount;
+    //         if (indxCount == 0) continue;
+
+    //         uint32_t indxOffset = rMesh->parts()[i].indxOffset;
+    //         vkCmdDrawIndexed(currentCmd, indxCount, range.count, indxOffset, 0, range.offset);
+    //     }
+    // }
 }
 
 // End frame: finalize command buffer, submit, and present
