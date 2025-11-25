@@ -233,7 +233,7 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
     const tinyDrawable& draw = *sharedRes.drawable;
 
     const auto& shaderGroups = draw.shaderGroups();
-    for (const auto& [shaderHandle, meshGroupVec] : shaderGroups) { // For each shader groups:
+    for (const auto& [shaderHandle, meshRangeVec] : shaderGroups) { // For each shader groups:
         // In the future you will change this to a r.get<tinyShader>(shaderHandle)
         testPipeline->bindCmd(currentCmd);
         testPipeline->bindSets(currentCmd, 0, &glbSet, 1, &offset, 1);
@@ -248,8 +248,8 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
         uint32_t matOffset = draw.matOffset(currentFrame);
         testPipeline->bindSets(currentCmd, 1, &matSet, 1, &matOffset, 1);
 
-        for (const auto& meshGroup : meshGroupVec) {
-            const auto* rMesh = sharedRes.fsGet<tinyMesh>(meshGroup.mesh);
+        for (const auto& meshRange : meshRangeVec) {
+            const auto* rMesh = sharedRes.fsGet<tinyMesh>(meshRange.mesh);
             if (!rMesh) continue; // Mesh not found in registry
 
             // Bind the vertex and index buffers
@@ -261,7 +261,7 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
             vkCmdBindVertexBuffers(currentCmd, 0, 1, vBuffers, vOffsets);
             vkCmdBindIndexBuffer(currentCmd, indxBuffer, 0, indxType);
 
-            for (uint32_t submeshIdx : meshGroup.submeshes) {
+            for (uint32_t submeshIdx : meshRange.submeshes) {
                 const auto& part = rMesh->parts()[submeshIdx];
 
                 uint32_t matIdx = draw.matIndex(part.material);
@@ -271,10 +271,10 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
                 vkCmdDrawIndexed(
                     currentCmd, 
                     part.indxCount,
-                    meshGroup.instaCount,
+                    meshRange.instaCount,
                     part.indxOffset,
                     0,
-                    meshGroup.instaOffset
+                    meshRange.instaOffset
                 );
             }
         }

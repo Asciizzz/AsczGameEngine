@@ -76,66 +76,41 @@ void tinyDrawable::init(const CreateInfo& info) {
         .updateDescSets(dvk_->device);
 
 // Setup textures data
+        // Later
 
+// Setup skin data
+
+    skinSize_x1_.unaligned = MAX_BONES * sizeof(glm::mat4);
+    skinSize_x1_.aligned = dvk_->alignSizeSSBO(skinSize_x1_.unaligned);
+
+    skinBuffer_
+        .setDataSize(skinSize_x1_.aligned * maxFramesInFlight_)
+        .setUsageFlags(tinyVk::BufferUsage::Storage)
+        .setMemPropFlags(tinyVk::MemProp::HostVisibleAndCoherent)
+        .createBuffer(dvk_)
+        .mapMemory();
+
+    skinDescLayout_.create(dvk_->device, {
+        {0, tinyVk::DescType::StorageBufferDynamic, 1, ShaderStage::Vertex, nullptr}
+    });
+
+    skinDescPool_.create(dvk_->device, {
+        {tinyVk::DescType::StorageBufferDynamic, 1}
+    }, 1);
+
+    skinDescSet_.allocate(dvk_->device, skinDescPool_, skinDescLayout_);
+
+    DescWrite()
+        .setDstSet(skinDescSet_)
+        .setType(DescType::StorageBufferDynamic)
+        .setDescCount(1)
+        .setBufferInfo({ VkDescriptorBufferInfo{
+            skinBuffer_,
+            0,
+            skinSize_x1_.unaligned // true size
+        } })
+        .updateDescSets(dvk_->device);
 }
-
-/*
-Mesh:
-    Index, Vertex, Morph, basic stuff
-
-    Part { materialHandle; range (offset, count) } // Submesh
-    Vector<Part> submeshes
-
-MeshGroup:
-    Vector<InstanceData> instances; // All instance data for this mesh
-
-ShaderGroup: // All submeshes that use the same shader
-    meshHandle
-    Vector<submesh_index> submeshes
-
-
-Global:
-    Map<mesh handle -> MeshGroup> meshGroups
-
-    Map<shader handle -> Vector<ShaderGroup>> shaderGroups
-
-    Vector<InstanceData> instanceBuffer (100000 instances x 80 bytes) = 8 MB
-
-    Vector<Material> matBuffer (65536 materials x 96 bytes) = ~6 MB
-    Map<handle, int> matIndexMap
-
-Start Frame:
-    Clear meshGroups
-    Clear shaderGroups
-    Clear matBuffer
-    Clear matIndexMap
-
-For each Entry:
-    meshGroup = meshGroups[entry.meshHandle]
-
-    Lazy init meshGroup if not exists:
-        Map<shader handle, Vector<submesh_index>> shaderToSubmeshes
-
-        For each (submesh, submesh_index) in mesh.submeshes:
-            matHandle = submesh.materialHandle
-
-            if material[matHandle] exists and matHandle not in matIndexMap :
-                matIndexMap[matHandle] = matBuffer.count
-                matBuffer.push(material[matHandle].data)
-
-            shaderHandle = getShaderFromMaterial(matHandle) or defaultShaderHandle
-
-            shaderToSubmeshes[shaderHandle].push(submesh_index)
-
-        For each [shaderHandle, Vector<submesh_index>] in shaderToSubmeshes:
-            shaderGroups[shaderHandle].push( ShaderGroup {
-                meshHandle = entry.meshHandle
-                submeshes  = Vector<submesh_index>
-            } )
-
-    meshGroup.instances.push(entry.instanceData)
-
-*/
 
 
 // --------------------------- Batching process --------------------------
@@ -148,6 +123,8 @@ void tinyDrawable::startFrame(uint32_t frameIndex) noexcept {
 
     matData_.clear();
     matIdxMap_.clear();
+
+    boneCount_ = 0;
 
 // Some initialization if needed
 
@@ -189,47 +166,60 @@ void tinyDrawable::submit(const MeshEntry& entry) noexcept {
 
         // Create shader groups
         for (const auto& [shaderH, submeshIndices] : shaderToSubmeshes) {
-            MeshGroup meshGroup;
-            meshGroup.mesh = entry.mesh;
-            meshGroup.submeshes = submeshIndices;
+            MeshRange meshRange;
+            meshRange.mesh = entry.mesh;
+            meshRange.submeshes = submeshIndices;
 
-            shaderGroups_[shaderH].push_back(meshGroup);
+            shaderGroups_[shaderH].push_back(meshRange);
         }
 
         meshIt = meshInstaMap_.find(entry.mesh);
     }
 
+    
     // Add instance data
     Mesh3D::Insta instaData;
     instaData.model = entry.model;
 
+    // If mesh entry has bone
+    if (entry.skins) {
+        uint32_t skinSize = static_cast<uint32_t>(entry.skins->size());
+
+        size_t skinDataSize = skinSize * sizeof(glm::mat4);
+        size_t skinDataOffset = boneCount_ * sizeof(glm::mat4) + skinOffset(frameIndex_);
+        skinBuffer_.copyData(entry.skins->data(), skinDataSize, skinDataOffset);
+        
+        instaData.other = glm::uvec4(boneCount_, skinSize, 0, 0);
+
+        boneCount_ += skinSize;
+
+    }
+
     meshIt->second.push_back(instaData);
+
+
 }
-
-
-static int count = 0;
-static int maxCount = 5;
 
 void tinyDrawable::finalize() {
     uint32_t curInstances = 0;
 
     for (auto& [shaderHandle, shaderGroupVec] : shaderGroups_) { // For each shader group:
-        for (MeshGroup& meshGroup : shaderGroupVec) {            // For each mesh group:
-            const auto& meshIt = meshInstaMap_.find(meshGroup.mesh);
+        for (MeshRange& meshRange : shaderGroupVec) {            // For each mesh group:
+            const auto& meshIt = meshInstaMap_.find(meshRange.mesh);
             if (meshIt == meshInstaMap_.end()) continue; // Should not happen
 
             const std::vector<Mesh3D::Insta>& dataVec = meshIt->second;
 
-            // Update mesh group info
-            meshGroup.instaOffset = curInstances;
-            meshGroup.instaCount = static_cast<uint32_t>(dataVec.size());
+            // Update mesh range info
+            meshRange.instaOffset = curInstances;
+            meshRange.instaCount = static_cast<uint32_t>(dataVec.size());
 
             // Copy data
             size_t dataOffset = curInstances * sizeof(Mesh3D::Insta) + instaOffset(frameIndex_);
             size_t dataSize = dataVec.size() * sizeof(Mesh3D::Insta);
             instaBuffer_.copyData(dataVec.data(), dataSize, dataOffset);
 
-            curInstances += meshGroup.instaCount;
+            curInstances += meshRange.instaCount;
         }
     }
 
@@ -237,24 +227,4 @@ void tinyDrawable::finalize() {
     size_t matDataOffset = matOffset(frameIndex_); // Aligned
     size_t matDataSize = matData_.size() * sizeof(tinyMaterial::Data); // True size
     matBuffer_.copyData(matData_.data(), matDataSize, matDataOffset);
-
-    if (curInstances == 0) return; // No instances, skip
-
-    // Print the entire shader groups for debugging 
-    if (count >= maxCount) return;
-    count++;
-
-    for (const auto& [shaderHandle, shaderGroupVec] : shaderGroups_) {
-        printf("Shader Handle [%u, %u, %u]: 0x%016llX\n", shaderHandle.idx(), shaderHandle.ver(), shaderHandle.tID(), shaderHandle.raw());
-        for (const MeshGroup& meshGroup : shaderGroupVec) {
-            printf("  Mesh Handle [%u, %u, %u]\n", meshGroup.mesh.idx(), meshGroup.mesh.ver(), meshGroup.mesh.tID());
-            printf("    Submeshes: ");
-            for (uint32_t submeshIdx : meshGroup.submeshes) {
-                printf("%u ", submeshIdx);
-            }
-            printf("\n");
-            printf("    Instance Offset: %u\n", meshGroup.instaOffset);
-            printf("    Instance Count: %u\n", meshGroup.instaCount);
-        }
-    }
 }

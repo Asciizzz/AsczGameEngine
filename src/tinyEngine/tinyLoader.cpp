@@ -652,8 +652,10 @@ void loadMesh(tinyMesh& mesh,
         default: break;
     }
 
-    if (hasRigging) mesh.setVrtxs(allVertices);
-    else mesh.setVrtxs(tinyVertex::Rigged::makeStatic(allVertices));
+    // if (hasRigging) mesh.setVrtxs(allVertices);
+    // else mesh.setVrtxs(tinyVertex::Rigged::makeStatic(allVertices));
+
+    mesh.setVrtxs(allVertices);
 
     for (size_t primIdx = 0; primIdx < primitives.size(); ++primIdx) {
         const auto& primitive = primitives[primIdx];

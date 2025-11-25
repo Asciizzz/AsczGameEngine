@@ -48,14 +48,16 @@ public:
     struct MeshEntry {
         tinyHandle mesh;
         glm::mat4 model = glm::mat4(1.0f);
+
+        std::vector<glm::mat4>* skins = nullptr;
     };
 
-    struct MeshGroup {
+    struct MeshRange {
         tinyHandle mesh;
         std::vector<uint32_t> submeshes;
 
-        uint32_t instaOffset;
-        uint32_t instaCount;
+        uint32_t instaOffset = 0;
+        uint32_t instaCount = 0;
     };
 
 // ---------------------------------------------------------------
@@ -79,24 +81,24 @@ public:
 
     VkBuffer instaBuffer() const noexcept { return instaBuffer_; }
 
-    VkDescriptorSet matDescSet() const noexcept { return matDescSet_.get(); }
-    VkDescriptorSetLayout matDescLayout() const noexcept { return matDescLayout_.get(); }
+    VkDescriptorSet matDescSet() const noexcept { return matDescSet_; }
+    VkDescriptorSetLayout matDescLayout() const noexcept { return matDescLayout_; }
 
     uint32_t matIndex(tinyHandle matHandle) const noexcept {
         auto it = matIdxMap_.find(matHandle);
         return (it != matIdxMap_.end()) ? it->second : 0;
     }
 
+    VkDescriptorSet skinDescSet() const noexcept { return skinDescSet_; }
+    VkDescriptorSetLayout skinDescLayout() const noexcept { return skinDescLayout_; }
+
     Size_x1 instaSize_x1() const noexcept { return instaSize_x1_; }
     Size_x1 matSize_x1() const noexcept { return matSize_x1_; }
+    Size_x1 skinSize_x1() const noexcept { return skinSize_x1_; }
 
-    inline VkDeviceSize instaOffset(uint32_t frameIndex) const noexcept {
-        return frameIndex * instaSize_x1_.aligned;
-    }
-
-    inline VkDeviceSize matOffset(uint32_t frameIndex) const noexcept {
-        return frameIndex * matSize_x1_.aligned;
-    }
+    inline VkDeviceSize instaOffset(uint32_t frameIndex) const noexcept { return frameIndex * instaSize_x1_.aligned; }
+    inline VkDeviceSize matOffset(uint32_t frameIndex) const noexcept { return frameIndex * matSize_x1_.aligned; }
+    inline VkDeviceSize skinOffset(uint32_t frameIndex) const noexcept { return frameIndex * skinSize_x1_.aligned; }
 
 // --------------------------- Bacthking --------------------------
 
@@ -105,7 +107,7 @@ public:
     void finalize();
 
 
-    const std::unordered_map<tinyHandle, std::vector<MeshGroup>>& shaderGroups() const noexcept {
+    const std::unordered_map<tinyHandle, std::vector<MeshRange>>& shaderGroups() const noexcept {
         return shaderGroups_;
     }
 
@@ -118,8 +120,8 @@ private:
     const tinyVk::Device* dvk_ = nullptr;
 
     // True implementation
-    std::unordered_map<tinyHandle, std::vector<Mesh3D::Insta>> meshInstaMap_; // Mesh handle -> instance data
-    std::unordered_map<tinyHandle, std::vector<MeshGroup>> shaderGroups_; // Shader handle -> mesh groups
+    std::unordered_map<tinyHandle, std::vector<Mesh3D::Insta>> meshInstaMap_; // Mesh handle -> Instance data
+    std::unordered_map<tinyHandle, std::vector<MeshRange>> shaderGroups_; // Shader handle -> mesh groups
 
     // Instances
     tinyVk::DataBuffer instaBuffer_;
@@ -140,4 +142,12 @@ private:
     tinyVk::DescPool texDescPool_;
     tinyVk::DescSet texDescSet_; // Dynamic descriptor set for textures
     std::unordered_set<tinyHandle> texInUse_;
+
+    // Skinning
+    tinyVk::DescSLayout skinDescLayout_;
+    tinyVk::DescPool skinDescPool_;
+    tinyVk::DescSet skinDescSet_;
+    tinyVk::DataBuffer skinBuffer_;
+    Size_x1 skinSize_x1_;
+    uint32_t boneCount_ = 0;
 };
