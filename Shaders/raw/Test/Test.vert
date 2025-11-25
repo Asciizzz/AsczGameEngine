@@ -56,11 +56,7 @@ void main() {
         skinnedPos = vec4(basePos, 1.0);
         skinnedNormal = baseNormal;
         skinnedTangent = baseTangent;
-
-        fragOther = vec4(0.0); // No skinning
     } else {
-        fragOther = inBoneWs;
-
         for (uint i = 0; i < 4; ++i) {
             uint id = inBoneIDs[i] + boneOffset;
 

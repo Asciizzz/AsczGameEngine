@@ -228,7 +228,6 @@ tinyHandle Scene::instantiate(tinyHandle sceneHandle, tinyHandle parent) noexcep
     if (!parentNode) parent = root_;
 
     UnorderedMap<tinyHandle, tinyHandle> from_to;
-    // helpful function to retrieve toHandle
     auto getToHandle = [&](tinyHandle fromHandle) -> tinyHandle {
         auto it = from_to.find(fromHandle);
         return it != from_to.end() ? it->second : tinyHandle();
