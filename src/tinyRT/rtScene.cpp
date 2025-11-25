@@ -198,7 +198,10 @@ void Scene::update(FrameStart frameStart) noexcept {
                 draw.submit({
                     meshRD3D->meshHandle(),
                     currentWorld,
-                    skele3D ? &skele3D->skinData() : nullptr,
+                    { // skin data
+                        meshRD3D->skeleNodeHandle(),
+                        skele3D ? &skele3D->skinData() : nullptr
+                    },
                     &meshRD3D->morphWeights()
                 });
             }

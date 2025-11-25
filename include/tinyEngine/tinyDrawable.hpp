@@ -40,7 +40,12 @@ public:
         tinyHandle mesh;
         glm::mat4 model = glm::mat4(1.0f);
 
-        const std::vector<glm::mat4>* skinData = nullptr;
+        // const std::vector<glm::mat4>* skinData = nullptr;
+        struct SkeleData {
+            tinyHandle skeleNode;
+            const std::vector<glm::mat4>* skinData = nullptr;
+        } skeleData;
+
         const std::vector<float>* mrphWeights = nullptr;
     };
 
@@ -50,6 +55,11 @@ public:
 
         uint32_t instaOffset = 0;
         uint32_t instaCount = 0;
+    };
+
+    struct SkinRange {
+        uint32_t skinOffset = 0;
+        uint32_t skinCount = 0;
     };
 
 // ---------------------------------------------------------------
@@ -150,6 +160,7 @@ private:
     tinyVk::DataBuffer  skinBuffer_;
     Size_x1             skinSize_x1_;
     uint32_t            skinCount_ = 0;
+    std::unordered_map<tinyHandle, SkinRange> skinRanges_; // Skeleton node handle -> SkinRange (NOT skeleton itself)
 
     // Morphing
     tinyVk::DescSLayout mrphWsDescLayout_;
