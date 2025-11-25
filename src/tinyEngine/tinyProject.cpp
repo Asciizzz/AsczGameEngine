@@ -83,7 +83,7 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
         tinyHandle fnMeshFolder = fs_->createFolder("Meshes", fnModelFolder);
 
         for (auto& mMesh : model.meshes) {
-            mMesh.mesh.vkCreate(dvk_, sharedRes_.mrphDsDescLayout(), sharedRes_.mrphDsDescPool());
+            mMesh.mesh.vkCreate(dvk_, VK_NULL_HANDLE, VK_NULL_HANDLE);
 
             for (auto& submesh : mMesh.mesh.submeshes()) {
                 if (validIndex(submesh.material.index, glmMatRHandle)) {
@@ -169,9 +169,9 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
 void tinyProject::addSceneInstance(tinyHandle fromHandle, tinyHandle toHandle, tinyHandle parentHandle) {
     if (fromHandle == toHandle) return; // Prevent self-copy
 
-    // if (rtScene* toScene = r().get<rtScene>(toHandle)) {
-    //     toScene->addScene(fromHandle, parentHandle);
-    // }
+    if (rtScene* toScene = r().get<rtScene>(toHandle)) {
+        toScene->instantiate(fromHandle, parentHandle);
+    }
 }
 
 // ------------------- Filesystem Setup -------------------

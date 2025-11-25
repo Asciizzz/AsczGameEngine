@@ -145,6 +145,7 @@ private:
     tinyVk::DataBuffer    vriggedBuffer_;
     tinyVk::DataBuffer    indxBuffer_;
 
+    // Delta buffer
     tinyVk::DataBuffer    mrphDsBuffer_;
     tinyVk::DescSet       mrphDsDescSet_;
 

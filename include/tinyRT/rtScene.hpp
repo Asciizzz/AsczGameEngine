@@ -122,8 +122,16 @@ public:
     tinyHandle nReparent(tinyHandle nHandle, tinyHandle nNewParent) noexcept;
 
     template<typename T>
-    T* nGetComp(tinyHandle nHandle) noexcept { // Automatic creation
-        Node* node = nodes_.get(nHandle);
+    T* nGetComp(tinyHandle nHandle) noexcept {
+        const Node* node = nodes_.get(nHandle);
+        if (!node || !node->has<T>()) return nullptr;
+
+        return rt_.get<T>(node->get<T>());
+    }
+
+    template<typename T>
+    const T* nGetComp(tinyHandle nHandle) const noexcept {
+        const Node* node = nodes_.get(nHandle);
         if (!node || !node->has<T>()) return nullptr;
 
         return rt_.get<T>(node->get<T>());
@@ -162,6 +170,8 @@ public:
 
 // Scene stuff and things idk
     void update(FrameStart frameStart) noexcept;
+
+    tinyHandle instantiate(tinyHandle sceneHandle, tinyHandle parent = tinyHandle()) noexcept;
 
 
 // Testing ground

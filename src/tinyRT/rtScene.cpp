@@ -216,3 +216,54 @@ void Scene::update(FrameStart frameStart) noexcept {
 
     draw.finalize();
 }
+
+
+tinyHandle Scene::instantiate(tinyHandle sceneHandle, tinyHandle parent) noexcept {
+    const Scene* fromScene = fsr().get<Scene>(sceneHandle);
+    if (!fromScene) return tinyHandle();
+
+    tinyHandle newRootHandle;
+
+    Node* parentNode = nodes_.get(parent);
+    if (!parentNode) parent = root_;
+
+    UnorderedMap<tinyHandle, tinyHandle> from_to;
+    // helpful function to retrieve toHandle
+    auto getToHandle = [&](tinyHandle fromHandle) -> tinyHandle {
+        auto it = from_to.find(fromHandle);
+        return it != from_to.end() ? it->second : tinyHandle();
+    };
+
+    std::function<void(tinyHandle, tinyHandle)> cloneRec = [&](tinyHandle fromHandle, tinyHandle toParent) {
+        const Node* fromNode = fromScene->node(fromHandle);
+        if (!fromNode) return;
+
+        tinyHandle toHandle = nAdd(fromNode->name, toParent);
+        Node* toNode = nodes_.get(toHandle);
+        from_to[fromHandle] = toHandle;
+
+        // Find new root
+        if (fromHandle == fromScene->root()) newRootHandle = toHandle;
+
+        // Establish parent-child relationship
+        toNode->parent = toParent;
+        if (Node* toParentNode = node(toParent)) toParentNode->addChild(toHandle);
+
+        // Clone components
+        if (const rtTRANFM3D* fromTrans = fromScene->nGetComp<rtTRANFM3D>(fromHandle)) {
+            rtTRANFM3D* toTrans = nWriteComp<rtTRANFM3D>(toHandle);
+            toTrans->local = fromTrans->local;
+        }
+
+        if (const rtMESHRD3D* fromMeshRD = fromScene->nGetComp<rtMESHRD3D>(fromHandle)) {
+            rtMESHRD3D* toMeshRD = nWriteComp<rtMESHRD3D>(toHandle);
+            toMeshRD->mesh = fromMeshRD->mesh;
+            toMeshRD->skeleNode = getToHandle(fromMeshRD->skeleNode);
+        }
+
+        if (const rtSKELE3D* fromSkele3D = fromScene->nGetComp<rtSKELE3D>(fromHandle)) {
+            rtSKELE3D* toSkele3D = nWriteComp<rtSKELE3D>(toHandle);
+            toSkele3D->copy(fromSkele3D);
+        }
+    };
+}

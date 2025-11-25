@@ -23,6 +23,17 @@ struct Skeleton3D {
         }
     }
 
+    void copy(const Skeleton3D* other) {
+        if (!other) return;
+
+        pool_ = other->pool_;
+        handle_ = other->handle_;
+
+        localPose_ = other->localPose_;
+        finalPose_ = other->finalPose_;
+        skinData_ = other->skinData_;
+    }
+
     void update(uint32_t boneIdx = 0) noexcept {
         // If boneIdx is 0, traverse linearly
         const tinySkeleton* skeleton = rSkeleton();

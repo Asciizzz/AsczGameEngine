@@ -21,30 +21,4 @@ struct SceneRes {
 
     template<typename T> T* fsGet(tinyHandle handle) { return fsr->get<T>(handle); }
     template<typename T> const T* fsGet(tinyHandle handle) const { return fsr->get<T>(handle); }
-
-// Static vulkan resources
-
-    // Helpful generic accessors
-    VkDescriptorPool descPool(tinyHandle handle) const;
-    VkDescriptorSetLayout descLayout(tinyHandle handle) const;
-    VkDescriptorSet descSet(tinyHandle handle) const;
-
-    // Morph target deltas (tinyMorph - 3 glm::vec3)
-    tinyHandle hMrphDsDescPool;
-    tinyHandle hMrphDsDescLayout;
-    VkDescriptorPool mrphDsDescPool() const;
-    VkDescriptorSetLayout mrphDsDescLayout() const;
-
-    // Morph target weights (float)
-    tinyHandle hMrphWsDescPool;
-    tinyHandle hMrphWsDescLayout;
-    VkDescriptorPool mrphWsDescPool() const;
-    VkDescriptorSetLayout mrphWsDescLayout() const;
-
-// Default resources accessors
-
-    tinyHandle hDummyMeshMrphDsDescSet;
-    tinyHandle hDummyMeshMrphWsDescSet;
-    VkDescriptorSet dummyMeshMrphDsDescSet() const;
-    VkDescriptorSet dummyMeshMrphWsDescSet() const;
 };
