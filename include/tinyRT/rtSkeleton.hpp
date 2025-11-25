@@ -71,8 +71,29 @@ struct Skeleton3D {
         return handle_;
     }
 
-    inline const std::vector<glm::mat4>& skinData() const noexcept {
-        return skinData_;
+    glm::mat4& localPose(uint32_t boneIndex) noexcept { return localPose_.at(boneIndex); }
+
+    inline const std::vector<glm::mat4>& skinData() const noexcept { return skinData_; }
+
+    void refresh(uint32_t boneIndex, bool recursive = false) {
+        // Reset the local pose to the bind pose
+        const tinySkeleton* skeleton = rSkeleton();
+        if (!skeleton || boneIndex >= skeleton->bones.size()) return;
+
+        localPose_[boneIndex] = skeleton->bones[boneIndex].bindPose;
+
+        if (!recursive) return;
+
+        std::function<void(uint32_t)> refreshRec = [&](uint32_t index) {
+            if (index >= skeleton->bones.size()) return;
+
+            localPose_[index] = skeleton->bones[index].bindPose;
+
+            for (int childIndex : skeleton->bones[index].children) {
+                refreshRec(childIndex);
+            }
+        };
+        refreshRec(boneIndex);
     }
 
 private:

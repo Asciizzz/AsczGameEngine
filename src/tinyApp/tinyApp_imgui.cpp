@@ -1372,14 +1372,13 @@ static void RenderScriptEditor() {
     ImGui::PopStyleColor();
 }
 
-/*
 static void RenderSkeleNodeEditor() {
     if (Editor::what != "SKEL3D") return;
 
     rtScene* scene = sceneRef;
 
     tinyHandle nHandle = Editor::selected;
-    tinyRT_SKEL3D* skel3D = scene->rtComp<tinyNodeRT::SKEL3D>(nHandle);
+    rtSKELE3D* skel3D = scene->nGetComp<rtSKELE3D>(nHandle);
     if (!skel3D) return;
 
     const tinyFS& fs = projRef->fs();
@@ -1465,7 +1464,7 @@ static void RenderSkeleNodeEditor() {
         const tinyBone& selectedBone = skeleton->bones[selectedBoneIndex];
         ImGui::Text("Selected Bone: %d - %s", selectedBoneIndex, selectedBone.name.c_str());
 
-        glm::mat4 boneLocal = skel3D->localPose(selectedBoneIndex);
+        glm::mat4& boneLocal = skel3D->localPose(selectedBoneIndex);
 
         glm::vec3 translation, scale, skew;
         glm::quat rotation;
@@ -1477,7 +1476,7 @@ static void RenderSkeleNodeEditor() {
             glm::mat4 t = glm::translate(glm::mat4(1.0f), translation);
             glm::mat4 r = glm::mat4_cast(rotation);
             glm::mat4 s = glm::scale(glm::mat4(1.0f), scale);
-            skel3D->setLocalPose(selectedBoneIndex, t * r * s);
+            boneLocal = t * r * s;
         };
 
         static glm::quat initialRotation;
@@ -1510,14 +1509,13 @@ static void RenderSkeleNodeEditor() {
 
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
         if (ImGui::Button("Refresh", ImVec2(-1, 0))) skel3D->refresh(selectedBoneIndex);
-        if (ImGui::Button("Refresh All", ImVec2(-1, 0))) skel3D->refreshAll(selectedBoneIndex);
+        if (ImGui::Button("Refresh All", ImVec2(-1, 0))) skel3D->refresh(selectedBoneIndex, true);
         ImGui::PopStyleColor();
     }
 
     ImGui::EndChild();
     ImGui::PopStyleColor();
 }
-*/
 
 // ============================================================================
 // MAIN UI RENDERING FUNCTION
@@ -1664,7 +1662,7 @@ void tinyApp::renderUI() {
 
     if (tinyUI::Begin("Editor", nullptr, ImGuiWindowFlags_NoCollapse)) {
         RenderScriptEditor();
-        // RenderSkeleNodeEditor();
+        RenderSkeleNodeEditor();
         tinyUI::End();
     }
 }
