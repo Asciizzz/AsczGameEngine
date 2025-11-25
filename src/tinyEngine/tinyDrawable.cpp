@@ -30,17 +30,21 @@ void tinyDrawable::init(const CreateInfo& info) {
     fsr_ = info.fsr;
     dvk_ = info.dvk;
 
-    size_t instaSize = MAX_INSTANCES * sizeof(Mesh3D::Insta);
+    instaSize_x1_.unaligned = MAX_INSTANCES * sizeof(Mesh3D::Insta);
+    instaSize_x1_.aligned = instaSize_x1_.unaligned; // Vertex attributes doesnt need minAlignment
+
     instaBuffer_
-        .setDataSize(instaSize)
+        .setDataSize(instaSize_x1_.aligned * maxFramesInFlight_)
         .setUsageFlags(tinyVk::BufferUsage::Vertex)
         .setMemPropFlags(tinyVk::MemProp::HostVisibleAndCoherent)
         .createBuffer(dvk_)
         .mapMemory();
 
-    size_t matSize = MAX_MATERIALS * sizeof(tinyMaterial::Data);
+    matSize_x1_.unaligned = MAX_MATERIALS * sizeof(tinyMaterial::Data);
+    matSize_x1_.aligned = dvk_->alignSizeSSBO(matSize_x1_.unaligned); // SSBO DO need alignment
+
     matBuffer_
-        .setDataSize(matSize)
+        .setDataSize(matSize_x1_.aligned * maxFramesInFlight_)
         .setUsageFlags(tinyVk::BufferUsage::Storage)
         .setMemPropFlags(tinyVk::MemProp::HostVisibleAndCoherent)
         .createBuffer(dvk_)
@@ -58,36 +62,50 @@ void tinyDrawable::init(const CreateInfo& info) {
     matDescSet_.allocate(dvk_->device, matDescPool_, matDescLayout_);
 }
 
+
+// --------------------------- Batching process --------------------------
+
 void tinyDrawable::startFrame(uint32_t frameIndex) noexcept {
     frameIndex_ = frameIndex % maxFramesInFlight_;
+
     shaderGroups_.clear();
     shaderIdxMap_.clear();
+
+    matData_.clear();
+    matIdxMap_.clear();
 }
 
 void tinyDrawable::submit(const MeshEntry& entry) noexcept {
-    // For the time being just use tinyHandle() as the key
+    tinyHandle shaderHandle = tinyHandle();
 
-    tinyHandle handle = tinyHandle();
-    
-    auto it = shaderIdxMap_.find(handle);
+    auto shaderIt = shaderIdxMap_.find(shaderHandle);
 
-    if (it == shaderIdxMap_.end()) {
-        shaderIdxMap_[handle] = static_cast<uint32_t>(shaderGroups_.size());
+    if (shaderIt == shaderIdxMap_.end()) {
+        shaderIdxMap_[shaderHandle] = static_cast<uint32_t>(shaderGroups_.size());
         shaderGroups_.emplace_back();
-        it = shaderIdxMap_.find(handle);
+        shaderIt = shaderIdxMap_.find(shaderHandle);
     }
 
-    ShaderGroup& shaderGroup = shaderGroups_[it->second];
-    // Add instance data
+    ShaderGroup& shaderGroup = shaderGroups_[shaderIt->second];
     shaderGroup.instaMap[entry.mesh].push_back({ entry.model, entry.other });
-    // Add material data (in the future)
-}
 
+    // Push material
+    tinyHandle matHandle = tinyHandle();
+
+    auto matIt = matIdxMap_.find(matHandle);
+    if (matIt == matIdxMap_.end()) {
+        uint32_t newIndex = static_cast<uint32_t>(matData_.size());
+
+        matIdxMap_[matHandle] = newIndex;
+        matData_.push_back(tinyMaterial::Data());
+
+        shaderGroup.meshToMatIndex[entry.mesh] = newIndex;
+    }
+}
 
 
 void tinyDrawable::finalize(uint32_t* totalInstances, uint32_t* totalMaterials) {
     uint32_t curInstances = 0;
-    uint32_t curMaterials = 0;
 
     for (ShaderGroup& shaderGroup : shaderGroups_) {
         shaderGroup.instaRanges.clear();
@@ -97,30 +115,21 @@ void tinyDrawable::finalize(uint32_t* totalInstances, uint32_t* totalMaterials) 
 
             Mesh3D::InstaRange range;
             range.mesh = meshH;
-            range.matIndex = shaderGroup.getMatIndex(tinyHandle()); // For the time being use default material
+            range.matIndex = shaderGroup.meshToMatIndex[meshH];
             range.offset = curInstances;
             range.count = dataVec.size();
             shaderGroup.instaRanges.push_back(range);
 
             // Copy data
-            size_t dataOffset = curInstances * sizeof(Mesh3D::Insta);
+            size_t dataOffset = curInstances * sizeof(Mesh3D::Insta) + frameIndex_ * instaSize_x1_.aligned;
             size_t dataSize = dataVec.size() * sizeof(Mesh3D::Insta);
             instaBuffer_.copyData(dataVec.data(), dataSize, dataOffset);
 
             curInstances += static_cast<uint32_t>(dataVec.size());
         }
         shaderGroup.instaMap.clear();
-
-        // Handle materials
-        shaderGroup.matOffset = static_cast<uint32_t>(curMaterials);
-
-        // size_t matDataSize = shaderGroup.mats.size() * sizeof(tinyMaterial::Data);
-        // matBuffer_.copyData(shaderGroup.mats.data(), matDataSize, curMaterials * sizeof(tinyMaterial::Data));
-        // curMaterials += shaderGroup.mats.size();
-
-        curMaterials += static_cast<uint32_t>(shaderGroup.mats.size());
     }
 
     if (totalInstances) *totalInstances = curInstances;
-    if (totalMaterials) *totalMaterials = curMaterials;
+    if (totalMaterials) *totalMaterials = static_cast<uint32_t>(matData_.size());
 }

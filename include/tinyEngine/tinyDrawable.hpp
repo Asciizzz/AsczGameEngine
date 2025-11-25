@@ -24,28 +24,9 @@ namespace Mesh3D {
 }
 
 struct ShaderGroup {
-    ShaderGroup() noexcept {
-        addMat(tinyMaterial());
-    }
-
     tinyHandle shader;
-
-    std::vector<tinyMaterial::Data> mats;
-    std::unordered_map<tinyHandle, uint32_t> matMap; // tinyHandle to index in mats
-    uint32_t matOffset = 0;
-
-    uint32_t addMat(const tinyMaterial& mat) {
-        mats.push_back(mat.data);
-        return static_cast<uint32_t>(mats.size() - 1);
-    }
-
-    uint32_t getMatIndex(tinyHandle matHandle) const {
-        auto it = matMap.find(matHandle);
-        if (it != matMap.end()) {
-            return it->second;
-        }
-        return UINT32_MAX; // Not found
-    }
+    
+    std::unordered_map<tinyHandle, uint32_t> meshToMatIndex;
 
     std::unordered_map<tinyHandle, std::vector<Mesh3D::Insta>> instaMap;
     std::vector<Mesh3D::InstaRange> instaRanges;
@@ -78,6 +59,7 @@ public:
 // --------------------------- Basic Getters ----------------------------
 
     uint32_t maxFramesInFlight() const noexcept { return maxFramesInFlight_; }
+    uint32_t frameIndex() const noexcept { return frameIndex_; }
 
     tinyRegistry& fsr() noexcept { return *fsr_; }
     const tinyRegistry& fsr() const noexcept { return *fsr_; }
@@ -85,14 +67,26 @@ public:
     VkBuffer instaBuffer() const noexcept { return instaBuffer_; }
     VkDescriptorSet matDescSet() const noexcept { return matDescSet_.get(); }
 
-    const std::vector<ShaderGroup>& shaderGroups() const noexcept {
-        return shaderGroups_;
+    const std::vector<ShaderGroup>& shaderGroups() const noexcept { return shaderGroups_; }
+
+    uint32_t matIndex(tinyHandle matHandle) const noexcept {
+        auto it = matIdxMap_.find(matHandle);
+        return (it != matIdxMap_.end()) ? it->second : UINT32_MAX;
     }
 
-// --------------------------- Complex rendering --------------------------
+    struct Size_x1 { // Per-frame
+        VkDeviceSize aligned = 0;   // Data aligned to min offset alignment
+        VkDeviceSize unaligned = 0; // Actual data size to copy
+    };
+
+    Size_x1 instaSize_x1() const noexcept { return instaSize_x1_; }
+    Size_x1 matSize_x1() const noexcept { return matSize_x1_; }
+
+// --------------------------- Bacthking --------------------------
 
     struct MeshEntry {
         tinyHandle mesh;
+        tinyHandle shader;
         glm::mat4 model = glm::mat4(1.0f);
         glm::vec4 other = glm::vec4(0.0f);
     };
@@ -102,6 +96,7 @@ public:
     void finalize(uint32_t* totalInstances = nullptr, uint32_t* totalMaterials = nullptr);
 
 private:
+// Basic info
     uint32_t maxFramesInFlight_ = 2;
     uint32_t frameIndex_ = 0;
 
@@ -112,11 +107,18 @@ private:
     std::vector<ShaderGroup> shaderGroups_;
     std::unordered_map<tinyHandle, uint32_t> shaderIdxMap_;
 
-    // Vulkan data
+// Vulkan data
+
     tinyVk::DataBuffer instaBuffer_;
+    Size_x1 instaSize_x1_;
 
     tinyVk::DescSLayout matDescLayout_;
     tinyVk::DescPool matDescPool_;
     tinyVk::DescSet matDescSet_;
+
     tinyVk::DataBuffer matBuffer_;
+    Size_x1 matSize_x1_;
+
+    std::vector<tinyMaterial::Data> matData_;
+    std::unordered_map<tinyHandle, uint32_t> matIdxMap_;
 };

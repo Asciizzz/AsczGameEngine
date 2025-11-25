@@ -190,7 +190,12 @@ void Scene::update(FrameStart frameStart) noexcept {
                 if (!mesh || !cam.collideAABB(mesh->ABmin(), mesh->ABmax(), currentWorld)) continue;
 
                 // Use the mesh static machine
-                draw.submit({ meshRD3D->mesh, currentWorld, glm::vec4(0.0f) });
+                draw.submit({
+                    meshRD3D->mesh,
+                    tinyHandle(),
+                    currentWorld,
+                    glm::vec4(0.0f)
+                });
             }
         }
 
