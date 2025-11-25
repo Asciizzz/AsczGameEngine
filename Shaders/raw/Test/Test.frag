@@ -42,5 +42,7 @@ void main() {
     Material mat = materials[pConst.props.x];
     mat.base = rainbowColors[pConst.props.x % 7];
 
-    outColor = mat.base * abs(dot(normalize(fragNrml), normalize(lightDir)));
+    // outColor = mat.base * abs(dot(normalize(fragNrml), normalize(lightDir)));
+
+    outColor = fragOther; // Debug output
 }

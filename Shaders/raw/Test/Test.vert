@@ -38,7 +38,8 @@ void main() {
     fragUV = inPos_Tu.zw;
     fragTangent = inTangent;
 
-    fragOther.x = other.y; // Testing out rigged flag
+    // Debug, if this model is rigged, push to the fragOther the bone color
+    fragOther = inBoneWs;
 
     gl_Position = glb.proj * glb.view * worldPos4;
 }
