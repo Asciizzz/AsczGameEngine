@@ -31,10 +31,10 @@ namespace tinyVertex {
         glm::vec4 tang;
 
         // Some helpers
-        void setPos (const glm::vec3& p) { pos_tu.x = p.x; pos_tu.y = p.y; pos_tu.z = p.z; }
-        void setNrml(const glm::vec3& n) { nrml_tv.x = n.x; nrml_tv.y = n.y; nrml_tv.z = n.z; }
-        void setUV  (const glm::vec2& uv){ pos_tu.w = uv.x; nrml_tv.w = uv.y; }
-        void setTang(const glm::vec4& t) { tang = t; }
+        Static& setPos (const glm::vec3& p) { pos_tu.x = p.x; pos_tu.y = p.y; pos_tu.z = p.z; return *this; }
+        Static& setNrml(const glm::vec3& n) { nrml_tv.x = n.x; nrml_tv.y = n.y; nrml_tv.z = n.z; return *this; }
+        Static& setUV  (const glm::vec2& uv){ pos_tu.w = uv.x; nrml_tv.w = uv.y; return *this; }
+        Static& setTang(const glm::vec4& t) { tang = t; return *this; }
     };
 
     struct Rigged {
@@ -131,8 +131,8 @@ struct tinyMesh {
     std::vector<Submesh>& submeshes() noexcept { return submeshes_; }
     const std::vector<Submesh>& submeshes() const noexcept { return submeshes_; }
 
-    const glm::vec3& ABmin() const noexcept { return ABmin_; }
-    const glm::vec3& ABmax() const noexcept { return ABmax_; }
+    glm::vec3& ABmin() noexcept { return ABmin_; }
+    glm::vec3& ABmax() noexcept { return ABmax_; }
 private:
     std::vector<tinyVertex::Static> vstaticData_;
     std::vector<tinyVertex::Rigged> vriggedData_;

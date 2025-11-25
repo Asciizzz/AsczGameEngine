@@ -611,22 +611,22 @@ void loadMesh(tinyMesh& mesh,
     for (const auto& p : allPrimitiveDatas) {
         // ---- vertices -------------------------------------------------------
         for (size_t i = 0; i < p.vrtxCount; ++i) {
-            // tinyVertex::Rigged v;
-            // v.setPos   (i < p.positions.size() ? p.positions[i] : glm::vec3(0.f));
-            // v.setNrml  (i < p.normals.size()   ? p.normals[i]   : glm::vec3(0.f));
-            // v.setUV    (i < p.uvs.size()       ? p.uvs[i]       : glm::vec2(0.f));
-            // v.setTang  (i < p.tangents.size()  ? p.tangents[i]  : glm::vec4(1,0,0,1));
             tinyVertex::Static sta;
             tinyVertex::Rigged rig;
 
-            sta.setPos   (i < p.positions.size() ? p.positions[i] : glm::vec3(0.f));
-            sta.setNrml  (i < p.normals.size()   ? p.normals[i]   : glm::vec3(0.f));
-            sta.setUV    (i < p.uvs.size()       ? p.uvs[i]       : glm::vec2(0.f));
-            sta.setTang  (i < p.tangents.size()  ? p.tangents[i]  : glm::vec4(1,0,0,1));
+            glm::vec3 pos  = (i < p.positions.size()) ? p.positions[i] : glm::vec3(0.f);
+            glm::vec3 nrm  = (i < p.normals.size())   ? p.normals[i]   : glm::vec3(0.f);
+            glm::vec2 uv   = (i < p.uvs.size())       ? p.uvs[i]       : glm::vec2(0.f);
+            glm::vec4 tang = (i < p.tangents.size())  ? p.tangents[i]  : glm::vec4(1,0,0,1);
+            sta.setPos(pos).setNrml(nrm).setUV(uv).setTang(tang);
+
             if (hasRigging && i < p.boneIDs.size() && i < p.weights.size()) {
                 rig.boneIDs = p.boneIDs[i];
                 rig.boneWs  = p.weights[i];
             }
+
+            mesh.ABmax() = glm::max(mesh.ABmax(), pos);
+            mesh.ABmin() = glm::min(mesh.ABmin(), pos);
 
             staticData.push_back(sta);
             riggedData.push_back(rig);

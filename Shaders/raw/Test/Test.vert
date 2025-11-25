@@ -1,7 +1,7 @@
 #version 450
 
 layout(push_constant) uniform PushConstant {
-    vec4 props;
+    vec4 props; // .x = material index, .y = isRigged flag
 } pConst;
 
 layout(set = 0, binding = 0) uniform GlobalUBO {
@@ -22,7 +22,11 @@ layout(location = 7) in vec4  mat4_2;
 layout(location = 8) in vec4  mat4_3;
 layout(location = 9) in uvec4 other;
 
-layout(location = 0) out vec3 fragNrml;
+layout(location = 0) out vec3 fragWorld;
+layout(location = 1) out vec3 fragNrml;
+layout(location = 2) out vec2 fragUV;
+layout(location = 3) out vec4 fragTangent;
+layout(location = 4) out vec4 fragOther;
 
 void main() {
     mat4 model = mat4(mat4_0, mat4_1, mat4_2, mat4_3);
@@ -31,6 +35,10 @@ void main() {
 
     mat3 normalMat = transpose(inverse(mat3(model)));
     fragNrml = normalMat * inNrml_Tv.xyz;
+    fragUV = inPos_Tu.zw;
+    fragTangent = inTangent;
+
+    fragOther.x = other.y; // Testing out rigged flag
 
     gl_Position = glb.proj * glb.view * worldPos4;
 }
