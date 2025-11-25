@@ -296,41 +296,6 @@ float SamplerVk::getMaxAnisotropy(VkPhysicalDevice pDevice, float requested) {
 }
 
 
-
-TextureVk::TextureVk(TextureVk&& other) noexcept
-    : image(std::move(other.image))
-    , sampler(std::move(other.sampler)) {}
-
-TextureVk& TextureVk::operator=(TextureVk&& other) noexcept {
-    if (this != &other) {
-        image = std::move(other.image);
-        sampler = std::move(other.sampler);
-    }
-    return *this;
-}
-
-
-TextureVk& TextureVk::createImage(const ImageConfig& config) {
-    image.createImage(config);
-    return *this;
-}
-
-TextureVk& TextureVk::createView(const ImageViewConfig& viewConfig) {
-    image.createView(viewConfig);
-    return *this;
-}
-
-TextureVk& TextureVk::createSampler(const SamplerConfig& config) {
-    sampler.create(config);
-    return *this;
-}
-
-TextureVk& TextureVk::setSampler(VkSampler sampler) {
-    this->sampler.set(sampler);
-    return *this;
-}
-
-
 void TextureVk::transitionLayout(ImageVk& image, VkCommandBuffer cmd, VkImageLayout oldLayout, VkImageLayout newLayout) {
     if (image.getImage() == VK_NULL_HANDLE) {
         std::cerr << "TextureVk: Cannot transition layout - image not created" << std::endl;

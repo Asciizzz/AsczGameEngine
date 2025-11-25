@@ -221,54 +221,10 @@ private:
 
 class TextureVk {
 public:
-    TextureVk() noexcept = default;
-    TextureVk(VkDevice device) : image(device), sampler(device) {}
-    TextureVk& init(VkDevice device) {
-        image.init(device);
-        sampler.init(device);
-        return *this;
-    }
-
-    TextureVk(const TextureVk&) = delete;
-    TextureVk& operator=(const TextureVk&) = delete;
-
-    TextureVk(TextureVk&& other) noexcept;
-    TextureVk& operator=(TextureVk&& other) noexcept;
-
-    // =====================
-
-    TextureVk& createImage(const ImageConfig& config);
-    TextureVk& createView(const ImageViewConfig& viewConfig);
-    TextureVk& createSampler(const SamplerConfig& config);
-
-    TextureVk& setSampler(VkSampler sampler);
-
-
-    VkImage getImage() const { return image.getImage(); }
-    VkImageView getView() const { return image.getView(); }
-    VkSampler getSampler() const { return sampler.get(); }
-
-
-    // void transitionLayout(VkCommandBuffer cmd, VkImageLayout oldLayout, VkImageLayout newLayout);
-    // void copyFromBuffer(VkCommandBuffer cmd, VkBuffer srcBuffer);
-    // void generateMipmaps(VkCommandBuffer cmd, VkPhysicalDevice pDevice);
-
-    // Immediate operations using temporary command buffers
-    // TextureVk& transitionLayoutImmediate(VkCommandBuffer tempCmd, VkImageLayout oldLayout, VkImageLayout newLayout);
-    // TextureVk& copyFromBufferImmediate(VkCommandBuffer tempCmd, VkBuffer srcBuffer);
-    // TextureVk& generateMipmapsImmediate(VkCommandBuffer tempCmd, VkPhysicalDevice pDevice);
-
     static void transitionLayout(ImageVk& image, VkCommandBuffer cmd, VkImageLayout oldLayout, VkImageLayout newLayout);
     static void copyFromBuffer(ImageVk& image, VkCommandBuffer cmd, VkBuffer srcBuffer);
     static void generateMipmaps(ImageVk& image, VkCommandBuffer cmd, VkPhysicalDevice pDevice);
 
-    bool valid() const { return image.valid() && sampler.valid(); }
-
-private:
-    ImageVk image;
-    SamplerVk sampler;
-    
-    // Helper methods
     static VkPipelineStageFlags getStageFlags(VkImageLayout layout);
     static VkAccessFlags getAccessFlags(VkImageLayout layout);
 };
