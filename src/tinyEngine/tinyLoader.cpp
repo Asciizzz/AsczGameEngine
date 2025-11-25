@@ -601,36 +601,47 @@ void loadMesh(tinyMesh& mesh,
     if (allPrimitiveDatas.empty()) return; // no primitives
 
     std::vector<uint32_t>           allIndices;
-    std::vector<tinyVertex::Rigged> allVertices;   // will be converted later
+
+    // Both will be updated simultaneously (we are using a new double buffer approach)
+    std::vector<tinyVertex::Static> staticData;
+    std::vector<tinyVertex::Rigged> riggedData;
 
     uint32_t vtxOffset = 0, idxOffset = 0;
 
     for (const auto& p : allPrimitiveDatas) {
         // ---- vertices -------------------------------------------------------
         for (size_t i = 0; i < p.vrtxCount; ++i) {
-            tinyVertex::Rigged v;
-            v.setPos   (i < p.positions.size() ? p.positions[i] : glm::vec3(0.f));
-            v.setNrml  (i < p.normals.size()   ? p.normals[i]   : glm::vec3(0.f));
-            v.setUV    (i < p.uvs.size()       ? p.uvs[i]       : glm::vec2(0.f));
-            v.setTang  (i < p.tangents.size()  ? p.tangents[i]  : glm::vec4(1,0,0,1));
+            // tinyVertex::Rigged v;
+            // v.setPos   (i < p.positions.size() ? p.positions[i] : glm::vec3(0.f));
+            // v.setNrml  (i < p.normals.size()   ? p.normals[i]   : glm::vec3(0.f));
+            // v.setUV    (i < p.uvs.size()       ? p.uvs[i]       : glm::vec2(0.f));
+            // v.setTang  (i < p.tangents.size()  ? p.tangents[i]  : glm::vec4(1,0,0,1));
+            tinyVertex::Static sta;
+            tinyVertex::Rigged rig;
 
+            sta.setPos   (i < p.positions.size() ? p.positions[i] : glm::vec3(0.f));
+            sta.setNrml  (i < p.normals.size()   ? p.normals[i]   : glm::vec3(0.f));
+            sta.setUV    (i < p.uvs.size()       ? p.uvs[i]       : glm::vec2(0.f));
+            sta.setTang  (i < p.tangents.size()  ? p.tangents[i]  : glm::vec4(1,0,0,1));
             if (hasRigging && i < p.boneIDs.size() && i < p.weights.size()) {
-                v.setBoneIDs(p.boneIDs[i]);
-                v.setBoneWs (p.weights[i], true);
+                rig.boneIDs = p.boneIDs[i];
+                rig.boneWs  = p.weights[i];
             }
-            allVertices.push_back(v);
+
+            staticData.push_back(sta);
+            riggedData.push_back(rig);
         }
 
         // ---- indices --------------------------------------------------------
         for (uint32_t idx : p.indices)
             allIndices.push_back(idx + vtxOffset);
 
-        // ---- part -----------------------------------------------------------
-        tinyMesh::Part part;
-        part.indxOffset = idxOffset;
-        part.indxCount  = static_cast<uint32_t>(p.indices.size());
-        part.material   = (p.materialIndex >= 0) ? tinyHandle(p.materialIndex) : tinyHandle();
-        mesh.addPart(part);
+        // ---- Submesh -----------------------------------------------------------
+        tinyMesh::Submesh submesh;
+        submesh.indxOffset = idxOffset;
+        submesh.indxCount  = static_cast<uint32_t>(p.indices.size());
+        submesh.material   = (p.materialIndex >= 0) ? tinyHandle(p.materialIndex) : tinyHandle();
+        mesh.submeshes().push_back(submesh);
 
         vtxOffset += static_cast<uint32_t>(p.vrtxCount);
         idxOffset += static_cast<uint32_t>(p.indices.size());
@@ -655,7 +666,8 @@ void loadMesh(tinyMesh& mesh,
     // if (hasRigging) mesh.setVrtxs(allVertices);
     // else mesh.setVrtxs(tinyVertex::Rigged::makeStatic(allVertices));
 
-    mesh.setVrtxs(allVertices);
+    mesh.setVrtxStatic(staticData);
+    mesh.setVrtxRigged(riggedData);
 
     for (size_t primIdx = 0; primIdx < primitives.size(); ++primIdx) {
         const auto& primitive = primitives[primIdx];
@@ -702,7 +714,7 @@ void loadMesh(tinyMesh& mesh,
             }
 
             // ---- build tinyMorph array ------------------------------------------------
-            std::vector<tinyMorph> deltas(pData.vrtxCount);
+            std::vector<tinyMorph::Delta> deltas(pData.vrtxCount);
             for (size_t v = 0; v < pData.vrtxCount; ++v) {
                 deltas[v].dPos  = dPos[v];
                 deltas[v].dNrml = dNrm[v];
@@ -725,10 +737,12 @@ void loadMesh(tinyMesh& mesh,
             name = sanitizeAsciiz(name, "morph", tgtIdx);
 
             // ---- add to mesh ---------------------------------------------------------
-            tinyMorphTarget mt;
-            mt.name   = std::move(name);
-            mt.deltas = std::move(deltas);
-            mesh.addMrphTarget(mt);
+            // tinyMorphTarget mt;
+            // mt.name   = std::move(name);
+            // mt.deltas = std::move(deltas);
+            // mesh.addMrphTarget(mt);
+
+            // For the time being just ignore these
         }
     }
 }
@@ -1423,14 +1437,14 @@ tinyModel tinyLoader::loadModelFromOBJ(const std::string& filePath) {
         }
 
         // Set mesh data
-        mesh.setVrtxs(vertices);
+        mesh.setVrtxStatic(vertices);
         mesh.setIndxs(indices);
 
-        tinyMesh::Part mPart;
-        mPart.indxOffset = 0;
-        mPart.indxCount = static_cast<uint32_t>(indices.size());
-        mPart.material = (materialId >= 0) ? tinyHandle(materialId) : tinyHandle();
-        mesh.addPart(mPart);
+        mesh.submeshes().push_back(tinyMesh::Submesh{
+            0,
+            static_cast<uint32_t>(indices.size()),
+            (materialId >= 0) ? tinyHandle(materialId) : tinyHandle()
+        });
 
         tinyModel::Mesh meshEntry;
         meshEntry.mesh = std::move(mesh);

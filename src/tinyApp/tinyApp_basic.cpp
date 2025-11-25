@@ -58,15 +58,6 @@ void tinyApp::initComponents() {
     const SceneRes& sharedRes = project->sharedRes();
     VkRenderPass renderPass = renderer->getMainRenderPass();
 
-    // Get vertex layouts
-    auto vstaticLayout = tinyVertex::Static::layout();
-    auto vstaticBind = vstaticLayout.bindingDesc();
-    auto vstaticAttrs = vstaticLayout.attributeDescs();
-
-    auto vriggedLayout = tinyVertex::Rigged::layout();
-    auto vriggedBind = vriggedLayout.bindingDesc();
-    auto vriggedAttrs = vriggedLayout.attributeDescs();
-
     // ===== Pipeline 1: Sky =====
     RasterCfg skyCfg;
     skyCfg.renderPass = renderPass;
@@ -139,13 +130,9 @@ void tinyApp::initComponents() {
     testPushConstant.size = 16;
     testCfg.pushConstantRanges = { testPushConstant };
     testCfg.withShaders("Shaders/bin/Test/Test.vert.spv", "Shaders/bin/Test/Test.frag.spv")
-        // .withVertexInput(
-        //     { vstaticBind, Mesh3D::Insta::bindingDesc(1) },
-        //     { vstaticAttrs, Mesh3D::Insta::attrDescs(1, 3) }
-        // );
         .withVertexInput(
-            { vriggedBind, Mesh3D::Insta::bindingDesc(1) },
-            { vriggedAttrs, Mesh3D::Insta::attrDescs(1, 5) }
+            tinyDrawable::bindingDesc(),
+            { tinyDrawable::attributeDescs() }
         );
 
     pipelineTest = MakeUnique<PipelineRaster>(device, testCfg);

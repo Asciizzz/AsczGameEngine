@@ -1,26 +1,46 @@
 #include "tinyEngine/tinyDrawable.hpp"
 
-using namespace Mesh3D;
-
 using namespace tinyVk;
 
-VkVertexInputBindingDescription Insta::bindingDesc(uint32_t binding) {
-    VkVertexInputBindingDescription bindingDescription{};
-    bindingDescription.binding = binding;
-    bindingDescription.stride = sizeof(Insta);
-    bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
-    return bindingDescription;
+std::vector<VkVertexInputBindingDescription> tinyDrawable::bindingDesc() noexcept {
+    VkVertexInputBindingDescription dataBinding{};
+    dataBinding.binding = 0;
+    dataBinding.stride = sizeof(tinyVertex::Static);
+    dataBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+    VkVertexInputBindingDescription rigBinding{};
+    rigBinding.binding = 1;
+    rigBinding.stride = sizeof(tinyVertex::Rigged);
+    rigBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+    VkVertexInputBindingDescription instaBinding{};
+    instaBinding.binding = 2;
+    instaBinding.stride = sizeof(InstaData);
+    instaBinding.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
+
+    return { dataBinding, rigBinding, instaBinding };
 }
 
-std::vector<VkVertexInputAttributeDescription> Insta::attrDescs(uint32_t binding, uint32_t locationOffset) {
-    std::vector<VkVertexInputAttributeDescription> attribs(5);
+std::vector<VkVertexInputAttributeDescription> tinyDrawable::attributeDescs() noexcept {
+    std::vector<VkVertexInputAttributeDescription> descs(10);
 
-    attribs[0] = {locationOffset + 0, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Insta, model) + sizeof(glm::vec4) * 0};
-    attribs[1] = {locationOffset + 1, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Insta, model) + sizeof(glm::vec4) * 1};
-    attribs[2] = {locationOffset + 2, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Insta, model) + sizeof(glm::vec4) * 2};
-    attribs[3] = {locationOffset + 3, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Insta, model) + sizeof(glm::vec4) * 3};
-    attribs[4] = {locationOffset + 4, 1, VK_FORMAT_R32G32B32A32_UINT,  offsetof(Insta, other)};
-    return attribs;
+    // Data buffer (binding = 0)
+    descs[0] = { 0, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(tinyVertex::Static, pos_tu)  };
+    descs[1] = { 1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(tinyVertex::Static, nrml_tv) };
+    descs[2] = { 2, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(tinyVertex::Static, tang) };
+
+    // Rigging buffer (binding = 1)
+    descs[3] = { 3, 1, VK_FORMAT_R32G32B32A32_UINT,   offsetof(tinyVertex::Rigged, boneIDs) };
+    descs[4] = { 4, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(tinyVertex::Rigged, boneWs)  };
+
+    // Insta buffer (binding = 2)
+    descs[5] = { 5, 2, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(InstaData, model) + sizeof(glm::vec4) * 0 };
+    descs[6] = { 6, 2, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(InstaData, model) + sizeof(glm::vec4) * 1 };
+    descs[7] = { 7, 2, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(InstaData, model) + sizeof(glm::vec4) * 2 };
+    descs[8] = { 8, 2, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(InstaData, model) + sizeof(glm::vec4) * 3 };
+    descs[9] = { 9, 2, VK_FORMAT_R32G32B32A32_UINT,   offsetof(InstaData, other) };
+
+    return descs;
 }
 
 //---------------------------------------------------------------
@@ -32,7 +52,7 @@ void tinyDrawable::init(const CreateInfo& info) {
 
 // Setup instance buffer
 
-    instaSize_x1_.unaligned = MAX_INSTANCES * sizeof(Mesh3D::Insta);
+    instaSize_x1_.unaligned = MAX_INSTANCES * sizeof(InstaData);
     instaSize_x1_.aligned = instaSize_x1_.unaligned; // Vertex attributes doesnt need minAlignment
 
     instaBuffer_
@@ -139,16 +159,16 @@ void tinyDrawable::submit(const MeshEntry& entry) noexcept {
     // Get or create mesh group
     auto& meshIt = meshInstaMap_.find(entry.mesh);
     if (meshIt == meshInstaMap_.end()) {
-        meshInstaMap_.emplace(entry.mesh, std::vector<Mesh3D::Insta>{});
-        std::vector<Mesh3D::Insta>& instaVec = meshInstaMap_[entry.mesh];
+        meshInstaMap_.emplace(entry.mesh, std::vector<InstaData>{});
+        std::vector<InstaData>& instaVec = meshInstaMap_[entry.mesh];
 
         // Build shader to submesh map
         std::unordered_map<tinyHandle, std::vector<uint32_t>> shaderToSubmeshes;
 
-        const std::vector<tinyMesh::Part>& parts = rMesh->parts();
+        const std::vector<tinyMesh::Submesh>& submeshes = rMesh->submeshes();
 
-        for (uint32_t i = 0; i < parts.size(); ++i) {
-            tinyHandle matHandle = parts[i].material;
+        for (uint32_t i = 0; i < submeshes.size(); ++i) {
+            tinyHandle matHandle = submeshes[i].material;
 
             const tinyMaterial* rMat = fsr_->get<tinyMaterial>(matHandle);
             if (!rMat) continue;
@@ -176,9 +196,8 @@ void tinyDrawable::submit(const MeshEntry& entry) noexcept {
         meshIt = meshInstaMap_.find(entry.mesh);
     }
 
-    
     // Add instance data
-    Mesh3D::Insta instaData;
+    InstaData instaData;
     instaData.model = entry.model;
 
     // If mesh entry has bone
@@ -208,15 +227,15 @@ void tinyDrawable::finalize() {
             const auto& meshIt = meshInstaMap_.find(meshRange.mesh);
             if (meshIt == meshInstaMap_.end()) continue; // Should not happen
 
-            const std::vector<Mesh3D::Insta>& dataVec = meshIt->second;
+            const std::vector<InstaData>& dataVec = meshIt->second;
 
             // Update mesh range info
             meshRange.instaOffset = curInstances;
             meshRange.instaCount = static_cast<uint32_t>(dataVec.size());
 
             // Copy data
-            size_t dataOffset = curInstances * sizeof(Mesh3D::Insta) + instaOffset(frameIndex_);
-            size_t dataSize = dataVec.size() * sizeof(Mesh3D::Insta);
+            size_t dataOffset = curInstances * sizeof(InstaData) + instaOffset(frameIndex_);
+            size_t dataSize = dataVec.size() * sizeof(InstaData);
             instaBuffer_.copyData(dataVec.data(), dataSize, dataOffset);
 
             curInstances += meshRange.instaCount;

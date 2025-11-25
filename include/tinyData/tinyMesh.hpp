@@ -1,23 +1,46 @@
 #pragma once
 
-#include "tinyVertex.hpp"
 #include "tinyType.hpp"
 
 #include "tinyVk/Resource/DataBuffer.hpp"
 #include "tinyVk/Resource/Descriptor.hpp"
 
+#include <glm/glm.hpp>
+
 #include <string>
 #include <limits>
 
-struct alignas(16) tinyMorph {
-    glm::vec3 dPos;
-    glm::vec3 dNrml;
-    glm::vec3 dTang;
-};
+namespace tinyMorph {
+    struct alignas(16) Delta {
+        glm::vec3 dPos;
+        glm::vec3 dNrml;
+        glm::vec3 dTang;
+    };
 
-struct tinyMorphTarget {
-    std::string name;
-    std::vector<tinyMorph> deltas;
+    struct Target {
+        std::string name;
+        std::vector<Delta> deltas;
+    };
+}
+
+namespace tinyVertex {
+    struct Static {
+        // Pack into vec4 to guarantee alignment
+        glm::vec4 pos_tu;
+        glm::vec4 nrml_tv;
+        glm::vec4 tang;
+
+        // Some helpers
+        void setPos (const glm::vec3& p) { pos_tu.x = p.x; pos_tu.y = p.y; pos_tu.z = p.z; }
+        void setNrml(const glm::vec3& n) { nrml_tv.x = n.x; nrml_tv.y = n.y; nrml_tv.z = n.z; }
+        void setUV  (const glm::vec2& uv){ pos_tu.w = uv.x; nrml_tv.w = uv.y; }
+        void setTang(const glm::vec4& t) { tang = t; }
+    };
+
+    struct Rigged {
+        glm::uvec4 boneIDs;
+        glm::vec4 boneWs;
+    };
 };
 
 struct tinyMesh {
@@ -29,227 +52,118 @@ struct tinyMesh {
     tinyMesh(tinyMesh&&) noexcept = default;
     tinyMesh& operator=(tinyMesh&&) noexcept = default;
 
-    struct Part {
+// -----------------------------------------
+
+    struct Submesh {
         uint32_t indxOffset = 0;
         uint32_t indxCount = 0;
         tinyHandle material;
     };
 
-// -----------------------------------------
-
-    template<typename VertexT>
-    tinyMesh& setVrtxs(const std::vector<VertexT>& verts) {
-        vrtxCount_ = verts.size();
-        vrtxLayout_ = VertexT::layout();
-
-        vrtxData_.resize(vrtxCount_ * sizeof(VertexT));
-        std::memcpy(vrtxData_.data(), verts.data(), vrtxData_.size());
-
-        // Compute AABB
-        ABmin_ = glm::vec3(std::numeric_limits<float>::max());
-        ABmax_ = glm::vec3(std::numeric_limits<float>::lowest());
-        for (const auto& v : verts) {
-            glm::vec3 pos = v.getPos();
-            ABmin_ = glm::min(ABmin_, pos);
-            ABmax_ = glm::max(ABmax_, pos);
-        }
-
+    tinyMesh& setVrtxStatic(const std::vector<tinyVertex::Static>& stas) {
+        vrtxCount_ = stas.size();
+        vstaticData_ = stas;
+        return *this;
+    }
+    tinyMesh& setVrtxRigged(const std::vector<tinyVertex::Rigged>& rigs) {
+        vriggedData_ = rigs;
+        isRigged_ = rigs.size() > 0;
         return *this;
     }
 
     template<typename IndexT>
-    tinyMesh& setIndxs(const std::vector<IndexT>& indxs) {
-        indxCount_ = indxs.size();
+    tinyMesh& setIndxs(const std::vector<IndexT>& indices) {
+        indxCount_ = indices.size();
         indxStride_ = sizeof(IndexT);
+        indxType_ = strideToType(indxStride_);
 
-        indxData_.resize(indxCount_ * indxStride_);
-        std::memcpy(indxData_.data(), indxs.data(), indxData_.size());
+        size_t byteSize = indxCount_ * indxStride_;
+        indxRaw_.resize(byteSize);
+        std::memcpy(indxRaw_.data(), indices.data(), byteSize);
 
-        return *this;
+        return *this;   
     }
 
-    tinyMesh& addMrphTarget(const tinyMorphTarget& target) {
-        // Mismatched vertex count, ignore
-        if (target.deltas.size() != vrtxCount_) return *this;
+    void vkCreate(const tinyVk::Device* device, VkDescriptorSetLayout mrphLayout = VK_NULL_HANDLE, VkDescriptorPool mrphPool = VK_NULL_HANDLE) {
+        using namespace tinyVk;
+        dvk_ = device;
 
-        // Append name
-        mrphNames_.push_back(target.name.empty() ? ("target_" + std::to_string(mrphCount_)) : target.name);
+        vstaticBuffer_
+            .setDataSize(vstaticData_.size() * sizeof(tinyVertex::Static))
+            .setUsageFlags(BufferUsage::Vertex)
+            .createDeviceLocalBuffer(dvk_, vstaticData_.data());
 
-        // Append raw data
-        size_t offset = mrphData_.size();
-        size_t targetSize = vrtxCount_ * sizeof(tinyMorph);
-        mrphData_.resize(offset + targetSize);
+        if (!isRigged_) vriggedData_.push_back(tinyVertex::Rigged()); // Dummy entry to avoid errors
 
-        std::memcpy(mrphData_.data() + offset, target.deltas.data(), targetSize);
-        ++mrphCount_;
+        vriggedBuffer_
+            .setDataSize(vriggedData_.size() * sizeof(tinyVertex::Rigged))
+            .setUsageFlags(BufferUsage::Vertex)
+            .createDeviceLocalBuffer(dvk_, vriggedData_.data());
 
-        return *this;
+        indxBuffer_ 
+            .setDataSize(indxRaw_.size())
+            .setUsageFlags(BufferUsage::Index)
+            .createDeviceLocalBuffer(dvk_, indxRaw_.data());
     }
-
-    tinyMesh& addPart(const Part& part) {
-        parts_.push_back(part);
-        return *this;
-    }
-
-// -----------------------------------------
-
-    template<typename VertexT>
-    VertexT* vrtxPtr() {
-        if (vrtxData_.empty()) return nullptr;
-        if (sizeof(VertexT) != vrtxLayout_.stride) return nullptr;
-        return reinterpret_cast<VertexT*>(vrtxData_.data());
-    }
-
-    template<typename VertexT>
-    const VertexT* vrtxPtr() const {
-        return const_cast<tinyMesh*>(this)->vrtxPtr<VertexT>();
-    }
-
-    template<typename IndexT>
-    IndexT* indxPtr() {
-        if (indxData_.empty() || sizeof(IndexT) != indxStride_) return nullptr;
-        return reinterpret_cast<IndexT*>(indxData_.data());
-    }
-
-    template<typename IndexT>
-    const IndexT* indxPtr() const {
-        return const_cast<tinyMesh*>(this)->indxPtr<IndexT>();
-    }
-
-    tinyMorph* mrphPtr(size_t targetIndex) {
-        if (mrphData_.empty() || targetIndex >= mrphCount_) return nullptr;
-        size_t offset = targetIndex * vrtxCount_ * sizeof(tinyMorph);
-        return reinterpret_cast<tinyMorph*>(mrphData_.data() + offset);
-    }
-
-    const tinyMorph* mrphPtr(size_t targetIndex) const {
-        return const_cast<tinyMesh*>(this)->mrphPtr(targetIndex);
-    }
-
-    const tinyVertex::Layout& vrtxLayout() const noexcept { return vrtxLayout_; }
-    const std::vector<uint8_t>& vrtxData() const noexcept { return vrtxData_; }
-    const std::vector<uint8_t>& indxData() const noexcept { return indxData_; }
-    const std::vector<uint8_t>& mrphData() const noexcept { return mrphData_; }
 
     void clearData() noexcept {
-        vrtxData_.clear();
-        indxData_.clear();
-        mrphData_.clear();
+        vstaticData_.clear();
+        vriggedData_.clear();
+        indxRaw_.clear();
     }
+
+// -----------------------------------------
 
     size_t vrtxCount() const noexcept { return vrtxCount_; }
     size_t indxCount() const noexcept { return indxCount_; }
-    size_t mrphCount() const noexcept { return mrphCount_; }
     size_t indxStride() const noexcept { return indxStride_; }
+    VkIndexType indxType() const noexcept { return indxType_; }
 
-    std::vector<Part>& parts() noexcept { return parts_; }
-    const std::vector<Part>& parts() const noexcept { return parts_; }
+    bool isRigged() const noexcept { return isRigged_; }
 
-    explicit operator bool() const noexcept { return !vrtxData_.empty() && !indxData_.empty(); }
+    VkBuffer vstaticBuffer() const noexcept { return vstaticBuffer_; }
+    VkBuffer vriggedBuffer() const noexcept { return vriggedBuffer_; }
+    VkBuffer indxBuffer() const noexcept { return indxBuffer_; }
+
+    const std::vector<tinyVertex::Static>& vstaticData() const noexcept { return vstaticData_; }
+    const std::vector<tinyVertex::Rigged>& vriggedData() const noexcept { return vriggedData_; }
+
+    std::vector<Submesh>& submeshes() noexcept { return submeshes_; }
+    const std::vector<Submesh>& submeshes() const noexcept { return submeshes_; }
 
     const glm::vec3& ABmin() const noexcept { return ABmin_; }
     const glm::vec3& ABmax() const noexcept { return ABmax_; }
-
-    std::string& mrphName(size_t targetIndex) noexcept {
-        static std::string emptyStr;
-        if (targetIndex >= mrphNames_.size()) return emptyStr;
-        return mrphNames_[targetIndex];
-    }
-    const std::string& mrphName(size_t targetIndex) const noexcept {
-        return const_cast<tinyMesh*>(this)->mrphName(targetIndex);
-    }
-
-// -----------------------------------------
-// Vulkan API
-// -----------------------------------------
-
-    VkBuffer vrtxBuffer() const noexcept { return vrtxBuffer_; }
-    VkBuffer indxBuffer() const noexcept { return indxBuffer_; }
-    VkBuffer mrphBuffer() const noexcept { return mrphBuffer_; }
-    VkIndexType indxType() const noexcept { return indxType_; }
-    VkDescriptorSet mrphDsDescSet() const noexcept {
-        return mrphCount() ? mrphDsDescSet_.get() : VK_NULL_HANDLE;
-    }
-
-    bool vkCreate(const tinyVk::Device* device, VkDescriptorSetLayout mrphLayout = VK_NULL_HANDLE, VkDescriptorPool mrphPool = VK_NULL_HANDLE) {
-        dvk_ = device;
-
-        using namespace tinyVk;
-
-        vrtxBuffer_
-            .setDataSize(vrtxData_.size())
-            .setUsageFlags(BufferUsage::Vertex)
-            .createDeviceLocalBuffer(dvk_, vrtxData_.data());
-
-        indxBuffer_ 
-            .setDataSize(indxData_.size())
-            .setUsageFlags(BufferUsage::Index)
-            .createDeviceLocalBuffer(dvk_, indxData_.data());
-
-        switch (indxStride_) {
-            case sizeof(uint8_t):  indxType_ = VK_INDEX_TYPE_UINT8;  break;
-            case sizeof(uint16_t): indxType_ = VK_INDEX_TYPE_UINT16; break;
-            case sizeof(uint32_t): indxType_ = VK_INDEX_TYPE_UINT32; break;
-            default:               indxType_ = VK_INDEX_TYPE_MAX_ENUM; break;
-        }
-
-        if (mrphCount() == 0) {
-            clearData();
-            return true;
-        }
-
-        // Morph targets
-        size_t mrphSize = mrphData_.size();
-        if (mrphLayout != VK_NULL_HANDLE && mrphPool != VK_NULL_HANDLE && mrphSize > 0) {
-            mrphBuffer_
-                .setDataSize(mrphSize)
-                .setUsageFlags(BufferUsage::Storage)
-                .createDeviceLocalBuffer(dvk_, mrphData_.data());
-            
-            mrphDsDescSet_.allocate(dvk_->device, mrphPool, mrphLayout);
-
-            DescWrite()
-                .setDstSet(mrphDsDescSet_)
-                .setType(DescType::StorageBuffer)
-                .setDescCount(1)
-                .setBufferInfo({ VkDescriptorBufferInfo{
-                    mrphBuffer_,
-                    0,
-                    mrphSize
-                } })
-                .updateDescSets(dvk_->device);
-        }
-
-        clearData();
-        return true;
-    }
-
 private:
+    std::vector<tinyVertex::Static> vstaticData_;
+    std::vector<tinyVertex::Rigged> vriggedData_;
+    std::vector<uint8_t>            indxRaw_; // Raw bytes
+    std::vector<Submesh>            submeshes_;
 
-    tinyVertex::Layout vrtxLayout_;
-    std::vector<uint8_t> vrtxData_; // raw bytes
-    size_t vrtxCount_ = 0;
-
-    std::vector<uint8_t> indxData_; // raw bytes
-    size_t indxCount_ = 0;
-    size_t indxStride_ = 0;
-
-    // Optional
-    std::vector<std::string> mrphNames_;
-    std::vector<uint8_t> mrphData_; // raw bytes
-    size_t mrphCount_ = 0;
-
-    std::vector<Part> parts_;
-
-    // Vulkan parts
+// Vulkan stuff and shit idk
     const tinyVk::Device* dvk_ = nullptr;
-    tinyVk::DataBuffer vrtxBuffer_;
-    tinyVk::DataBuffer indxBuffer_;
-    tinyVk::DataBuffer mrphBuffer_;
-    tinyVk::DescSet mrphDsDescSet_;
-    VkIndexType indxType_ = VK_INDEX_TYPE_UINT16;
+    tinyVk::DataBuffer    vstaticBuffer_;
+    tinyVk::DataBuffer    vriggedBuffer_;
+    tinyVk::DataBuffer    indxBuffer_;
 
-    // AABB
+    tinyVk::DataBuffer    mrphDsBuffer_;
+    tinyVk::DescSet       mrphDsDescSet_;
+
+    size_t      vrtxCount_ = 0;
+    size_t      indxCount_ = 0;
+    size_t      indxStride_ = 0;
+    VkIndexType indxType_ = VK_INDEX_TYPE_UINT16;
+    bool        isRigged_ = false;
+
+    // AABB (demo)
     glm::vec3 ABmin_ = glm::vec3(std::numeric_limits<float>::max());
     glm::vec3 ABmax_ = glm::vec3(std::numeric_limits<float>::lowest());
+
+    static VkIndexType strideToType(size_t stride) noexcept {
+        switch (stride) {
+            case sizeof(uint8_t):  return VK_INDEX_TYPE_UINT8;
+            case sizeof(uint16_t): return VK_INDEX_TYPE_UINT16;
+            case sizeof(uint32_t): return VK_INDEX_TYPE_UINT32;
+            default:               return VK_INDEX_TYPE_MAX_ENUM;
+        }
+    }
 };

@@ -8,23 +8,6 @@
 #include "tinyData/tinyMaterial.hpp"
 #include "tinyData/tinyTexture.hpp"
 
-/* TO DO
-
-Redesign the structure, submesh will be the new atomic unit instead of mesh
-
-Im going to bed, see you tomorrow
-
-*/
-
-namespace Mesh3D {
-    struct Insta {
-        glm::mat4 model = glm::mat4(1.0f); // Model matrix
-        glm::uvec4 other = glm::uvec4(0); // Additional data
-
-        static VkVertexInputBindingDescription bindingDesc(uint32_t binding);
-        static std::vector<VkVertexInputAttributeDescription> attrDescs(uint32_t binding, uint32_t locationOffset);
-    };
-}
 
 class tinyDrawable {
 public:
@@ -33,6 +16,9 @@ public:
     static constexpr size_t MAX_TEXTURES  = 65536;  // Hopefully not needing this many
     static constexpr size_t MAX_BONES     = 102400; // 6.5mb ~ 400 model x 256 bones x 64 bytes (mat4) - plenty
     static constexpr size_t MAX_MORPHS    = 256;    // Morph WEIGHTS, not Delta
+
+    static std::vector<VkVertexInputBindingDescription> bindingDesc() noexcept;
+    static std::vector<VkVertexInputAttributeDescription> attributeDescs() noexcept;
 
     struct CreateInfo {
         uint32_t maxFramesInFlight = 2;
@@ -43,6 +29,11 @@ public:
     struct Size_x1 { // Per-frame
         VkDeviceSize aligned = 0;   // Data aligned to min offset alignment
         VkDeviceSize unaligned = 0; // Actual data size to copy
+    };
+
+    struct InstaData {
+        glm::mat4 model = glm::mat4(1.0f); // Model matrix
+        glm::uvec4 other = glm::uvec4(0); // Additional data
     };
 
     struct MeshEntry {
@@ -120,7 +111,7 @@ private:
     const tinyVk::Device* dvk_ = nullptr;
 
     // True implementation
-    std::unordered_map<tinyHandle, std::vector<Mesh3D::Insta>> meshInstaMap_; // Mesh handle -> Instance data
+    std::unordered_map<tinyHandle, std::vector<InstaData>> meshInstaMap_; // Mesh handle -> Instance data
     std::unordered_map<tinyHandle, std::vector<MeshRange>> shaderGroups_; // Shader handle -> mesh groups
 
     // Instances

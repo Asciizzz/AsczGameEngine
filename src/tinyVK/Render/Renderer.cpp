@@ -241,7 +241,7 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
         // Bind the instance buffer once then use the ranges to draw
         VkBuffer buffers[] = { draw.instaBuffer() };
         VkDeviceSize offsets[] = { draw.instaOffset(currentFrame) };
-        vkCmdBindVertexBuffers(currentCmd, 1, 1, buffers, offsets);
+        vkCmdBindVertexBuffers(currentCmd, 2, 1, buffers, offsets); // Binding 2
 
         // Bind the material descriptor set once
         VkDescriptorSet matSet = draw.matDescSet();
@@ -252,27 +252,30 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
             const auto* rMesh = sharedRes.fsGet<tinyMesh>(meshRange.mesh);
             if (!rMesh) continue; // Mesh not found in registry
 
-            // Bind the vertex and index buffers
-            VkBuffer vrtxBuffer = rMesh->vrtxBuffer();
+            VkBuffer staticBuffer = rMesh->vstaticBuffer();
+            VkBuffer riggedBuffer = rMesh->vriggedBuffer();
+            bool isRigged = rMesh->isRigged();
+
+            VkBuffer vBuffers[] = { staticBuffer, riggedBuffer };
+            VkDeviceSize vOffsets[] = { 0, 0 };
+            vkCmdBindVertexBuffers(currentCmd, 0, 2, vBuffers, vOffsets); // Bindings 0 and 1
+
             VkBuffer indxBuffer = rMesh->indxBuffer();
             VkIndexType indxType = rMesh->indxType();
-            VkBuffer vBuffers[] = { vrtxBuffer };
-            VkDeviceSize vOffsets[] = { 0 };
-            vkCmdBindVertexBuffers(currentCmd, 0, 1, vBuffers, vOffsets);
             vkCmdBindIndexBuffer(currentCmd, indxBuffer, 0, indxType);
 
             for (uint32_t submeshIdx : meshRange.submeshes) {
-                const auto& part = rMesh->parts()[submeshIdx];
+                const auto& submesh = rMesh->submeshes()[submeshIdx];
 
-                uint32_t matIdx = draw.matIndex(part.material);
+                uint32_t matIdx = draw.matIndex(submesh.material);
 
-                testPipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, 0, glm::uvec4(matIdx, 0, 0, 0));
+                testPipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, 0, glm::uvec4(matIdx, isRigged ? 1 : 0, 0, 0));
 
                 vkCmdDrawIndexed(
                     currentCmd, 
-                    part.indxCount,
+                    submesh.indxCount,
                     meshRange.instaCount,
-                    part.indxOffset,
+                    submesh.indxOffset,
                     0,
                     meshRange.instaOffset
                 );
