@@ -575,7 +575,7 @@ static void RenderSceneNodeHierarchy() {
 
                     // Scene File = instantiate
                     if (dataHandle.is<rtScene>() && dataHandle != State::sceneHandle) {
-                        // scene->addScene(dataHandle, h);
+                        scene->instantiate(dataHandle, h);
                         State::setExpanded(h, true);
                     }
 

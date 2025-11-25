@@ -194,7 +194,7 @@ void Scene::update(FrameStart frameStart) noexcept {
                 if (!mesh || !cam.collideAABB(mesh->ABmin(), mesh->ABmax(), currentWorld)) continue;
 
                 // Submit draw entry
-                const Skeleton3D* skele3D = nGetComp<Skeleton3D>(meshRD3D->skeleNode);
+                const Skeleton3D* skele3D = this->nGetComp<Skeleton3D>(meshRD3D->skeleNode);
                 draw.submit({
                     meshRD3D->mesh,
                     currentWorld,
@@ -265,5 +265,13 @@ tinyHandle Scene::instantiate(tinyHandle sceneHandle, tinyHandle parent) noexcep
             rtSKELE3D* toSkele3D = nWriteComp<rtSKELE3D>(toHandle);
             toSkele3D->copy(fromSkele3D);
         }
+
+        // Recurse into children
+        for (tinyHandle fromChildHandle : fromNode->children) {
+            cloneRec(fromChildHandle, toHandle);
+        }
     };
+    cloneRec(fromScene->root(), parent);
+
+    return newRootHandle;
 }
