@@ -148,9 +148,8 @@ void tinyApp::initUI() {
     UIBackend->setVulkanData(vkData);
 
     uiSampler = tinyVk::SamplerVk();
-    SamplerConfig sampConfig = SamplerConfig()
-        .withAddressModes(VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE)
-        .withPhysicalDevice(dvk->pDevice);
+    SamplerConfig sampConfig;
+    sampConfig.addressModes(VK_SAMPLER_ADDRESS_MODE_REPEAT);
 
     uiSampler.init(dvk->device);
     uiSampler.create(sampConfig);

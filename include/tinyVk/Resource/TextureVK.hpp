@@ -180,9 +180,16 @@ struct SamplerConfig {
     VkFilter magFilter = VK_FILTER_LINEAR;
     VkFilter minFilter = VK_FILTER_LINEAR;
     VkSamplerMipmapMode mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+
     VkSamplerAddressMode addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
     VkSamplerAddressMode addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
     VkSamplerAddressMode addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    void addressModes(VkSamplerAddressMode mode) {
+        addressModeU = mode;
+        addressModeV = mode;
+        addressModeW = mode;
+    }
+
     VkBool32 anisotropyEnable = VK_TRUE;
     float maxAnisotropy = 16.0f; // Will be clamped to device limit
     float mipLodBias = 0.0f;
@@ -192,19 +199,7 @@ struct SamplerConfig {
     VkBool32 unnormalizedCoordinates = VK_FALSE;
     VkBool32 compareEnable = VK_FALSE;
     VkCompareOp compareOp = VK_COMPARE_OP_ALWAYS;
-
     VkPhysicalDevice pDevice = VK_NULL_HANDLE; // Optional, for anisotropy limits
-
-    // Builder pattern methods for easy configuration
-    SamplerConfig& withFilters(VkFilter magFilter, VkFilter minFilter);
-    SamplerConfig& withMipmapMode(VkSamplerMipmapMode mode);
-    SamplerConfig& withAddressModes(VkSamplerAddressMode mode);
-    SamplerConfig& withAddressModes(VkSamplerAddressMode u, VkSamplerAddressMode v, VkSamplerAddressMode w);
-    SamplerConfig& withAnisotropy(VkBool32 enable, float maxAniso = 16.0f);
-    SamplerConfig& withLodRange(float minLod, float maxLod, float bias = 0.0f);
-    SamplerConfig& withBorderColor(VkBorderColor color);
-    SamplerConfig& withCompare(VkBool32 enable, VkCompareOp op = VK_COMPARE_OP_LESS);
-    SamplerConfig& withPhysicalDevice(VkPhysicalDevice pDevice);
 };
 
 class SamplerVk {

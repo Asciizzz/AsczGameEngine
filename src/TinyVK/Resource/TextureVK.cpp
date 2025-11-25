@@ -303,60 +303,6 @@ uint32_t ImageVk::autoMipLevels(uint32_t width, uint32_t height) {
 }
 
 
-
-SamplerConfig& SamplerConfig::withFilters(VkFilter magFilter, VkFilter minFilter) {
-    this->magFilter = magFilter;
-    this->minFilter = minFilter;
-    return *this;
-}
-
-SamplerConfig& SamplerConfig::withMipmapMode(VkSamplerMipmapMode mode) {
-    this->mipmapMode = mode;
-    return *this;
-}
-
-SamplerConfig& SamplerConfig::withAddressModes(VkSamplerAddressMode mode) {
-    withAddressModes(mode, mode, mode);
-    return *this;
-}
-
-SamplerConfig& SamplerConfig::withAddressModes(VkSamplerAddressMode u, VkSamplerAddressMode v, VkSamplerAddressMode w) {
-    this->addressModeU = u;
-    this->addressModeV = v;
-    this->addressModeW = w;
-    return *this;
-}
-
-SamplerConfig& SamplerConfig::withAnisotropy(VkBool32 enable, float maxAniso) {
-    this->anisotropyEnable = enable;
-    this->maxAnisotropy = maxAniso;
-    return *this;
-}
-
-SamplerConfig& SamplerConfig::withLodRange(float minLod, float maxLod, float bias) {
-    this->minLod = minLod;
-    this->maxLod = maxLod;
-    this->mipLodBias = bias;
-    return *this;
-}
-
-SamplerConfig& SamplerConfig::withBorderColor(VkBorderColor color) {
-    this->borderColor = color;
-    return *this;
-}
-
-SamplerConfig& SamplerConfig::withCompare(VkBool32 enable, VkCompareOp op) {
-    this->compareEnable = enable;
-    this->compareOp = op;
-    return *this;
-}
-
-SamplerConfig& SamplerConfig::withPhysicalDevice(VkPhysicalDevice pDevice) {
-    this->pDevice = pDevice;
-    return *this;
-}
-
-
 SamplerVk::SamplerVk(SamplerVk&& other) noexcept {
     device = other.device;
     sampler = other.sampler;
