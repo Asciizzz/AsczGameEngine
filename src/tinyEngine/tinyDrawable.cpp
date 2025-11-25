@@ -188,7 +188,7 @@ void tinyDrawable::submit(const MeshEntry& entry) noexcept {
         size_t skinDataSize = skinSize * sizeof(glm::mat4);
         size_t skinDataOffset = boneCount_ * sizeof(glm::mat4) + skinOffset(frameIndex_);
         skinBuffer_.copyData(entry.skins->data(), skinDataSize, skinDataOffset);
-        
+
         instaData.other = glm::uvec4(boneCount_, skinSize, 0, 0);
 
         boneCount_ += skinSize;
