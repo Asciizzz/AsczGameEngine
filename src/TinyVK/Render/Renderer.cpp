@@ -12,8 +12,8 @@ Renderer::Renderer (Device* dvk, VkSurfaceKHR surface, SDL_Window* window, uint3
 
     swapchain = MakeUnique<Swapchain>(dvk, surface, window);
 
-    depthImage = MakeUnique<DepthImage>(dvk->device);
-    depthImage->create(dvk->pDevice, swapchain->getExtent());
+    depthImage = MakeUnique<DepthImage>();
+    depthImage->create(dvk->device, dvk->pDevice, swapchain->getWidth(), swapchain->getHeight());
 
     createRenderTargets();
 
@@ -83,7 +83,7 @@ void Renderer::createRenderTargets() {
     // Create render passes with proper ownership
     auto mainRenderPassConfig = RenderPassConfig::forwardRendering(
         swapchain->getImageFormat(), 
-        depthImage->getFormat()
+        depthImage->format()
     );
     mainRenderPass = MakeUnique<RenderPass>(device, mainRenderPassConfig);
     
@@ -94,7 +94,7 @@ void Renderer::createRenderTargets() {
         FrameBufferConfig fbConfig = FrameBufferConfig()
             .withRenderPass(mainRenderPass->get())
             .addAttachment(swapchain->getImageView(i))
-            .addAttachment(depthImage->getView())
+            .addAttachment(depthImage->view())
             .withExtent(extent);
 
         auto framebuffer = MakeUnique<FrameBuffer>(device);
@@ -113,8 +113,8 @@ void Renderer::createRenderTargets() {
         VkClearValue depthClear;
         depthClear.depthStencil = {1.0f, 0};
         
-        swapchainTarget.addAttachment(swapchain->getImage(i), swapchain->getImageView(i), colorClear);
-        swapchainTarget.addAttachment(depthImage->getImage(), depthImage->getView(), depthClear);
+        swapchainTarget.addAttachment(swapchain->image(i), swapchain->getImageView(i), colorClear);
+        swapchainTarget.addAttachment(depthImage->image(), depthImage->view(), depthClear);
         
         swapchainRenderTargets.push_back(swapchainTarget);
         
@@ -149,7 +149,7 @@ void Renderer::handleWindowResize(SDL_Window* window) {
     SDL_GetWindowSize(window, &newWidth, &newHeight);
     
     // Recreate depth resources before recreating other resources
-    depthImage->create(dvk->pDevice, newWidth, newHeight);
+    depthImage->create(dvk->device, dvk->pDevice, newWidth, newHeight);
     
     // Now safe to cleanup and recreate Swapchain
     swapchain->cleanup();

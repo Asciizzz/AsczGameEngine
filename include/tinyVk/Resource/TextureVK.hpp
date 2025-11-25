@@ -50,7 +50,6 @@ struct ImageConfig {
     void dimensions(uint32_t w, uint32_t h) { width = w; height = h; }
     uint32_t depth = 1;
     uint32_t mipLevels = 1;
-    void autoMipLevels();
     uint32_t arrayLayers = 1;
     VkFormat format = VK_FORMAT_UNDEFINED;
     VkImageType imageType = VK_IMAGE_TYPE_2D;
@@ -60,6 +59,7 @@ struct ImageConfig {
     VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT;
     VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
+    VkDevice device = VK_NULL_HANDLE; // Required
     VkPhysicalDevice pDevice = VK_NULL_HANDLE; // Optional, for memory type finding
 };
 
@@ -88,14 +88,7 @@ enum class TOwnership {
 class TextureVk;
 class ImageVk {
 public:
-
     ImageVk() noexcept = default;
-    ImageVk(VkDevice device) : device(device) {}
-    ImageVk& init(VkDevice device) {
-        this->device = device;
-        return *this;
-    }
-
     ~ImageVk() { cleanup(); }
     void cleanup();
 
@@ -109,47 +102,43 @@ public:
 
     ImageVk& createImage(const ImageConfig& config);
     ImageVk& createView(const ImageViewConfig& viewConfig);
+    ImageVk& wrapExternalImage(VkDevice device, VkImage extImage, VkFormat fmt, VkExtent2D extent);
 
-    ImageVk& wrapExternalImage(VkImage extImage, VkFormat fmt, VkExtent2D extent);
+    inline VkImage        image()  const { return image_;  }
+    inline VkImageView    view()   const { return view_;   }
+    inline VkDeviceMemory memory() const { return memory_; }
+    inline VkFormat       format() const { return format_; }
+    inline uint32_t       width()  const { return width_;  }
+    inline uint32_t       height() const { return height_; }
+    inline VkExtent2D extent2D()   const { return { width_, height_ }; }
+    inline VkExtent3D extent3D()   const { return { width_, height_, depth_ }; }
+    inline uint32_t   mipLevels()  const { return mipLevels_; }
+    inline uint32_t   arrayLayers()const { return arrayLayers_; }
+    inline VkImageLayout  layout() const { return layout_; }
 
-    VkImage getImage() const { return image; }
-    VkImageView getView() const { return view; }
-    VkDeviceMemory getMemory() const { return memory; }
-    VkFormat getFormat() const { return format; }
-    uint32_t getWidth() const { return width; }
-    uint32_t getHeight() const { return height; }
-    VkExtent2D getExtent2D() const { return { width, height }; }
-    VkExtent3D getExtent3D() const { return { width, height, depth }; }
-    uint32_t getMipLevels() const { return mipLevels; }
-    uint32_t getArrayLayers() const { return arrayLayers; }
-    VkImageLayout getCurrentLayout() const { return layout; }
+    bool valid() const { return image_ != VK_NULL_HANDLE && memory_ != VK_NULL_HANDLE; }
+    bool hasImage() const { return image_ != VK_NULL_HANDLE; }
+    bool hasView() const { return view_ != VK_NULL_HANDLE; }
 
-    bool valid() const { return image != VK_NULL_HANDLE && memory != VK_NULL_HANDLE; }
-    bool hasImage() const { return image != VK_NULL_HANDLE; }
-    bool hasView() const { return view != VK_NULL_HANDLE; }
+    void setLayout(VkImageLayout newLayout) { layout_ = newLayout; }
 
     // Static helper functions
     static uint32_t autoMipLevels(uint32_t width, uint32_t height);
-
 private:
-    friend class TextureVk;
+    VkDevice device_ = VK_NULL_HANDLE;
 
-    VkDevice device = VK_NULL_HANDLE;
+    VkImage        image_  = VK_NULL_HANDLE;
+    VkImageView    view_   = VK_NULL_HANDLE;
+    VkDeviceMemory memory_ = VK_NULL_HANDLE;
+    TOwnership ownership_  = TOwnership::Owned;
 
-    VkImage image = VK_NULL_HANDLE;
-    VkImageView view = VK_NULL_HANDLE;
-    VkDeviceMemory memory = VK_NULL_HANDLE;
-    TOwnership ownership = TOwnership::Owned;
-
-    VkFormat format = VK_FORMAT_UNDEFINED;
-    uint32_t width = 0;
-    uint32_t height = 0;
-    uint32_t depth = 1;
-    uint32_t mipLevels = 1;
-    uint32_t arrayLayers = 1;
-    VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
-
-    void setLayout(VkImageLayout newLayout) { layout = newLayout; } // For TextureVk
+    VkFormat format_ = VK_FORMAT_UNDEFINED;
+    uint32_t width_  = 0;
+    uint32_t height_ = 0;
+    uint32_t depth_  = 1;
+    uint32_t mipLevels_   = 1;
+    uint32_t arrayLayers_ = 1;
+    VkImageLayout layout_ = VK_IMAGE_LAYOUT_UNDEFINED;
 };
 
 
@@ -177,18 +166,14 @@ struct SamplerConfig {
     VkBool32 unnormalizedCoordinates = VK_FALSE;
     VkBool32 compareEnable = VK_FALSE;
     VkCompareOp compareOp = VK_COMPARE_OP_ALWAYS;
+
+    VkDevice device = VK_NULL_HANDLE; // Required
     VkPhysicalDevice pDevice = VK_NULL_HANDLE; // Optional, for anisotropy limits
 };
 
 class SamplerVk {
 public:
     SamplerVk() noexcept = default;
-    SamplerVk(VkDevice device) : device(device) {}
-    SamplerVk& init(VkDevice device) {
-        this->device = device;
-        return *this;
-    }
-
     ~SamplerVk() { cleanup(); }
     void cleanup();
 
@@ -200,19 +185,16 @@ public:
 
     // =====================
 
-    SamplerVk& create(const SamplerConfig& config);
-    SamplerVk& set(VkSampler sampler);
+    void create(const SamplerConfig& config);
 
-    VkSampler get() const { return sampler; }
-    operator VkSampler() const { return sampler; } // Implicit conversion
+    VkSampler sampler() const { return sampler_; }
+    operator VkSampler() const { return sampler_; }
 
-    bool valid() const { return sampler != VK_NULL_HANDLE; }
+    bool valid() const { return sampler_ != VK_NULL_HANDLE; }
 
 private:
-    VkDevice device = VK_NULL_HANDLE;
-    VkSampler sampler = VK_NULL_HANDLE;
-    
-    TOwnership ownership = TOwnership::Owned;
+    VkDevice device_ = VK_NULL_HANDLE;
+    VkSampler sampler_ = VK_NULL_HANDLE;
 
     // Helper to clamp anisotropy to device limits
     static float getMaxAnisotropy(VkPhysicalDevice pDevice, float requested);

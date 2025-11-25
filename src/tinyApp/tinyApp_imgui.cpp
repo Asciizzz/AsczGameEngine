@@ -149,9 +149,9 @@ void tinyApp::initUI() {
 
     uiSampler = tinyVk::SamplerVk();
     SamplerConfig sampConfig;
+    sampConfig.device = dvk->device;
     sampConfig.addressModes(VK_SAMPLER_ADDRESS_MODE_REPEAT);
 
-    uiSampler.init(dvk->device);
     uiSampler.create(sampConfig);
 
     imguiSampler = &uiSampler;

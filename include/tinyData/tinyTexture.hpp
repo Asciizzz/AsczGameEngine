@@ -72,8 +72,8 @@ struct tinyTexture {
 
 // ----------------------- Vulkan API -----------------------
 
-    VkImage image() const noexcept { return imageVk_.getImage(); }
-    VkImageView view() const noexcept { return imageVk_.getView(); }
+    VkImage image() const noexcept { return imageVk_.image(); }
+    VkImageView view() const noexcept { return imageVk_.view(); }
 
     bool vkCreate(const tinyVk::Device* device, VkSampler sampler = VK_NULL_HANDLE) {
         using namespace tinyVk;
@@ -103,6 +103,7 @@ struct tinyTexture {
         uint32_t mipLevel = ImageVk::autoMipLevels(width(), height());
 
         ImageConfig imageConfig;
+        imageConfig.device = dvk_->device;
         imageConfig.pDevice = dvk_->pDevice;
         imageConfig.dimensions(width(), height());
         imageConfig.mipLevels = mipLevel;
@@ -117,7 +118,6 @@ struct tinyTexture {
 
         imageVk_ = ImageVk(); // Reset image
         imageVk_
-            .init(dvk_->device)
             .createImage(imageConfig)
             .createView(viewConfig);
 

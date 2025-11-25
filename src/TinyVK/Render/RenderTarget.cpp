@@ -10,7 +10,7 @@ RenderAttachment::RenderAttachment(VkImage img, VkImageView v, VkClearValue clea
     : image(img), view(v), clearValue(clear) {}
 
 RenderAttachment::RenderAttachment(const ImageVk& imageVK, VkClearValue clear) 
-    : image(imageVK.getImage()), view(imageVK.getView()), clearValue(clear) {}
+    : image(imageVK.image()), view(imageVK.view()), clearValue(clear) {}
 
 
 RenderTarget& RenderTarget::withRenderPass(VkRenderPass rp) {

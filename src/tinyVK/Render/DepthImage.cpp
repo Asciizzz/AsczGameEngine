@@ -5,10 +5,11 @@
 
 using namespace tinyVk;
 
-void DepthImage::create(VkPhysicalDevice pDevice, uint32_t width, uint32_t height) {
+void DepthImage::create(VkDevice device, VkPhysicalDevice pDevice, uint32_t width, uint32_t height) {
     cleanup(); // Clean up existing resources if any
 
     ImageConfig imgCfg;
+    imgCfg.device = device;
     imgCfg.pDevice = pDevice;
     imgCfg.dimensions(width, height);
     imgCfg.format = findDepthFormat(pDevice);

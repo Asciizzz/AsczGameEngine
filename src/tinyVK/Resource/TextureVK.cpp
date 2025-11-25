@@ -8,145 +8,146 @@
 using namespace tinyVk;
 
 void ImageVk::cleanup() {
-    if (device == VK_NULL_HANDLE) return;
+    if (device_ == VK_NULL_HANDLE) return;
 
-    if (view != VK_NULL_HANDLE) vkDestroyImageView(device, view, nullptr);
+    if (view_ != VK_NULL_HANDLE) vkDestroyImageView(device_, view_, nullptr);
 
-    if (ownership == TOwnership::Owned) {
-        if (image != VK_NULL_HANDLE)  vkDestroyImage(device, image, nullptr);
-        if (memory != VK_NULL_HANDLE) vkFreeMemory(device, memory, nullptr);
+    if (ownership_ == TOwnership::Owned) {
+        if (image_ != VK_NULL_HANDLE)  vkDestroyImage(device_, image_, nullptr);
+        if (memory_ != VK_NULL_HANDLE) vkFreeMemory(device_, memory_, nullptr);
     }
 
-    view = VK_NULL_HANDLE;
-    image = VK_NULL_HANDLE;
-    memory = VK_NULL_HANDLE;
+    view_ = VK_NULL_HANDLE;
+    image_ = VK_NULL_HANDLE;
+    memory_ = VK_NULL_HANDLE;
 
-    format = VK_FORMAT_UNDEFINED;
-    width = height = depth = 0;
-    mipLevels = arrayLayers = 1;
-    layout = ImageLayout::Undefined;
-    ownership = TOwnership::Owned;
+    format_ = VK_FORMAT_UNDEFINED;
+    width_ = height_ = depth_ = 0;
+    mipLevels_ = arrayLayers_ = 1;
+    layout_ = ImageLayout::Undefined;
+    ownership_ = TOwnership::Owned;
 }
 
 ImageVk::ImageVk(ImageVk&& other) noexcept
-    : device(other.device)
-    , image(other.image)
-    , memory(other.memory)
-    , view(other.view)
-    , format(other.format)
-    , width(other.width)
-    , height(other.height)
-    , depth(other.depth)
-    , mipLevels(other.mipLevels)
-    , arrayLayers(other.arrayLayers)
-    , layout(other.layout)
-    , ownership(other.ownership) {
+    : device_(other.device_)
+    , image_(other.image_)
+    , memory_(other.memory_)
+    , view_(other.view_)
+    , format_(other.format_)
+    , width_(other.width_)
+    , height_(other.height_)
+    , depth_(other.depth_)
+    , mipLevels_(other.mipLevels_)
+    , arrayLayers_(other.arrayLayers_)
+    , layout_(other.layout_)
+    , ownership_(other.ownership_) {
     
     // Reset other object
-    other.device = VK_NULL_HANDLE;
-    other.image = VK_NULL_HANDLE;
-    other.memory = VK_NULL_HANDLE;
-    other.view = VK_NULL_HANDLE;
-    other.format = VK_FORMAT_UNDEFINED;
-    other.width = 0;
-    other.height = 0;
-    other.depth = 1;
-    other.mipLevels = 1;
-    other.arrayLayers = 1;
-    other.layout = VK_IMAGE_LAYOUT_UNDEFINED;
-    other.ownership = TOwnership::Owned;
+    other.device_ = VK_NULL_HANDLE;
+    other.image_ = VK_NULL_HANDLE;
+    other.memory_ = VK_NULL_HANDLE;
+    other.view_ = VK_NULL_HANDLE;
+    other.format_ = VK_FORMAT_UNDEFINED;
+    other.width_ = 0;
+    other.height_ = 0;
+    other.depth_ = 1;
+    other.mipLevels_ = 1;
+    other.arrayLayers_ = 1;
+    other.layout_ = VK_IMAGE_LAYOUT_UNDEFINED;
+    other.ownership_ = TOwnership::Owned;
 }
 
 ImageVk& ImageVk::operator=(ImageVk&& other) noexcept {
     if (this != &other) {
         cleanup();
 
-        device = other.device;
-        image = other.image;
-        memory = other.memory;
-        view = other.view;
-        format = other.format;
-        width = other.width;
-        height = other.height;
-        depth = other.depth;
-        mipLevels = other.mipLevels;
-        arrayLayers = other.arrayLayers;
-        layout = other.layout;
-        ownership = other.ownership;
-        
-        // Reset other object
-        other.device = VK_NULL_HANDLE;
-        other.image = VK_NULL_HANDLE;
-        other.memory = VK_NULL_HANDLE;
-        other.view = VK_NULL_HANDLE;
-        other.format = VK_FORMAT_UNDEFINED;
-        other.width = 0;
-        other.height = 0;
-        other.depth = 1;
-        other.mipLevels = 1;
-        other.arrayLayers = 1;
-        other.layout = VK_IMAGE_LAYOUT_UNDEFINED;
-        other.ownership = TOwnership::Owned;
+        device_ = other.device_;
+        image_ = other.image_;
+        memory_ = other.memory_;
+        view_ = other.view_;
+        format_ = other.format_;
+        width_ = other.width_;
+        height_ = other.height_;
+        depth_ = other.depth_;
+        mipLevels_ = other.mipLevels_;
+        arrayLayers_ = other.arrayLayers_;
+        layout_ = other.layout_;
+        ownership_ = other.ownership_;
+
+        other.device_ = VK_NULL_HANDLE;
+        other.image_ = VK_NULL_HANDLE;
+        other.memory_ = VK_NULL_HANDLE;
+        other.view_ = VK_NULL_HANDLE;
+        other.format_ = VK_FORMAT_UNDEFINED;
+        other.width_ = 0;
+        other.height_ = 0;
+        other.depth_ = 1;
+        other.mipLevels_ = 1;
+        other.arrayLayers_ = 1;
+        other.layout_ = VK_IMAGE_LAYOUT_UNDEFINED;
+        other.ownership_ = TOwnership::Owned;
     }
     return *this;
 }
 
 
 ImageVk& ImageVk::createImage(const ImageConfig& config) {
-    if (device == VK_NULL_HANDLE || config.pDevice == VK_NULL_HANDLE) {
-        std::cerr << "ImageVk: Cannot create image - device not set" << std::endl;
+    if (config.device == VK_NULL_HANDLE || config.pDevice == VK_NULL_HANDLE) {
+        std::cerr << "ImageVk: Cannot create image - devices not set" << std::endl;
         return *this;
     }
+
+    device_ = config.device;
 
     cleanup();
 
     // Store configuration
-    width = config.width;
-    height = config.height;
-    depth = config.depth;
-    mipLevels = config.mipLevels;
-    arrayLayers = config.arrayLayers;
-    format = config.format;
-    layout = config.initialLayout;
+    width_       = config.width;
+    height_      = config.height;
+    depth_       = config.depth;
+    mipLevels_   = config.mipLevels;
+    arrayLayers_ = config.arrayLayers;
+    format_      = config.format;
+    layout_      = config.initialLayout;
 
     // Create image
     VkImageCreateInfo imageInfo{};
-    imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    imageInfo.imageType = config.imageType;
-    imageInfo.extent.width = config.width;
+    imageInfo.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    imageInfo.imageType     = config.imageType;
+    imageInfo.extent.width  = config.width;
     imageInfo.extent.height = config.height;
-    imageInfo.extent.depth = config.depth;
-    imageInfo.mipLevels = config.mipLevels;
-    imageInfo.arrayLayers = config.arrayLayers;
-    imageInfo.format = config.format;
-    imageInfo.tiling = config.tiling;
+    imageInfo.extent.depth  = config.depth;
+    imageInfo.mipLevels     = config.mipLevels;
+    imageInfo.arrayLayers   = config.arrayLayers;
+    imageInfo.format        = config.format;
+    imageInfo.tiling        = config.tiling;
     imageInfo.initialLayout = config.initialLayout;
-    imageInfo.usage = config.usage;
-    imageInfo.samples = config.samples;
-    imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    imageInfo.usage         = config.usage;
+    imageInfo.samples       = config.samples;
+    imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
 
-    if (vkCreateImage(device, &imageInfo, nullptr, &image) != VK_SUCCESS) {
+    if (vkCreateImage(device_, &imageInfo, nullptr, &image_) != VK_SUCCESS) {
         std::cerr << "ImageVk: Failed to create image" << std::endl;
         return *this;
     }
 
     // Allocate memory
     VkMemoryRequirements memRequirements;
-    vkGetImageMemoryRequirements(device, image, &memRequirements);
+    vkGetImageMemoryRequirements(device_, image_, &memRequirements);
 
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
     allocInfo.memoryTypeIndex = Device::findMemoryType(memRequirements.memoryTypeBits, config.memProps, config.pDevice);
 
-    if (vkAllocateMemory(device, &allocInfo, nullptr, &memory) != VK_SUCCESS) {
+    if (vkAllocateMemory(device_, &allocInfo, nullptr, &memory_) != VK_SUCCESS) {
         std::cerr << "ImageVk: Failed to allocate image memory" << std::endl;
         cleanup();
         return *this;
     }
 
     // Bind memory
-    if (vkBindImageMemory(device, image, memory, 0) != VK_SUCCESS) {
+    if (vkBindImageMemory(device_, image_, memory_, 0) != VK_SUCCESS) {
         std::cerr << "ImageVk: Failed to bind image memory" << std::endl;
         cleanup();
     }
@@ -155,49 +156,50 @@ ImageVk& ImageVk::createImage(const ImageConfig& config) {
 }
 
 ImageVk& ImageVk::createView(const ImageViewConfig& viewConfig) {
-    if (image == VK_NULL_HANDLE) {
+    if (image_ == VK_NULL_HANDLE) {
         std::cerr << "ImageVk: Cannot create image view - image not created" << std::endl;
         return *this;
     }
 
     // Clean up existing image view
-    if (view != VK_NULL_HANDLE) {
-        vkDestroyImageView(device, view, nullptr);
-        view = VK_NULL_HANDLE;
+    if (view_ != VK_NULL_HANDLE) {
+        vkDestroyImageView(device_, view_, nullptr);
+        view_ = VK_NULL_HANDLE;
     }
 
     VkImageViewCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    createInfo.image = image;
+    createInfo.image = image_;
     createInfo.viewType = viewConfig.type;
     // Auto-select format if not specified
-    createInfo.format = (viewConfig.format != VK_FORMAT_UNDEFINED) ? viewConfig.format : format;
+    createInfo.format = (viewConfig.format != VK_FORMAT_UNDEFINED) ? viewConfig.format : format_;
     createInfo.components = viewConfig.components;
     createInfo.subresourceRange.aspectMask = viewConfig.aspectMask;
     createInfo.subresourceRange.baseMipLevel = viewConfig.baseMipLevel;
-    createInfo.subresourceRange.levelCount = (viewConfig.mipLevels == VK_REMAINING_MIP_LEVELS) ? mipLevels : viewConfig.mipLevels;
+    createInfo.subresourceRange.levelCount = (viewConfig.mipLevels == VK_REMAINING_MIP_LEVELS) ? mipLevels_ : viewConfig.mipLevels;
     createInfo.subresourceRange.baseArrayLayer = viewConfig.baseArrayLayer;
-    createInfo.subresourceRange.layerCount = (viewConfig.arrayLayers == VK_REMAINING_ARRAY_LAYERS) ? arrayLayers : viewConfig.arrayLayers;
+    createInfo.subresourceRange.layerCount = (viewConfig.arrayLayers == VK_REMAINING_ARRAY_LAYERS) ? arrayLayers_ : viewConfig.arrayLayers;
 
-    if (vkCreateImageView(device, &createInfo, nullptr, &view) != VK_SUCCESS) {
+    if (vkCreateImageView(device_, &createInfo, nullptr, &view_) != VK_SUCCESS) {
         std::cerr << "ImageVk: Failed to create image view" << std::endl;
     }
 
     return *this;
 }
 
-ImageVk& ImageVk::wrapExternalImage(VkImage extImage, VkFormat fmt, VkExtent2D extent) {
+ImageVk& ImageVk::wrapExternalImage(VkDevice device, VkImage extImage, VkFormat fmt, VkExtent2D extent) {
     cleanup();
 
-    image = extImage;
-    format = fmt;
-    width = extent.width;
-    height = extent.height;
-    depth = 1;
-    mipLevels = 1;
-    arrayLayers = 1;
-    layout = ImageLayout::PresentSrcKHR;
-    ownership = TOwnership::External;
+    device_      = device;
+    image_       = extImage;
+    format_      = fmt;
+    width_       = extent.width;
+    height_      = extent.height;
+    depth_       = 1;
+    mipLevels_   = 1;
+    arrayLayers_ = 1;
+    layout_      = ImageLayout::PresentSrcKHR;
+    ownership_   = TOwnership::External;
 
     return *this;
 }
@@ -208,44 +210,37 @@ uint32_t ImageVk::autoMipLevels(uint32_t width, uint32_t height) {
 
 
 SamplerVk::SamplerVk(SamplerVk&& other) noexcept {
-    device = other.device;
-    sampler = other.sampler;
-    ownership = other.ownership;
+    device_    = other.device_;
+    sampler_   = other.sampler_;
 
-    other.device = VK_NULL_HANDLE;
-    other.sampler = VK_NULL_HANDLE;
-    other.ownership = TOwnership::Owned;
+    other.device_    = VK_NULL_HANDLE;
+    other.sampler_   = VK_NULL_HANDLE;
 }
 
 SamplerVk& SamplerVk::operator=(SamplerVk&& other) noexcept {
     if (this != &other) {
         cleanup();
 
-        device = other.device;
-        sampler = other.sampler;
-        ownership = other.ownership;
+        device_    = other.device_;
+        sampler_   = other.sampler_;
 
-        other.device = VK_NULL_HANDLE;
-        other.sampler = VK_NULL_HANDLE;
-        other.ownership = TOwnership::Owned;
+        other.device_    = VK_NULL_HANDLE;
+        other.sampler_   = VK_NULL_HANDLE;
     }
     return *this;
 }
 
 void SamplerVk::cleanup() {
-    if (sampler != VK_NULL_HANDLE && device != VK_NULL_HANDLE && ownership == TOwnership::Owned) {
-        vkDestroySampler(device, sampler, nullptr);
-        sampler = VK_NULL_HANDLE;
-
-        ownership = TOwnership::Owned;
+    if (sampler_ != VK_NULL_HANDLE && device_ != VK_NULL_HANDLE) {
+        vkDestroySampler(device_, sampler_, nullptr);
+        sampler_ = VK_NULL_HANDLE;
     }
 }
 
+void SamplerVk::create(const SamplerConfig& config) {
+    if (config.device == VK_NULL_HANDLE) return;
 
-SamplerVk& SamplerVk::create(const SamplerConfig& config) {
-    if (device == VK_NULL_HANDLE) {
-        throw std::runtime_error("SamplerVk: Device not initialized");
-    }
+    device_ = config.device;
 
     cleanup(); // Clean up existing sampler if any
 
@@ -267,21 +262,10 @@ SamplerVk& SamplerVk::create(const SamplerConfig& config) {
     createInfo.maxAnisotropy    = getMaxAnisotropy(config.pDevice, config.maxAnisotropy);
     createInfo.unnormalizedCoordinates = config.unnormalizedCoordinates;
 
-    VkResult result = vkCreateSampler(device, &createInfo, nullptr, &sampler);
+    VkResult result = vkCreateSampler(device_, &createInfo, nullptr, &sampler_);
     if (result != VK_SUCCESS) {
         throw std::runtime_error("Failed to create VkSampler");
     }
-
-    ownership = TOwnership::Owned;
-
-    return *this;
-}
-
-SamplerVk& SamplerVk::set(VkSampler sampler) {
-    cleanup();
-    this->sampler = sampler;
-    ownership = TOwnership::External;
-    return *this;
 }
 
 float SamplerVk::getMaxAnisotropy(VkPhysicalDevice pDevice, float requested) {
@@ -296,8 +280,8 @@ float SamplerVk::getMaxAnisotropy(VkPhysicalDevice pDevice, float requested) {
 }
 
 
-void TextureVk::transitionLayout(ImageVk& image, VkCommandBuffer cmd, VkImageLayout oldLayout, VkImageLayout newLayout) {
-    if (image.getImage() == VK_NULL_HANDLE) {
+void TextureVk::transitionLayout(ImageVk& imageVk, VkCommandBuffer cmd, VkImageLayout oldLayout, VkImageLayout newLayout) {
+    if (imageVk.image() == VK_NULL_HANDLE) {
         std::cerr << "TextureVk: Cannot transition layout - image not created" << std::endl;
         return;
     }
@@ -308,14 +292,14 @@ void TextureVk::transitionLayout(ImageVk& image, VkCommandBuffer cmd, VkImageLay
     barrier.newLayout = newLayout;
     barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.image = image.getImage();
+    barrier.image = imageVk.image();
     
     // Determine aspect mask based on format
     if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
         barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 
-        bool hasStencil =   image.getFormat() == VK_FORMAT_D32_SFLOAT_S8_UINT ||
-                            image.getFormat() == VK_FORMAT_D24_UNORM_S8_UINT;
+        bool hasStencil =   imageVk.format() == VK_FORMAT_D32_SFLOAT_S8_UINT ||
+                            imageVk.format() == VK_FORMAT_D24_UNORM_S8_UINT;
         barrier.subresourceRange.aspectMask |= hasStencil ? VK_IMAGE_ASPECT_STENCIL_BIT : 0;
 
     } else {
@@ -323,9 +307,9 @@ void TextureVk::transitionLayout(ImageVk& image, VkCommandBuffer cmd, VkImageLay
     }
 
     barrier.subresourceRange.baseMipLevel = 0;
-    barrier.subresourceRange.levelCount = image.getMipLevels();
+    barrier.subresourceRange.levelCount = imageVk.mipLevels();
     barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = image.getArrayLayers();
+    barrier.subresourceRange.layerCount = imageVk.arrayLayers();
 
     barrier.srcAccessMask = getAccessFlags(oldLayout);
     barrier.dstAccessMask = getAccessFlags(newLayout);
@@ -335,11 +319,11 @@ void TextureVk::transitionLayout(ImageVk& image, VkCommandBuffer cmd, VkImageLay
 
     vkCmdPipelineBarrier(cmd, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 
-    image.setLayout(newLayout);
+    imageVk.setLayout(newLayout);
 }
 
-void TextureVk::copyFromBuffer(ImageVk& image, VkCommandBuffer cmd, VkBuffer srcBuffer) {
-    if (image.getImage() == VK_NULL_HANDLE) {
+void TextureVk::copyFromBuffer(ImageVk& imageVk, VkCommandBuffer cmd, VkBuffer srcBuffer) {
+    if (imageVk.image() == VK_NULL_HANDLE) {
         std::cerr << "TextureVk: Cannot copy from buffer - image not created" << std::endl;
         return;
     }
@@ -353,20 +337,20 @@ void TextureVk::copyFromBuffer(ImageVk& image, VkCommandBuffer cmd, VkBuffer src
     region.imageSubresource.baseArrayLayer = 0;
     region.imageSubresource.layerCount = 1;
     region.imageOffset = {0, 0, 0};
-    region.imageExtent = image.getExtent3D();
+    region.imageExtent = imageVk.extent3D();
 
-    vkCmdCopyBufferToImage(cmd, srcBuffer, image.getImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+    vkCmdCopyBufferToImage(cmd, srcBuffer, imageVk.image(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 }
 
-void TextureVk::generateMipmaps(ImageVk& image, VkCommandBuffer cmd, VkPhysicalDevice pDevice) {
-    if (image.getImage() == VK_NULL_HANDLE) {
+void TextureVk::generateMipmaps(ImageVk& imageVk    , VkCommandBuffer cmd, VkPhysicalDevice pDevice) {
+    if (imageVk.image() == VK_NULL_HANDLE) {
         std::cerr << "TextureVk: Cannot generate mipmaps - image not created" << std::endl;
         return;
     }
 
     // Check if image format supports linear blitting
     VkFormatProperties formatProperties;
-    vkGetPhysicalDeviceFormatProperties(pDevice, image.getFormat(), &formatProperties);
+    vkGetPhysicalDeviceFormatProperties(pDevice, imageVk.format(), &formatProperties);
 
     if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
         throw std::runtime_error("TextureVk: texture image format does not support linear blitting!");
@@ -374,7 +358,7 @@ void TextureVk::generateMipmaps(ImageVk& image, VkCommandBuffer cmd, VkPhysicalD
 
     VkImageMemoryBarrier barrier{};
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrier.image = image.getImage();
+    barrier.image = imageVk.image();
     barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -382,10 +366,10 @@ void TextureVk::generateMipmaps(ImageVk& image, VkCommandBuffer cmd, VkPhysicalD
     barrier.subresourceRange.layerCount = 1;
     barrier.subresourceRange.levelCount = 1;
 
-    int32_t mipWidth = static_cast<int32_t>(image.getWidth());
-    int32_t mipHeight = static_cast<int32_t>(image.getHeight());
+    int32_t mipWidth = static_cast<int32_t>(imageVk.width());
+    int32_t mipHeight = static_cast<int32_t>(imageVk.height());
 
-    for (uint32_t i = 1; i < image.getMipLevels(); ++i) {
+    for (uint32_t i = 1; i < imageVk.mipLevels(); ++i) {
         barrier.subresourceRange.baseMipLevel = i - 1;
         barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
         barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
@@ -408,8 +392,8 @@ void TextureVk::generateMipmaps(ImageVk& image, VkCommandBuffer cmd, VkPhysicalD
         blit.dstSubresource.baseArrayLayer = 0;
         blit.dstSubresource.layerCount = 1;
 
-        vkCmdBlitImage(cmd, image.getImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                            image.getImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
+        vkCmdBlitImage(cmd, imageVk.image(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                            imageVk.image(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
 
         barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
         barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -422,7 +406,7 @@ void TextureVk::generateMipmaps(ImageVk& image, VkCommandBuffer cmd, VkPhysicalD
         if (mipHeight > 1) mipHeight /= 2;
     }
 
-    barrier.subresourceRange.baseMipLevel = image.getMipLevels() - 1;
+    barrier.subresourceRange.baseMipLevel = imageVk.mipLevels() - 1;
     barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -430,7 +414,7 @@ void TextureVk::generateMipmaps(ImageVk& image, VkCommandBuffer cmd, VkPhysicalD
 
     vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
     
-    image.setLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    imageVk.setLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
 VkPipelineStageFlags TextureVk::getStageFlags(VkImageLayout layout) {

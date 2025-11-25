@@ -29,14 +29,14 @@ public:
     std::vector<ImageVk> images;
 
     VkImageView getImageView(uint32_t index) const {
-        return (index < images.size()) ? images[index].getView() : VK_NULL_HANDLE;
+        return (index < images.size()) ? images[index].view() : VK_NULL_HANDLE;
     }
-    VkImage getImage(uint32_t index) const {
-        return (index < images.size()) ? images[index].getImage() : VK_NULL_HANDLE;
+    VkImage image(uint32_t index) const {
+        return (index < images.size()) ? images[index].image() : VK_NULL_HANDLE;
     }
 
-    VkFormat getImageFormat() const { return images.empty() ? VK_FORMAT_UNDEFINED : images[0].getFormat(); }
-    VkExtent2D getExtent() const { return images.empty() ? VkExtent2D{0, 0} : images[0].getExtent2D(); }
+    VkFormat getImageFormat() const { return images.empty() ? VK_FORMAT_UNDEFINED : images[0].format(); }
+    VkExtent2D getExtent() const { return images.empty() ? VkExtent2D{0, 0} : images[0].extent2D(); }
     uint32_t getWidth() const { return getExtent().width; }
     uint32_t getHeight() const { return getExtent().height; }
     uint32_t getImageCount() const { return static_cast<uint32_t>(images.size()); }
