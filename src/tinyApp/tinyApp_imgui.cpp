@@ -898,13 +898,15 @@ static void RenderBONE3D(const tinyFS& fs, rtScene* scene, rtScene::NWrap& wrap)
     tinyHandle skeleNodeHandle = bone3D->skeleNodeHandle;
 }
 
+*/
 
-static void RenderSKEL3D(const tinyFS& fs, rtScene* scene, rtScene::NWrap& wrap) {
-    tinyRT_SKEL3D* skel3D = wrap.skel3D;
+
+static void RenderSKEL3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle) {
+    rtSKELE3D* skel3D = scene->nGetComp<rtSKELE3D>(nHandle);
     if (!skel3D) return;
 
     RenderDragField(
-        [scene, wrap]() { return scene->nodeName(wrap.handle); },
+        [scene, nHandle]() { return scene->nName(nHandle).c_str(); },
         "Skeleton Component",
         []() { return ImVec4(0.8f, 0.6f, 0.6f, 1.0f); },
         ImVec4(0.2f, 0.2f, 0.2f, 1.0f),
@@ -914,7 +916,7 @@ static void RenderSKEL3D(const tinyFS& fs, rtScene* scene, rtScene::NWrap& wrap)
         [&]() {
             ImGui::BeginTooltip();
 
-            if (skel3D->hasSkeleton()) {
+            if (skel3D->rSkeleton()) {
                 tinyHandle skeleHandle = skel3D->skeleHandle();
 
                 tinyHandle fHandle = fs.rDataToFile(skeleHandle);
@@ -931,10 +933,12 @@ static void RenderSKEL3D(const tinyFS& fs, rtScene* scene, rtScene::NWrap& wrap)
 
     // For the time being just open the editor
     if (ImGui::Button("Open Runtime Skeleton Editor", ImVec2(-1, 0))) {
-        Editor::selected = wrap.handle;
+        Editor::selected = nHandle;
         Editor::what = "SKEL3D";
     }
 }
+
+/*
 
 static void RenderSCRIPT(const tinyFS& fs, rtScene* scene, rtScene::NWrap& wrap) {
     tinyRT_SCRIPT* script = wrap.script;
@@ -1179,12 +1183,12 @@ static void RenderSceneNodeInspector(tinyProject* project) {
     //     [&scene, handle]() { scene->writeComp<tinyNodeRT::BONE3D>(handle); },
     //     [&scene, handle]() { scene->removeComp<tinyNodeRT::BONE3D>(handle); }
     // });
-    // components.push_back({
-    //     "Skeleton 3D", wrap.skel3D != nullptr,
-    //     [&]() { RenderSKEL3D(fs, scene, wrap); },
-    //     [&scene, handle]() { scene->writeComp<tinyNodeRT::SKEL3D>(handle); },
-    //     [&scene, handle]() { scene->removeComp<tinyNodeRT::SKEL3D>(handle); }
-    // });
+    components.push_back({
+        "Skeleton 3D", node->has<rtSKELE3D>(),
+        [&]() { RenderSKEL3D(fs, scene, handle); },
+        [&]() { scene->nAddComp<rtSKELE3D>(handle); },
+        [&]() { scene->nEraseComp<rtSKELE3D>(handle); }
+    });
     // components.push_back({
     //     "Runtime Script", wrap.script != nullptr,
     //     [&]() { RenderSCRIPT(fs, scene, wrap); },

@@ -201,6 +201,10 @@ void Scene::update(FrameStart frameStart) noexcept {
                     skele3D ? &skele3D->skinData() : nullptr
                 });
             }
+
+            if (rtSKELE3D* skel3D = rt_.get<rtSKELE3D>(compHandle)) {
+                skel3D->update();
+            }
         }
 
         // Recurse into children

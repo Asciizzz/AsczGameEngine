@@ -67,6 +67,10 @@ struct Skeleton3D {
         return pool_ && handle_ ? pool_->get(handle_) : nullptr;
     }
 
+    inline tinyHandle skeleHandle() const noexcept {
+        return handle_;
+    }
+
     inline const std::vector<glm::mat4>& skinData() const noexcept {
         return skinData_;
     }
