@@ -63,7 +63,7 @@ float noise(vec3 p) {
 float fbm(vec3 p) {
     float v = 0.0;
     float a = 0.5;
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 5; i++) {
         v += a * noise(p);
         p *= 2.0;
         a *= 0.5;
@@ -87,11 +87,10 @@ vec3 renderClouds(vec3 rayDir, float time, vec3 cameraPos, vec3 sunDir)
 {
     if (rayDir.y < 0.01) return vec3(0.0);
 
-    const float CLOUD_ALT   = 24000.0;
+    const float CLOUD_ALT   = 15000.0;
     const float CLOUD_THICK = 200.0;
-    const float CLOUD_SPEED = 300.0;
-    const float STEP_SIZE   = 400.0;
-    const int   STEPS       = 6;
+    const float STEP_SIZE   = 800.0;
+    const int   STEPS       = 16;
 
     float t = CLOUD_ALT / max(rayDir.y, 0.001);
 
@@ -107,9 +106,7 @@ vec3 renderClouds(vec3 rayDir, float time, vec3 cameraPos, vec3 sunDir)
         float lod = clamp(viewDist * 0.00005, 0.0, 1.0);
         float scale = mix(0.00025, 0.00005, lod);
 
-        vec3 fbmOffset = vec3(time * CLOUD_SPEED, 0.0, time * CLOUD_SPEED);
-        float n = fbm(worldPos * scale + fbmOffset);
-
+        float n = fbm(worldPos * scale + vec3(0.0, time * 0.00003, 0.0));
         float d = smoothstep(0.5, 0.75, n);
 
         // Distance density fade (fixes white sheet)
@@ -152,10 +149,9 @@ void main() {
 
     vec3 sunDir = normalize(vec3(0.3, 1.0, 0.2)); // static sunlight
 
-    vec3 clouds = renderClouds(rayDir, time, camPos, sunDir) * 0.8;
+    vec3 clouds = renderClouds(rayDir, time, camPos, sunDir) * 0.5;
 
     vec3 finalColor = sky + clouds;
-    // vec3 finalColor = vec3(mod(time , 1.0));
 
     // Ground (simple)
     if (rayDir.y < 0.0)

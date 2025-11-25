@@ -38,15 +38,18 @@ void tinyGlobal::vkCreate(const tinyVk::Device* dvk) {
 
 
 void tinyGlobal::update(const tinyCamera& camera, uint32_t frameIndex) {
-    static constexpr float deltaDay = 1.0f / 86400.0f;
 
     ubo.proj = camera.projectionMatrix;
     ubo.view = camera.viewMatrix;
 
-    float elapsedSeconds =
-        std::chrono::duration<float>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+    static auto startTime = std::chrono::high_resolution_clock::now();
 
-    float timeOfDay = fmod(elapsedSeconds * deltaDay, 1.0f);
+    auto now = std::chrono::high_resolution_clock::now();
+    float elapsedSeconds = std::chrono::duration<float>(now - startTime).count();
+
+    static constexpr float deltaDay = 1.0f / 86400.0f; // 1 day = 86400 seconds
+    float timeSpeed = 60.0f; // 1 real second = 1 in-game minute
+    float timeOfDay = fmod(elapsedSeconds * deltaDay * timeSpeed, 1.0f);
     ubo.prop1 = glm::vec4(timeOfDay, 0.0f, 0.0f, 0.0f);
 
     // During copy, you need to use the correct size and offset
