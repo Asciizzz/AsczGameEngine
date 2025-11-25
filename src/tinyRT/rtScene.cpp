@@ -262,7 +262,7 @@ tinyHandle Scene::instantiate(tinyHandle sceneHandle, tinyHandle parent) noexcep
             rtMESHRD3D* toMeshRD = nWriteComp<rtMESHRD3D>(toHandle);
             toMeshRD->
                 assignMesh(fromMeshRD->meshHandle(), fromMeshRD->morphWeights()).
-                assignSkeleNode(fromMeshRD->skeleNodeHandle());
+                assignSkeleNode(getToHandle(fromMeshRD->skeleNodeHandle()));
         }
 
         if (const rtSKELE3D* fromSkele3D = fromScene->nGetComp<rtSKELE3D>(fromHandle)) {

@@ -242,28 +242,30 @@ void tinyDrawable::submit(const MeshEntry& entry) noexcept {
 
         // If this skeleton node already registered, use existing range
         auto skinRangeIt = skinRanges_.find(skeleNode);
-        if (skinRangeIt != skinRanges_.end()) {
-            instaData.other.x = skinRangeIt->second.skinOffset;
-            instaData.other.y = skinRangeIt->second.skinCount;
-        }
-        else { // New skeleton node, create new range
+        if (skinRangeIt == skinRanges_.end()) {
+        //     instaData.other.x = skinRangeIt->second.skinOffset;
+        //     instaData.other.y = skinRangeIt->second.skinCount;
+        // } else { // New skeleton node, create new range
             uint32_t thisCount = static_cast<uint32_t>(skeleData.skinData->size());
 
             SkinRange newRange;
             newRange.skinOffset = skinCount_;
             newRange.skinCount = static_cast<uint32_t>(skeleData.skinData->size());
             skinRanges_[skeleNode] = newRange;
+            printf("New skin range: offset=%u, count=%u\n", newRange.skinOffset, newRange.skinCount);
 
             // Copy skin data
             size_t skinDataSize = thisCount * sizeof(glm::mat4);
             size_t skinDataOffset = skinCount_ * sizeof(glm::mat4) + skinOffset(frameIndex_);
             skinBuffer_.copyData(skeleData.skinData->data(), skinDataSize, skinDataOffset);
 
-            instaData.other.x = newRange.skinOffset;
-            instaData.other.y = newRange.skinCount;
+            skinRangeIt = skinRanges_.find(skeleNode);
 
             skinCount_ += thisCount;
         }
+
+        instaData.other.x = skinRangeIt->second.skinOffset;
+        instaData.other.y = skinRangeIt->second.skinCount;
     }
 
     if (entry.mrphWeights && !entry.mrphWeights->empty()) {
