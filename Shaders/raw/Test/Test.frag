@@ -5,6 +5,9 @@ layout(location = 1) in flat uvec4 fragOther;
 
 struct Material {
     vec4 base;
+    vec4 empty;
+    vec4 empty;
+    vec4 empty;
     uvec4 tex1;
     uvec4 tex2;
 };

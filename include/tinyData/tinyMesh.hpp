@@ -29,6 +29,12 @@ struct tinyMesh {
     tinyMesh(tinyMesh&&) noexcept = default;
     tinyMesh& operator=(tinyMesh&&) noexcept = default;
 
+    struct Part {
+        uint32_t indxOffset = 0;
+        uint32_t indxCount = 0;
+        tinyHandle material;
+    };
+
 // -----------------------------------------
 
     template<typename VertexT>
@@ -77,6 +83,11 @@ struct tinyMesh {
         std::memcpy(mrphData_.data() + offset, target.deltas.data(), targetSize);
         ++mrphCount_;
 
+        return *this;
+    }
+
+    tinyMesh& addPart(const Part& part) {
+        parts_.push_back(part);
         return *this;
     }
 
@@ -130,6 +141,9 @@ struct tinyMesh {
     size_t indxCount() const noexcept { return indxCount_; }
     size_t mrphCount() const noexcept { return mrphCount_; }
     size_t indxStride() const noexcept { return indxStride_; }
+
+    std::vector<Part>& parts() noexcept { return parts_; }
+    const std::vector<Part>& parts() const noexcept { return parts_; }
 
     explicit operator bool() const noexcept { return !vrtxData_.empty() && !indxData_.empty(); }
 
@@ -225,7 +239,9 @@ private:
     std::vector<uint8_t> mrphData_; // raw bytes
     size_t mrphCount_ = 0;
 
-    // Vulkan
+    std::vector<Part> parts_;
+
+    // Vulkan parts
     const tinyVk::Device* dvk_ = nullptr;
     tinyVk::DataBuffer vrtxBuffer_;
     tinyVk::DataBuffer indxBuffer_;

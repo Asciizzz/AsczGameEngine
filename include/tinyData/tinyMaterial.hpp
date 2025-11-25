@@ -3,21 +3,15 @@
 #include <glm/glm.hpp>
 #include "tinyType.hpp"
 
-struct tinyMaterial {
-    struct alignas(16) Data {
-        glm::vec4 base = glm::vec4(1.0f);
-        glm::ivec4 tex1 = glm::ivec4(-1); // Albedo, specular, normal, occlusion
-        glm::ivec4 tex2 = glm::ivec4(-1); // Metallic, roughness, emission,
-    };
+struct  tinyMaterial {
+    struct alignas(16) Data { // Pure data, shader determines context
+        glm::vec4 float1 = glm::vec4(1.0f);
+        glm::vec4 float2 = glm::vec4(0.0f);
+        glm::vec4 float3 = glm::vec4(0.0f);
+        glm::vec4 float4 = glm::vec4(0.0f);
+        glm::uvec4 uint1 = glm::uvec4(0);
+        glm::uvec4 uint2 = glm::uvec4(0);
+    } data; // Total size: 96 bytes
 
-    tinyHandle albIndx;
-    glm::vec4 baseColor = glm::vec4(1.0f);
-
-    // int& alb() noexcept { return data.tex1.x; }
-    // int& spec() noexcept { return data.tex1.y; }
-    // int& nrml() noexcept { return data.tex1.z; }
-    // int& oclu() noexcept { return data.tex1.w; }
-    // int& metal() noexcept { return data.tex2.x; }
-    // int& rough() noexcept { return data.tex2.y; }
-    // int& emiss() noexcept { return data.tex2.z; }
-};
+    tinyHandle shader;
+}; 

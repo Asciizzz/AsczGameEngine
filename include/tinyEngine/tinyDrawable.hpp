@@ -35,9 +35,10 @@ struct ShaderGroup {
 class tinyDrawable {
 public:
     static constexpr size_t MAX_INSTANCES = 100000; // 8mb - more than enough
-    static constexpr size_t MAX_BONES     = 102400; // 6.5mb ~ 400 model x 256 bones x 64 bytes (mat4) - plenty
-    static constexpr size_t MAX_MATERIALS = 10000;  // ~0.8-0.96mb, plenty
+    static constexpr size_t MAX_MATERIALS = 10000;  // 0.96mb - more than enough
     static constexpr size_t MAX_TEXTURES  = 65536;  // Hopefully not needing this many
+    static constexpr size_t MAX_BONES     = 102400; // 6.5mb ~ 400 model x 256 bones x 64 bytes (mat4) - plenty
+    static constexpr size_t MAX_MORPHS    = 256;    // Morph WEIGHTS, not Delta
 
 // ---------------------------------------------------------------
 
@@ -65,7 +66,9 @@ public:
     const tinyRegistry& fsr() const noexcept { return *fsr_; }
 
     VkBuffer instaBuffer() const noexcept { return instaBuffer_; }
+
     VkDescriptorSet matDescSet() const noexcept { return matDescSet_.get(); }
+    VkDescriptorSetLayout matDescLayout() const noexcept { return matDescLayout_.get(); }
 
     const std::vector<ShaderGroup>& shaderGroups() const noexcept { return shaderGroups_; }
 

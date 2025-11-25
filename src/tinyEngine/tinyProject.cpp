@@ -64,7 +64,7 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
             tinyMaterial material;
 
             // Set material base color from model
-            material.baseColor = mMaterial.baseColor;
+            material.data.float1 = mMaterial.baseColor;
 
             tinyHandle fnHandle = fs_->createFile(mMaterial.name, std::move(material), fnMatFolder);
             tinyHandle dataHandle = fs_->dataHandle(fnHandle);

@@ -534,7 +534,7 @@ static bool readDeltaAccessor(const tinygltf::Model& model,
     return true;
 }
 
-void loadMesh(tinyMesh& mesh, int& matIdx,
+void loadMesh(tinyMesh& mesh,
               const tinygltf::Model& gltfModel,
               const tinygltf::Mesh& gltfMesh,
               const std::vector<tinygltf::Primitive>& primitives,
@@ -598,9 +598,6 @@ void loadMesh(tinyMesh& mesh, int& matIdx,
         allPrimitiveDatas.push_back(std::move(pData));
     }
 
-    // For simplicity use the first primitive's material as the mesh material
-    matIdx = allPrimitiveDatas.empty() ? -1 : allPrimitiveDatas[0].materialIndex;
-
     if (allPrimitiveDatas.empty()) return; // no primitives
 
     std::vector<uint32_t>           allIndices;
@@ -627,6 +624,13 @@ void loadMesh(tinyMesh& mesh, int& matIdx,
         // ---- indices --------------------------------------------------------
         for (uint32_t idx : p.indices)
             allIndices.push_back(idx + vtxOffset);
+
+        // ---- part -----------------------------------------------------------
+        tinyMesh::Part part;
+        part.indxOffset = idxOffset;
+        part.indxCount  = static_cast<uint32_t>(p.indices.size());
+        part.material   = (p.materialIndex >= 0) ? tinyHandle(p.materialIndex) : tinyHandle();
+        mesh.addPart(part);
 
         vtxOffset += static_cast<uint32_t>(p.vrtxCount);
         idxOffset += static_cast<uint32_t>(p.indices.size());
@@ -735,7 +739,7 @@ void loadMeshes(std::vector<tinyModel::Mesh>& meshes, tinygltf::Model& gltfModel
         tinyModel::Mesh meshEntry;
         meshEntry.name = sanitizeAsciiz(gltfMesh.name, "mesh", meshIndex);
 
-        loadMesh(meshEntry.mesh, meshEntry.matIdx, gltfModel, gltfMesh, gltfMesh.primitives, !forceStatic);
+        loadMesh(meshEntry.mesh, gltfModel, gltfMesh, gltfMesh.primitives, !forceStatic);
 
         meshes.push_back(std::move(meshEntry));
     }
@@ -1420,9 +1424,14 @@ tinyModel tinyLoader::loadModelFromOBJ(const std::string& filePath) {
         mesh.setVrtxs(vertices);
         mesh.setIndxs(indices);
 
+        tinyMesh::Part mPart;
+        mPart.indxOffset = 0;
+        mPart.indxCount = static_cast<uint32_t>(indices.size());
+        mPart.material = (materialId >= 0) ? tinyHandle(materialId) : tinyHandle();
+        mesh.addPart(mPart);
+
         tinyModel::Mesh meshEntry;
         meshEntry.mesh = std::move(mesh);
-        meshEntry.matIdx = materialId;
         meshEntry.name = materialId >= 0 ? result.materials[materialId].name : "Mesh";
 
         result.meshes.push_back(std::move(meshEntry));

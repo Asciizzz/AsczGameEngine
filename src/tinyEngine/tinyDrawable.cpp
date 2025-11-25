@@ -109,7 +109,8 @@ void tinyDrawable::submit(const MeshEntry& entry) noexcept {
         matIndex = static_cast<uint32_t>(matData_.size());
 
         tinyMaterial::Data matData;
-        matData.base = rMat->baseColor;
+        matData.float1 = rMat->data.float1;
+        // In the future there will be specific conversion (like texture mapping, not just raw data copy)
 
         matIdxMap_[entry.mat] = matIndex;
         matData_.push_back(matData);
