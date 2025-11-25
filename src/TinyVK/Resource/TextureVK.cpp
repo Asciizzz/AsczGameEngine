@@ -481,7 +481,7 @@ TextureVk& TextureVk::setSampler(VkSampler sampler) {
 }
 
 
-void TextureVk::transitionLayout(VkCommandBuffer cmd, VkImageLayout oldLayout, VkImageLayout newLayout) {
+void TextureVk::transitionLayout(ImageVk& image, VkCommandBuffer cmd, VkImageLayout oldLayout, VkImageLayout newLayout) {
     if (image.getImage() == VK_NULL_HANDLE) {
         std::cerr << "TextureVk: Cannot transition layout - image not created" << std::endl;
         return;
@@ -523,7 +523,7 @@ void TextureVk::transitionLayout(VkCommandBuffer cmd, VkImageLayout oldLayout, V
     image.setLayout(newLayout);
 }
 
-void TextureVk::copyFromBuffer(VkCommandBuffer cmd, VkBuffer srcBuffer) {
+void TextureVk::copyFromBuffer(ImageVk& image, VkCommandBuffer cmd, VkBuffer srcBuffer) {
     if (image.getImage() == VK_NULL_HANDLE) {
         std::cerr << "TextureVk: Cannot copy from buffer - image not created" << std::endl;
         return;
@@ -543,7 +543,7 @@ void TextureVk::copyFromBuffer(VkCommandBuffer cmd, VkBuffer srcBuffer) {
     vkCmdCopyBufferToImage(cmd, srcBuffer, image.getImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 }
 
-void TextureVk::generateMipmaps(VkCommandBuffer cmd, VkPhysicalDevice pDevice) {
+void TextureVk::generateMipmaps(ImageVk& image, VkCommandBuffer cmd, VkPhysicalDevice pDevice) {
     if (image.getImage() == VK_NULL_HANDLE) {
         std::cerr << "TextureVk: Cannot generate mipmaps - image not created" << std::endl;
         return;
@@ -617,24 +617,6 @@ void TextureVk::generateMipmaps(VkCommandBuffer cmd, VkPhysicalDevice pDevice) {
     
     image.setLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
-
-
-
-TextureVk& TextureVk::transitionLayoutImmediate(VkCommandBuffer tempCmd, VkImageLayout oldLayout, VkImageLayout newLayout) {
-    transitionLayout(tempCmd, oldLayout, newLayout);
-    return *this;
-}
-
-TextureVk& TextureVk::copyFromBufferImmediate(VkCommandBuffer tempCmd, VkBuffer srcBuffer) {
-    copyFromBuffer(tempCmd, srcBuffer);
-    return *this;
-}
-
-TextureVk& TextureVk::generateMipmapsImmediate(VkCommandBuffer tempCmd, VkPhysicalDevice pDevice) {
-    generateMipmaps(tempCmd, pDevice);
-    return *this;
-}
-
 
 VkPipelineStageFlags TextureVk::getStageFlags(VkImageLayout layout) {
     switch (layout) {

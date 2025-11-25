@@ -72,8 +72,8 @@ struct tinyTexture {
 
 // ----------------------- Vulkan API -----------------------
 
-    VkImageView view() const noexcept { return textureVk_.getView(); }
-    VkSampler sampler() const noexcept { return textureVk_.getSampler(); }
+    VkImage image() const noexcept { return imageVk_.getImage(); }
+    VkImageView view() const noexcept { return imageVk_.getView(); }
 
     bool vkCreate(const tinyVk::Device* device, VkSampler sampler = VK_NULL_HANDLE) {
         using namespace tinyVk;
@@ -115,27 +115,17 @@ struct tinyTexture {
             .withAspectMask(ImageAspect::Color)
             .withMipLevels(mipLevel);
 
-        textureVk_ = TextureVk(); // Reset texture
-        textureVk_
+        imageVk_ = ImageVk(); // Reset image
+        imageVk_
             .init(dvk_->device)
             .createImage(imageConfig)
             .createView(viewConfig);
 
-        if (sampler != VK_NULL_HANDLE) {
-            textureVk_.setSampler(sampler);
-        } else {
-            SamplerConfig sampConfig = SamplerConfig().withAddressModes(vkWrapMode());
-            textureVk_.createSampler(sampConfig);
-        }
-
-        if (!textureVk_.valid()) return false;
-
         TempCmd tempCmd(dvk_, dvk_->graphicsPoolWrapper);
 
-        textureVk_
-            .transitionLayoutImmediate(tempCmd.get(), ImageLayout::Undefined, ImageLayout::TransferDstOptimal)
-            .copyFromBufferImmediate(tempCmd.get(), stagingBuffer.get())
-            .generateMipmapsImmediate(tempCmd.get(), dvk_->pDevice);
+        TextureVk::transitionLayout(imageVk_, tempCmd, ImageLayout::Undefined, ImageLayout::TransferDstOptimal);
+        TextureVk::copyFromBuffer(imageVk_, tempCmd, stagingBuffer.get());
+        TextureVk::generateMipmaps(imageVk_, tempCmd, dvk_->pDevice);
 
         tempCmd.endAndSubmit();
 
@@ -162,7 +152,8 @@ private:
 
     // Vulkan parts
     const tinyVk::Device* dvk_ = nullptr;
-    tinyVk::TextureVk textureVk_;
+    tinyVk::ImageVk imageVk_;
+    VkSamplerAddressMode wrapModeVk_ = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 
     uint64_t makeHash() noexcept {
         const uint64_t FNV_offset = 1469598103934665603ULL;

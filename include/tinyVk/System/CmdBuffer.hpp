@@ -39,6 +39,8 @@ public:
 
     VkCommandBuffer get() const { return cmdBuffer; }
 
+    operator VkCommandBuffer() const { return cmdBuffer; } // Implicit conversion   
+
     const Device* dvk = nullptr;
     Device::PoolWrapper poolWrapper{};
     VkCommandBuffer cmdBuffer = VK_NULL_HANDLE;

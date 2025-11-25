@@ -276,14 +276,18 @@ public:
     VkSampler getSampler() const { return sampler.get(); }
 
 
-    void transitionLayout(VkCommandBuffer cmd, VkImageLayout oldLayout, VkImageLayout newLayout);
-    void copyFromBuffer(VkCommandBuffer cmd, VkBuffer srcBuffer);
-    void generateMipmaps(VkCommandBuffer cmd, VkPhysicalDevice pDevice);
+    // void transitionLayout(VkCommandBuffer cmd, VkImageLayout oldLayout, VkImageLayout newLayout);
+    // void copyFromBuffer(VkCommandBuffer cmd, VkBuffer srcBuffer);
+    // void generateMipmaps(VkCommandBuffer cmd, VkPhysicalDevice pDevice);
 
     // Immediate operations using temporary command buffers
-    TextureVk& transitionLayoutImmediate(VkCommandBuffer tempCmd, VkImageLayout oldLayout, VkImageLayout newLayout);
-    TextureVk& copyFromBufferImmediate(VkCommandBuffer tempCmd, VkBuffer srcBuffer);
-    TextureVk& generateMipmapsImmediate(VkCommandBuffer tempCmd, VkPhysicalDevice pDevice);
+    // TextureVk& transitionLayoutImmediate(VkCommandBuffer tempCmd, VkImageLayout oldLayout, VkImageLayout newLayout);
+    // TextureVk& copyFromBufferImmediate(VkCommandBuffer tempCmd, VkBuffer srcBuffer);
+    // TextureVk& generateMipmapsImmediate(VkCommandBuffer tempCmd, VkPhysicalDevice pDevice);
+
+    static void transitionLayout(ImageVk& image, VkCommandBuffer cmd, VkImageLayout oldLayout, VkImageLayout newLayout);
+    static void copyFromBuffer(ImageVk& image, VkCommandBuffer cmd, VkBuffer srcBuffer);
+    static void generateMipmaps(ImageVk& image, VkCommandBuffer cmd, VkPhysicalDevice pDevice);
 
     bool valid() const { return image.valid() && sampler.valid(); }
 
@@ -292,8 +296,8 @@ private:
     SamplerVk sampler;
     
     // Helper methods
-    VkPipelineStageFlags getStageFlags(VkImageLayout layout);
-    VkAccessFlags getAccessFlags(VkImageLayout layout);
+    static VkPipelineStageFlags getStageFlags(VkImageLayout layout);
+    static VkAccessFlags getAccessFlags(VkImageLayout layout);
 };
 
 }
