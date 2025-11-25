@@ -90,18 +90,7 @@ namespace Texture {
 
     static UnorderedMap<uint64_t, ImTextureID> textureCache;
 
-    static tinyVk::SamplerVk sampler;
-
-    static void initSampler(const tinyVk::Device* dvk) {
-        SamplerConfig sampConfig = SamplerConfig()
-            .withAddressModes(VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE)
-            .withPhysicalDevice(dvk->pDevice);
-
-        sampler.init(dvk->device);
-        sampler.create(sampConfig);
-    }
-
-    static void Render(tinyTexture* texture) {
+    static void Render(tinyTexture* texture, VkSampler sampler) {
         uint64_t cacheKey = (uint64_t)texture->view();
 
         ImTextureID texId;
@@ -140,6 +129,8 @@ namespace Texture {
 // UI INITIALIZATION
 // ============================================================================
 
+static const tinyVk::SamplerVk* imguiSampler;
+
 void tinyApp::initUI() {
     UIBackend = new tinyUI::Backend_Vulkan();
 
@@ -156,6 +147,16 @@ void tinyApp::initUI() {
 
     UIBackend->setVulkanData(vkData);
 
+    uiSampler = tinyVk::SamplerVk();
+    SamplerConfig sampConfig = SamplerConfig()
+        .withAddressModes(VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE)
+        .withPhysicalDevice(dvk->pDevice);
+
+    uiSampler.init(dvk->device);
+    uiSampler.create(sampConfig);
+
+    imguiSampler = &uiSampler;
+
     tinyUI::Init(UIBackend, windowManager->window);
 
     projRef = project.get();
@@ -167,8 +168,6 @@ void tinyApp::initUI() {
 
     // Init code editor
     CodeEditor::Init();
-
-    Texture::initSampler(dvk.get());
 }
 
 void tinyApp::updateActiveScene() {
@@ -1301,7 +1300,7 @@ static void RenderFileInspector(tinyProject* project) {
     } else if (dHandle.is<tinyTexture>()) {
         tinyTexture* texture = fs.r().get<tinyTexture>(dHandle);
 
-        Texture::Render(texture);
+        Texture::Render(texture, *imguiSampler);
     }
 }
 
