@@ -108,14 +108,16 @@ void tinyDrawable::submit(const MeshEntry& entry) noexcept {
         shaderIt = shaderIdxMap_.find(shaderHandle);
     }
 
+    // Debug
+    uint32_t debugMat = entry.mat.idx();
+
     ShaderGroup& shaderGroup = shaderGroups_[shaderIt->second];
     shaderGroup.shader = shaderHandle;
 
-    // std::unordered_map<tinyHandle, std::vector<Mesh3D::Insta>>& instaMap = shaderGroup.instaMap;
     std::vector<Mesh3D::Insta>& instaVec = shaderGroup.instaMap[entry.mesh];
     instaVec.push_back({
         entry.model,
-        glm::uvec4(instaVec.size(), 0, 0, 0)
+        glm::uvec4(debugMat, 0, 0, 0)
     });
 }
 

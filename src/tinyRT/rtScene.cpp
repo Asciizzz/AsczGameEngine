@@ -191,7 +191,7 @@ void Scene::update(FrameStart frameStart) noexcept {
 
                 draw.submit({
                     meshRD3D->mesh,
-                    tinyHandle(),
+                    meshRD3D->material,
                     tinyHandle(),
                     currentWorld
                 });

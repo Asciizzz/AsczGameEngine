@@ -56,48 +56,23 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
         }
     }
 
-/*
-
     std::vector<tinyHandle> glmMatRHandle;
     if (!model.materials.empty()) {
         tinyHandle fnMatFolder = fs_->createFolder("Materials", fnModelFolder);
 
         for (const auto& mMaterial : model.materials) {
-            tinyMaterial materialVk;
-            materialVk.init(
-                dvk_,
-                sharedRes_.defaultTextureVk0(),
-                sharedRes_.defaultTextureVk1(),
-                sharedRes_.matDescLayout(),
-                sharedRes_.matDescPool()
-            );
+            tinyMaterial material;
 
             // Set material base color from model
-            materialVk.setBaseColor(mMaterial.baseColor);
+            material.baseColor = mMaterial.baseColor;
 
-            // Remap the material's texture indices
-
-            // Albedo texture
-            tinyHandle albHandle = linkHandle(mMaterial.albIndx, glbTexRHandle);
-            materialVk.setTexture(MTexSlot::Albedo, r().get<tinyTextureVk>(albHandle));
-
-            // Normal texture
-            tinyHandle nrmlHandle = linkHandle(mMaterial.nrmlIndx, glbTexRHandle);
-            materialVk.setTexture(MTexSlot::Normal, r().get<tinyTextureVk>(nrmlHandle));
-            // Metallic texture
-            tinyHandle metalHandle = linkHandle(mMaterial.metalIndx, glbTexRHandle);
-            materialVk.setTexture(MTexSlot::MetalRough, r().get<tinyTextureVk>(metalHandle));
-
-            // Emissive texture
-            tinyHandle emisHandle = linkHandle(mMaterial.emisIndx, glbTexRHandle);
-            materialVk.setTexture(MTexSlot::Emissive, r().get<tinyTextureVk>(emisHandle));
-
-            tinyHandle fnHandle = fs_->createFile(mMaterial.name, std::move(materialVk), fnMatFolder);
+            tinyHandle fnHandle = fs_->createFile(mMaterial.name, std::move(material), fnMatFolder);
             tinyHandle dataHandle = fs_->dataHandle(fnHandle);
             glmMatRHandle.push_back(dataHandle);
         }
     }
-*/
+
+    UnorderedMap<tinyHandle, tinyHandle> meshMatMap; // Mesh to material mapping
 
     std::vector<tinyHandle> glbMeshRHandle;
     if (!model.meshes.empty()) {
@@ -109,6 +84,12 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
             tinyHandle fnHandle = fs_->createFile(mMesh.name, std::move(mMesh.mesh), fnMeshFolder);
             tinyHandle dataHandle = fs_->dataHandle(fnHandle);
             glbMeshRHandle.push_back(dataHandle);
+
+            // Link material
+            int mMatIdx = mMesh.matIdx;
+            if (validIndex(mMatIdx, glmMatRHandle)) {
+                meshMatMap[dataHandle] = glmMatRHandle[mMatIdx];
+            }
         }
     }
 
@@ -159,6 +140,9 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
         if (ogNode.hasMESHR()) {
             rtMESHRD3D* meshrd = scene.nWriteComp<rtMESHRD3D>(nodeHandle);
             meshrd->mesh = linkHandle(ogNode.MESHRD_meshIndx, glbMeshRHandle);
+
+            auto it = meshMatMap.find(meshrd->mesh);
+            if (it != meshMatMap.end()) meshrd->material = it->second;
         }
 
         for (int childIndex : ogNode.children) {

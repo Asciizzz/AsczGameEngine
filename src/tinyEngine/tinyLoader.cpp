@@ -598,6 +598,9 @@ void loadMesh(tinyMesh& mesh, int& matIdx,
         allPrimitiveDatas.push_back(std::move(pData));
     }
 
+    // For simplicity use the first primitive's material as the mesh material
+    matIdx = allPrimitiveDatas.empty() ? -1 : allPrimitiveDatas[0].materialIndex;
+
     if (allPrimitiveDatas.empty()) return; // no primitives
 
     std::vector<uint32_t>           allIndices;
