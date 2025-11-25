@@ -121,7 +121,7 @@ void tinyDrawable::finalize(uint32_t* totalInstances, uint32_t* totalMaterials) 
             shaderGroup.instaRanges.push_back(range);
 
             // Copy data
-            size_t dataOffset = curInstances * sizeof(Mesh3D::Insta) + frameIndex_ * instaSize_x1_.aligned;
+            size_t dataOffset = curInstances * sizeof(Mesh3D::Insta) + instaOffset(frameIndex_);
             size_t dataSize = dataVec.size() * sizeof(Mesh3D::Insta);
             instaBuffer_.copyData(dataVec.data(), dataSize, dataOffset);
 

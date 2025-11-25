@@ -247,7 +247,7 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
 
         // Bind the instance buffer once then use the ranges to draw
         VkBuffer buffers[] = { draw.instaBuffer() };
-        VkDeviceSize offsets[] = { draw.instaSize_x1().aligned * currentFrame };
+        VkDeviceSize offsets[] = { draw.instaOffset(currentFrame) };
         vkCmdBindVertexBuffers(currentCmd, 1, 1, buffers, offsets);
 
         for (const auto& range : ranges) {

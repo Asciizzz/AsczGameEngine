@@ -82,6 +82,14 @@ public:
     Size_x1 instaSize_x1() const noexcept { return instaSize_x1_; }
     Size_x1 matSize_x1() const noexcept { return matSize_x1_; }
 
+    inline VkDeviceSize instaOffset(uint32_t frameIndex) const noexcept {
+        return frameIndex * instaSize_x1_.aligned;
+    }
+
+    inline VkDeviceSize matOffset(uint32_t frameIndex) const noexcept {
+        return frameIndex * matSize_x1_.aligned;
+    }
+
 // --------------------------- Bacthking --------------------------
 
     struct MeshEntry {
