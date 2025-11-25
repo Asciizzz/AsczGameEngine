@@ -1,5 +1,7 @@
 #pragma once
 
+#include <unordered_set>
+
 #include "tinyRegistry.hpp"
 
 #include "tinyData/tinyMesh.hpp"
@@ -35,8 +37,7 @@ public:
     static constexpr size_t MAX_INSTANCES = 100000; // 8mb - more than enough
     static constexpr size_t MAX_BONES     = 102400; // 6.5mb ~ 400 model x 256 bones x 64 bytes (mat4) - plenty
     static constexpr size_t MAX_MATERIALS = 10000;  // ~0.8-0.96mb, plenty
-
-    // Total ~ 8mb + (6.5mb + 1mb) * frames(2 or 3) = at worst ~ 30mb, small fries for like 99% of hardware
+    static constexpr size_t MAX_TEXTURES  = 65536;  // Hopefully not needing this many
 
 // ---------------------------------------------------------------
 
@@ -116,16 +117,23 @@ private:
 
 // Vulkan data
 
+    // Instances
     tinyVk::DataBuffer instaBuffer_;
     Size_x1 instaSize_x1_;
 
+    // Materials
     tinyVk::DescSLayout matDescLayout_;
     tinyVk::DescPool matDescPool_;
     tinyVk::DescSet matDescSet_;
-
     tinyVk::DataBuffer matBuffer_;
     Size_x1 matSize_x1_;
 
     std::vector<tinyMaterial::Data> matData_;
     std::unordered_map<tinyHandle, uint32_t> matIdxMap_;
+
+    // Textures
+    tinyVk::DescSLayout texDescLayout_;
+    tinyVk::DescPool texDescPool_;
+    tinyVk::DescSet texDescSet_; // Dynamic descriptor set for textures
+    std::unordered_set<tinyHandle> texInUse_;
 };

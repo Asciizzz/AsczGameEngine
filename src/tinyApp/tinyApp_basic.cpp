@@ -129,7 +129,8 @@ void tinyApp::initComponents() {
     RasterCfg testCfg;
     testCfg.renderPass = renderPass;
     testCfg.setLayouts = {
-        project->descSLayout_Global()
+        project->descSLayout_Global(),
+        project->drawable().matDescLayout()
     };
     // Push constants for mesh only (80 bytes)
     VkPushConstantRange testPushConstant{};

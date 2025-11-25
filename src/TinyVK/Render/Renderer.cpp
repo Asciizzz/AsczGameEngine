@@ -230,12 +230,9 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
     VkDescriptorSet glbSet = global->getDescSet();
     uint32_t offset = currentFrame * global->alignedSize;
 
-    // Bind pipeline and descriptor sets once
-
-    // Use the new instanced static machine
     const tinyDrawable& draw = *sharedRes.drawable;
-    const std::vector<ShaderGroup>& shaderGroups = draw.shaderGroups();
 
+    const std::vector<ShaderGroup>& shaderGroups = draw.shaderGroups();
     for (const auto& shaderGroup : shaderGroups) {
         const auto& ranges = shaderGroup.instaRanges;
         if (ranges.empty()) continue;
@@ -249,6 +246,11 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
         VkBuffer buffers[] = { draw.instaBuffer() };
         VkDeviceSize offsets[] = { draw.instaOffset(currentFrame) };
         vkCmdBindVertexBuffers(currentCmd, 1, 1, buffers, offsets);
+
+        // Bind the material descriptor set once
+        VkDescriptorSet matSet = draw.matDescSet();
+        uint32_t matOffset = draw.matOffset(currentFrame);
+        testPipeline->bindSets(currentCmd, 1, &matSet, 1, &matOffset, 1);
 
         for (const auto& range : ranges) {
             const auto* rMesh = sharedRes.fsGet<tinyMesh>(range.mesh);

@@ -30,6 +30,8 @@ void tinyDrawable::init(const CreateInfo& info) {
     fsr_ = info.fsr;
     dvk_ = info.dvk;
 
+// Setup instance buffer
+
     instaSize_x1_.unaligned = MAX_INSTANCES * sizeof(Mesh3D::Insta);
     instaSize_x1_.aligned = instaSize_x1_.unaligned; // Vertex attributes doesnt need minAlignment
 
@@ -43,6 +45,8 @@ void tinyDrawable::init(const CreateInfo& info) {
     matSize_x1_.unaligned = MAX_MATERIALS * sizeof(tinyMaterial::Data);
     matSize_x1_.aligned = dvk_->alignSizeSSBO(matSize_x1_.unaligned); // SSBO DO need alignment
 
+// Setup material data
+
     matBuffer_
         .setDataSize(matSize_x1_.aligned * maxFramesInFlight_)
         .setUsageFlags(tinyVk::BufferUsage::Storage)
@@ -50,9 +54,8 @@ void tinyDrawable::init(const CreateInfo& info) {
         .createBuffer(dvk_)
         .mapMemory();
 
-    // Create pool and layout
     matDescLayout_.create(dvk_->device, {
-        {0, tinyVk::DescType::StorageBufferDynamic, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr}
+        {0, tinyVk::DescType::StorageBufferDynamic, 1, ShaderStage::Fragment, nullptr}
     });
 
     matDescPool_.create(dvk_->device, {
@@ -71,6 +74,9 @@ void tinyDrawable::init(const CreateInfo& info) {
             matSize_x1_.unaligned // true size
         } })
         .updateDescSets(dvk_->device);
+
+// Setup textures data
+
 }
 
 
@@ -103,7 +109,7 @@ void tinyDrawable::submit(const MeshEntry& entry) noexcept {
         matIndex = static_cast<uint32_t>(matData_.size());
 
         tinyMaterial::Data matData;
-        matData.base = glm::vec4(matIndex, 0, 0, 0); // Testing
+        matData.base = rMat->baseColor;
 
         matIdxMap_[entry.mat] = matIndex;
         matData_.push_back(matData);
@@ -119,16 +125,13 @@ void tinyDrawable::submit(const MeshEntry& entry) noexcept {
         shaderIt = shaderIdxMap_.find(shaderHandle);
     }
 
-    // Debug
-    uint32_t debugMat = entry.mat.idx();
-
     ShaderGroup& shaderGroup = shaderGroups_[shaderIt->second];
     shaderGroup.shader = shaderHandle;
 
     std::vector<Mesh3D::Insta>& instaVec = shaderGroup.instaMap[entry.mesh];
     instaVec.push_back({
         entry.model,
-        glm::uvec4(debugMat, 0, 0, 0)
+        glm::uvec4(matIndex, 0, 0, 0)
     });
 }
 
