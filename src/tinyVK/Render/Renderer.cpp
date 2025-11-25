@@ -223,30 +223,34 @@ void Renderer::drawSky(const tinyProject* project, const PipelineRaster* skyPipe
 
 void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const PipelineRaster* testPipeline) const {
     const SceneRes& sharedRes = scene->res();
+    
+    const tinyDrawable& draw = *sharedRes.drawable;
+    
+    const tinyGlobal* global = project->global();
 
     VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
 
-    const tinyGlobal* global = project->global();
     VkDescriptorSet glbSet = global->getDescSet();
-    uint32_t offset = currentFrame * global->alignedSize;
+    uint32_t glbOffset = currentFrame * global->alignedSize;
+    
+    VkDescriptorSet matSet = draw.matDescSet();
+    uint32_t matOffset = draw.matOffset(currentFrame);
 
-    const tinyDrawable& draw = *sharedRes.drawable;
+    VkDescriptorSet skinSet = draw.skinDescSet();
+    uint32_t skinOffset = draw.skinOffset(currentFrame);
 
     const auto& shaderGroups = draw.shaderGroups();
     for (const auto& [shaderHandle, meshRangeVec] : shaderGroups) { // For each shader groups:
         // In the future you will change this to a r.get<tinyShader>(shaderHandle)
         testPipeline->bindCmd(currentCmd);
-        testPipeline->bindSets(currentCmd, 0, &glbSet, 1, &offset, 1);
+        testPipeline->bindSets(currentCmd, 0, &glbSet, 1, &glbOffset, 1);
+        testPipeline->bindSets(currentCmd, 1, &matSet, 1, &matOffset, 1);
+        testPipeline->bindSets(currentCmd, 2, &skinSet, 1, &skinOffset, 1);
 
         // Bind the instance buffer once then use the ranges to draw
         VkBuffer buffers[] = { draw.instaBuffer() };
         VkDeviceSize offsets[] = { draw.instaOffset(currentFrame) };
         vkCmdBindVertexBuffers(currentCmd, 2, 1, buffers, offsets); // Binding 2
-
-        // Bind the material descriptor set once
-        VkDescriptorSet matSet = draw.matDescSet();
-        uint32_t matOffset = draw.matOffset(currentFrame);
-        testPipeline->bindSets(currentCmd, 1, &matSet, 1, &matOffset, 1);
 
         for (const auto& meshRange : meshRangeVec) {
             const auto* rMesh = sharedRes.fsGet<tinyMesh>(meshRange.mesh);

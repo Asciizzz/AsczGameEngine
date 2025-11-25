@@ -70,66 +70,18 @@ void tinyApp::initComponents() {
     
     pipelineSky = MakeUnique<PipelineRaster>(device, skyCfg);
 
-/*
-    // ===== Pipeline 2: Rigged Mesh =====
-    RasterCfg riggedCfg;
-    riggedCfg.renderPass = renderPass;
-    riggedCfg.setLayouts = {
-        project->descSLayout_Global(),
-        // sharedRes.matDescLayout(),
-        // sharedRes.skinDescLayout(),
-        sharedRes.mrphDsDescLayout(),
-        sharedRes.mrphWsDescLayout()
-    };
-    
-    // Push constants for rigged mesh (80 bytes)
-    VkPushConstantRange riggedPushConstant{};
-    riggedPushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-    riggedPushConstant.offset = 0;
-    riggedPushConstant.size = 80;
-    riggedCfg.pushConstantRanges = { riggedPushConstant };
-    
-    riggedCfg.withShaders("Shaders/bin/Rasterize/TestRigged.vert.spv", "Shaders/bin/Rasterize/TestSingle.frag.spv")
-        .withVertexInput({ vriggedBind }, { vriggedAttrs });
-
-    pipelineRigged = MakeUnique<PipelineRaster>(device, riggedCfg);
-
-    // ===== Pipeline 3: Static Mesh =====
-    RasterCfg staticCfg;
-    staticCfg.renderPass = renderPass;
-    staticCfg.setLayouts = { 
-        project->descSLayout_Global(),
-        // sharedRes.matDescLayout()
-    };
-    
-    // Push constants for static mesh (80 bytes)
-    VkPushConstantRange staticPushConstant{};
-    staticPushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-    staticPushConstant.offset = 0;
-    staticPushConstant.size = 80;
-    staticCfg.pushConstantRanges = { staticPushConstant };
-    
-    staticCfg.withShaders("Shaders/bin/Rasterize/TestStatic.vert.spv", "Shaders/bin/Rasterize/TestSingle.frag.spv")
-        .withVertexInput({ vstaticBind }, { vstaticAttrs });
-    
-    pipelineStatic = MakeUnique<PipelineRaster>(device, staticCfg);
-*/
-
     // ===== Pipeline 4: Test =====
 
     RasterCfg testCfg;
     testCfg.renderPass = renderPass;
-    testCfg.setLayouts = {
-        project->descSLayout_Global(),
-        project->drawable().matDescLayout()
-    };
-    // Push constants for mesh only (80 bytes)
-    VkPushConstantRange testPushConstant{};
-    testPushConstant.stageFlags = ShaderStage::VertexAndFragment;
-    testPushConstant.offset = 0;
-    testPushConstant.size = 16;
-    testCfg.pushConstantRanges = { testPushConstant };
-    testCfg.withShaders("Shaders/bin/Test/Test.vert.spv", "Shaders/bin/Test/Test.frag.spv")
+    testCfg
+        .withDescriptorLayouts({
+            project->descSLayout_Global(),
+            project->drawable().matDescLayout(),
+            project->drawable().skinDescLayout()
+        })
+        .withPushConstants(ShaderStage::VertexAndFragment, 0, 16)
+        .withShaders("Shaders/bin/Test/Test.vert.spv", "Shaders/bin/Test/Test.frag.spv")
         .withVertexInput(
             tinyDrawable::bindingDesc(),
             { tinyDrawable::attributeDescs() }
@@ -162,14 +114,10 @@ bool tinyApp::checkWindowResize() {
 
     // Update render pass for all pipeline configs
     pipelineSky->cfg.renderPass = renderPass;
-    // pipelineRigged->cfg.renderPass = renderPass;
-    // pipelineStatic->cfg.renderPass = renderPass;
     pipelineTest->cfg.renderPass = renderPass;
 
     // Recreate pipelines
     pipelineSky->recreate();
-    // pipelineRigged->recreate();
-    // pipelineStatic->recreate();
     pipelineTest->recreate();
 
     // Update UI render pass

@@ -9,6 +9,10 @@ layout(set = 0, binding = 0) uniform GlobalUBO {
     mat4 view;
 } glb;
 
+layout (std430, set = 2, binding = 0) readonly buffer SkinBuffer {
+    mat4 skinData[];
+};
+
 layout(location = 0) in vec4  inPos_Tu;
 layout(location = 1) in vec4  inNrml_Tv;
 layout(location = 2) in vec4  inTangent;
@@ -57,21 +61,16 @@ void main() {
     } else {
         fragOther = inBoneWs;
 
-        // We havent setup skinning yet, so just pass through
-        skinnedPos = vec4(basePos, 1.0);
-        skinnedNormal = baseNormal;
-        skinnedTangent = baseTangent;
+        for (uint i = 0; i < 4; ++i) {
+            uint id = inBoneIDs[i] + boneOffset;
 
-        // for (uint i = 0; i < 4; ++i) {
-        //     uint id = inBoneIDs[i];
+            float w = inBoneWs[i];
+            mat4 boneMat = id < boneCount ? skinData[id] : mat4(1.0);
 
-        //     float w = inBoneWs[i];
-        //     mat4 boneMat = id < boneCount ? skinData[id] : mat4(1.0);
-
-        //     skinnedPos     += w * (boneMat * vec4(basePos, 1.0));
-        //     skinnedNormal  += w * mat3(boneMat) * baseNormal;
-        //     skinnedTangent += w * mat3(boneMat) * baseTangent;
-        // }
+            skinnedPos     += w * (boneMat * vec4(basePos, 1.0));
+            skinnedNormal  += w * mat3(boneMat) * baseNormal;
+            skinnedTangent += w * mat3(boneMat) * baseTangent;
+        }
     }
 
 // ----------------------------------

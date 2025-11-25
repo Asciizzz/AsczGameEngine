@@ -49,11 +49,7 @@ private:
 
     UniquePtr<tinyVk::Renderer> renderer;
 
-    // Three simple pipelines - no manager needed
     UniquePtr<tinyVk::PipelineRaster> pipelineSky;
-    UniquePtr<tinyVk::PipelineRaster> pipelineRigged;
-    UniquePtr<tinyVk::PipelineRaster> pipelineStatic;
-
     UniquePtr<tinyVk::PipelineRaster> pipelineTest;
 
     UniquePtr<tinyProject> project; // New gigachad system
