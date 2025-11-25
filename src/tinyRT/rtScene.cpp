@@ -275,6 +275,7 @@ tinyHandle Scene::instantiate(tinyHandle sceneHandle, tinyHandle parent) noexcep
             cloneRec(fromChildHandle, toHandle);
         }
     };
+
     cloneRec(fromScene->root(), parent);
 
     return newRootHandle;

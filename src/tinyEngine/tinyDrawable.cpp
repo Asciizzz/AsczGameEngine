@@ -243,16 +243,12 @@ void tinyDrawable::submit(const MeshEntry& entry) noexcept {
         // If this skeleton node already registered, use existing range
         auto skinRangeIt = skinRanges_.find(skeleNode);
         if (skinRangeIt == skinRanges_.end()) {
-        //     instaData.other.x = skinRangeIt->second.skinOffset;
-        //     instaData.other.y = skinRangeIt->second.skinCount;
-        // } else { // New skeleton node, create new range
             uint32_t thisCount = static_cast<uint32_t>(skeleData.skinData->size());
 
             SkinRange newRange;
             newRange.skinOffset = skinCount_;
             newRange.skinCount = static_cast<uint32_t>(skeleData.skinData->size());
             skinRanges_[skeleNode] = newRange;
-            printf("New skin range: offset=%u, count=%u\n", newRange.skinOffset, newRange.skinCount);
 
             // Copy skin data
             size_t skinDataSize = thisCount * sizeof(glm::mat4);
