@@ -21,34 +21,10 @@ namespace Mesh3D {
         glm::mat4 model = glm::mat4(1.0f); // Model matrix
         glm::uvec4 other = glm::uvec4(0); // Additional data
 
-        static VkVertexInputBindingDescription bindingDesc(uint32_t binding = 1);
-        static std::vector<VkVertexInputAttributeDescription> attrDescs(uint32_t binding = 1, uint32_t locationOffset = 3);
-    };
-
-    struct InstaRange {
-        tinyHandle mesh;
-        std::vector<uint32_t> submesh;
-        uint32_t offset = 0;
-        uint32_t count = 0;
+        static VkVertexInputBindingDescription bindingDesc(uint32_t binding);
+        static std::vector<VkVertexInputAttributeDescription> attrDescs(uint32_t binding, uint32_t locationOffset);
     };
 }
-
-struct MeshGroup {
-    std::vector<Mesh3D::Insta> instaData;
-    std::vector<uint32_t> submeshIndex;
-    /*List of submesh indices for that shader
-        Every submesh uses different material which can potentially use different shader.
-        This will ruin the batching if we group by mesh only.
-    */
-};
-
-struct ShaderGroup {
-    tinyHandle shader;
-
-    std::unordered_map<tinyHandle, MeshGroup> meshGroups;
-    std::vector<Mesh3D::InstaRange> instaRanges;
-};
-
 
 class tinyDrawable {
 public:
@@ -58,13 +34,31 @@ public:
     static constexpr size_t MAX_BONES     = 102400; // 6.5mb ~ 400 model x 256 bones x 64 bytes (mat4) - plenty
     static constexpr size_t MAX_MORPHS    = 256;    // Morph WEIGHTS, not Delta
 
-// ---------------------------------------------------------------
-
     struct CreateInfo {
         uint32_t maxFramesInFlight = 2;
         tinyRegistry* fsr = nullptr;
         const tinyVk::Device* dvk = nullptr;
     };
+
+    struct Size_x1 { // Per-frame
+        VkDeviceSize aligned = 0;   // Data aligned to min offset alignment
+        VkDeviceSize unaligned = 0; // Actual data size to copy
+    };
+
+    struct MeshEntry {
+        tinyHandle mesh;
+        glm::mat4 model = glm::mat4(1.0f);
+    };
+
+    struct MeshGroup {
+        tinyHandle mesh;
+        std::vector<uint32_t> submeshes;
+
+        uint32_t instaOffset;
+        uint32_t instaCount;
+    };
+
+// ---------------------------------------------------------------
 
     tinyDrawable() noexcept = default;
     void init(const CreateInfo& info);
@@ -88,17 +82,10 @@ public:
     VkDescriptorSet matDescSet() const noexcept { return matDescSet_.get(); }
     VkDescriptorSetLayout matDescLayout() const noexcept { return matDescLayout_.get(); }
 
-    const std::vector<ShaderGroup>& shaderGroups() const noexcept { return shaderGroups_; }
-
     uint32_t matIndex(tinyHandle matHandle) const noexcept {
         auto it = matIdxMap_.find(matHandle);
         return (it != matIdxMap_.end()) ? it->second : 0;
     }
-
-    struct Size_x1 { // Per-frame
-        VkDeviceSize aligned = 0;   // Data aligned to min offset alignment
-        VkDeviceSize unaligned = 0; // Actual data size to copy
-    };
 
     Size_x1 instaSize_x1() const noexcept { return instaSize_x1_; }
     Size_x1 matSize_x1() const noexcept { return matSize_x1_; }
@@ -113,14 +100,14 @@ public:
 
 // --------------------------- Bacthking --------------------------
 
-    struct MeshEntry {
-        tinyHandle mesh;
-        glm::mat4 model = glm::mat4(1.0f);
-    };
-
     void startFrame(uint32_t frameIndex) noexcept;
     void submit(const MeshEntry& entry) noexcept;
-    void finalize(uint32_t* totalInstances = nullptr, uint32_t* totalMaterials = nullptr);
+    void finalize();
+
+
+    const std::unordered_map<tinyHandle, std::vector<MeshGroup>>& shaderGroups() const noexcept {
+        return shaderGroups_;
+    }
 
 private:
 // Basic info
@@ -130,11 +117,9 @@ private:
     tinyRegistry* fsr_ = nullptr;
     const tinyVk::Device* dvk_ = nullptr;
 
-    // Perframe freshed list
-    std::vector<ShaderGroup> shaderGroups_;
-    std::unordered_map<tinyHandle, uint32_t> shaderIdxMap_;
-
-// Vulkan data
+    // True implementation
+    std::unordered_map<tinyHandle, std::vector<Mesh3D::Insta>> meshInstaMap_; // Mesh handle -> instance data
+    std::unordered_map<tinyHandle, std::vector<MeshGroup>> shaderGroups_; // Shader handle -> mesh groups
 
     // Instances
     tinyVk::DataBuffer instaBuffer_;

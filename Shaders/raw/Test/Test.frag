@@ -21,22 +21,22 @@ layout(std430, set = 1, binding = 0) readonly buffer MatBuffer {
 
 layout(location = 0) out vec4 outColor;
 
-// // Array of rainbow colors for testing
-// vec4 rainbowColors[7] = vec4[](
-//     vec4(1.0, 0.0, 0.0, 1.0),
-//     vec4(1.0, 0.5, 0.0, 1.0),
-//     vec4(1.0, 1.0, 0.0, 1.0),
-//     vec4(0.0, 1.0, 0.0, 1.0),
-//     vec4(0.0, 0.0, 1.0, 1.0),
-//     vec4(0.29, 0.0, 0.51, 1.0),
-//     vec4(0.56, 0.0, 1.0, 1.0)
-// );
+// Array of rainbow colors for testing
+vec4 rainbowColors[7] = vec4[](
+    vec4(1.0, 0.0, 0.0, 1.0),
+    vec4(1.0, 0.5, 0.0, 1.0),
+    vec4(1.0, 1.0, 0.0, 1.0),
+    vec4(0.0, 1.0, 0.0, 1.0),
+    vec4(0.0, 0.0, 1.0, 1.0),
+    vec4(0.29, 0.0, 0.51, 1.0),
+    vec4(0.56, 0.0, 1.0, 1.0)
+);
 
 void main() {
     vec3 lightDir = vec3(1.0, 1.0, 1.0);
 
-    // vec4 base = rainbowColors[pConst.props.x % 7];
     Material mat = materials[pConst.props.x];
+    mat.base = rainbowColors[pConst.props.x % 7];
 
     outColor = mat.base * abs(dot(normalize(fragNrml), normalize(lightDir)));
 }

@@ -139,11 +139,14 @@ void tinyApp::initComponents() {
     testPushConstant.size = 16;
     testCfg.pushConstantRanges = { testPushConstant };
     testCfg.withShaders("Shaders/bin/Test/Test.vert.spv", "Shaders/bin/Test/Test.frag.spv")
-        .withVertexInput({
-            vstaticBind, Mesh3D::Insta::bindingDesc()
-        }, {
-            vstaticAttrs, Mesh3D::Insta::attrDescs()
-        });
+        .withVertexInput(
+            { vstaticBind, Mesh3D::Insta::bindingDesc(1) },
+            { vstaticAttrs, Mesh3D::Insta::attrDescs(1, 3) }
+        );
+        // .withVertexInput(
+        //     { vriggedBind, Mesh3D::Insta::bindingDesc(1) },
+        //     { vriggedAttrs, Mesh3D::Insta::attrDescs(1, 5) }
+        // );
 
     pipelineTest = MakeUnique<PipelineRaster>(device, testCfg);
     // ===== Initialize UI System =====

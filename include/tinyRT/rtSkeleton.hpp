@@ -21,8 +21,6 @@ struct Skeleton3D {
         for (size_t i = 0; i < skeleton->bones.size(); ++i) {
             localPose_[i] = skeleton->bones[i].bindPose;
         }
-
-        printf("Initialized Skeleton3D with %zu bones.\n", skeleton->bones.size());
     }
 
     void update(uint32_t boneIdx = 0) noexcept {

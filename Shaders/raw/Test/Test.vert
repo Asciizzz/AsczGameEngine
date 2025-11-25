@@ -20,6 +20,12 @@ layout(location = 5) in vec4  mat4_2;
 layout(location = 6) in vec4  mat4_3;
 layout(location = 7) in uvec4 other;
 
+// layout(location = 5) in vec4  mat4_0;
+// layout(location = 6) in vec4  mat4_1;
+// layout(location = 7) in vec4  mat4_2;
+// layout(location = 8) in vec4  mat4_3;
+// layout(location = 9) in uvec4 other;
+
 layout(location = 0) out vec3 fragNrml;
 
 void main() {

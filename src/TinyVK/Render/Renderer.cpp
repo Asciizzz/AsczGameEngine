@@ -232,13 +232,9 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
 
     const tinyDrawable& draw = *sharedRes.drawable;
 
-    const std::vector<ShaderGroup>& shaderGroups = draw.shaderGroups();
-    for (const auto& shaderGroup : shaderGroups) {
-        const auto& ranges = shaderGroup.instaRanges;
-        if (ranges.empty()) continue;
-
-        // Bind this specific shader pipeline
-        /* For the time being we only have one pipeline, so no need to switch. */
+    const auto& shaderGroups = draw.shaderGroups();
+    for (const auto& [shaderHandle, meshGroupVec] : shaderGroups) { // For each shader groups:
+        // In the future you will change this to a r.get<tinyShader>(shaderHandle)
         testPipeline->bindCmd(currentCmd);
         testPipeline->bindSets(currentCmd, 0, &glbSet, 1, &offset, 1);
 
@@ -252,8 +248,8 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
         uint32_t matOffset = draw.matOffset(currentFrame);
         testPipeline->bindSets(currentCmd, 1, &matSet, 1, &matOffset, 1);
 
-        for (const auto& range : ranges) {
-            const auto* rMesh = sharedRes.fsGet<tinyMesh>(range.mesh);
+        for (const auto& meshGroup : meshGroupVec) {
+            const auto* rMesh = sharedRes.fsGet<tinyMesh>(meshGroup.mesh);
             if (!rMesh) continue; // Mesh not found in registry
 
             // Bind the vertex and index buffers
@@ -265,15 +261,21 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
             vkCmdBindVertexBuffers(currentCmd, 0, 1, vBuffers, vOffsets);
             vkCmdBindIndexBuffer(currentCmd, indxBuffer, 0, indxType);
 
-            // vkCmdDrawIndexed(currentCmd, rMesh->indxCount(), range.count, 0, 0, range.offset);
-            for (uint32_t submeshIdx : range.submesh) {
+            for (uint32_t submeshIdx : meshGroup.submeshes) {
                 const auto& part = rMesh->parts()[submeshIdx];
 
                 uint32_t matIdx = draw.matIndex(part.material);
 
                 testPipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, 0, glm::uvec4(matIdx, 0, 0, 0));
-            
-                vkCmdDrawIndexed(currentCmd, part.indxCount, range.count, part.indxOffset, 0, range.offset);
+
+                vkCmdDrawIndexed(
+                    currentCmd, 
+                    part.indxCount,
+                    meshGroup.instaCount,
+                    part.indxOffset,
+                    0,
+                    meshGroup.instaOffset
+                );
             }
         }
     }
