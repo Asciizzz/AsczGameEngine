@@ -7,102 +7,6 @@
 
 using namespace tinyVk;
 
-// ImageConfig implementation
-ImageConfig& ImageConfig::withDimensions(uint32_t w, uint32_t h, uint32_t d) {
-    width = w;
-    height = h;
-    depth = d;
-    return *this;
-}
-
-ImageConfig& ImageConfig::withAutoMipLevels() {
-    mipLevels = ImageVk::autoMipLevels(width, height);
-    return *this;
-}
-
-ImageConfig& ImageConfig::withFormat(VkFormat fmt) {
-    format = fmt;
-    return *this;
-}
-
-ImageConfig& ImageConfig::withUsage(VkImageUsageFlags usageFlags) {
-    usage = usageFlags;
-    return *this;
-}
-
-ImageConfig& ImageConfig::withMemProps(VkMemoryPropertyFlags memProps) {
-    memoryProperties = memProps;
-    return *this;
-}
-
-ImageConfig& ImageConfig::withMipLevels(uint32_t levels) {
-    mipLevels = levels;
-    return *this;
-}
-
-ImageConfig& ImageConfig::withSamples(VkSampleCountFlagBits sampleCount) {
-    samples = sampleCount;
-    return *this;
-}
-
-ImageConfig& ImageConfig::withTiling(VkImageTiling imageTiling) {
-    tiling = imageTiling;
-    return *this;
-}
-
-ImageConfig& ImageConfig::withPhysicalDevice(VkPhysicalDevice pDevice) {
-    this->pDevice = pDevice;
-    return *this;
-}
-
-// ImageViewConfig implementation
-ImageViewConfig& ImageViewConfig::withType(VkImageViewType viewType) {
-    type = viewType;
-    return *this;
-}
-
-ImageViewConfig& ImageViewConfig::withFormat(VkFormat fmt) {
-    format = fmt;
-    return *this;
-}
-
-ImageViewConfig& ImageViewConfig::withAspectMask(VkImageAspectFlags aspect) {
-    aspectMask = aspect;
-    return *this;
-}
-
-ImageViewConfig& ImageViewConfig::withBaseMipLevel(uint32_t baseLevel) {
-    baseMipLevel = baseLevel;
-    return *this;
-}
-
-ImageViewConfig& ImageViewConfig::withMipLevels(uint32_t levels) {
-    mipLevels = levels;
-    return *this;
-}
-
-ImageViewConfig& ImageViewConfig::withBaseArrayLayer(uint32_t baseLayer) {
-    baseArrayLayer = baseLayer;
-    return *this;
-}
-
-ImageViewConfig& ImageViewConfig::withArrayLayers(uint32_t layers) {
-    arrayLayers = layers;
-    return *this;
-}
-
-ImageViewConfig& ImageViewConfig::withComponents(VkComponentMapping comp) {
-    components = comp;
-    return *this;
-}
-
-ImageViewConfig& ImageViewConfig::withAutoMipLevels(uint32_t width, uint32_t height) {
-    mipLevels = ImageVk::autoMipLevels(width, height);
-    return *this;
-}
-
-
-
 void ImageVk::cleanup() {
     if (device == VK_NULL_HANDLE) return;
 
@@ -233,7 +137,7 @@ ImageVk& ImageVk::createImage(const ImageConfig& config) {
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = Device::findMemoryType(memRequirements.memoryTypeBits, config.memoryProperties, config.pDevice);
+    allocInfo.memoryTypeIndex = Device::findMemoryType(memRequirements.memoryTypeBits, config.memProps, config.pDevice);
 
     if (vkAllocateMemory(device, &allocInfo, nullptr, &memory) != VK_SUCCESS) {
         std::cerr << "ImageVk: Failed to allocate image memory" << std::endl;

@@ -173,10 +173,6 @@ void tinyApp::updateActiveScene() {
     curScene = project->scene(State::sceneHandle);
     sceneRef = curScene;
 
-    // curScene->setFStart({
-    //     renderer->getCurrentFrame(),
-    //     fpsManager->deltaTime
-    // });
     curScene->update({
         renderer->getCurrentFrame(),
         fpsManager->deltaTime

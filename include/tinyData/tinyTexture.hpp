@@ -80,12 +80,12 @@ struct tinyTexture {
 
         dvk_ = device;
 
-        VkFormat textureFormat;
+        VkFormat imageFormat;
         switch (channels()) {
-            case 1: textureFormat = VK_FORMAT_R8_SRGB; break;
-            case 2: textureFormat = VK_FORMAT_R8G8_SRGB; break;
-            case 3: textureFormat = VK_FORMAT_R8G8B8_SRGB; break;
-            case 4: textureFormat = VK_FORMAT_R8G8B8A8_SRGB; break;
+            case 1: imageFormat = VK_FORMAT_R8_SRGB; break;
+            case 2: imageFormat = VK_FORMAT_R8G8_SRGB; break;
+            case 3: imageFormat = VK_FORMAT_R8G8B8_SRGB; break;
+            case 4: imageFormat = VK_FORMAT_R8G8B8A8_SRGB; break;
             default: return false; // Unsupported channel count
         }
 
@@ -102,18 +102,18 @@ struct tinyTexture {
 
         uint32_t mipLevel = ImageVk::autoMipLevels(width(), height());
 
-        ImageConfig imageConfig = ImageConfig()
-            .withPhysicalDevice(dvk_->pDevice)
-            .withDimensions(width(), height())
-            .withMipLevels(mipLevel)
-            .withFormat(textureFormat)
-            .withUsage(ImageUsage::Sampled | ImageUsage::TransferDst | ImageUsage::TransferSrc)
-            .withTiling(ImageTiling::Optimal)
-            .withMemProps(MemProp::DeviceLocal);
+        ImageConfig imageConfig;
+        imageConfig.pDevice = dvk_->pDevice;
+        imageConfig.dimensions(width(), height());
+        imageConfig.mipLevels = mipLevel;
+        imageConfig.format = imageFormat;
+        imageConfig.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+        imageConfig.tiling = VK_IMAGE_TILING_OPTIMAL;
+        imageConfig.memProps = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
-        ImageViewConfig viewConfig = ImageViewConfig()
-            .withAspectMask(ImageAspect::Color)
-            .withMipLevels(mipLevel);
+        ImageViewConfig viewConfig;
+        viewConfig.format = imageFormat;
+        viewConfig.aspectMask = ImageAspect::Color;
 
         imageVk_ = ImageVk(); // Reset image
         imageVk_

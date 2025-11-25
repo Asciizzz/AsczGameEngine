@@ -47,30 +47,20 @@ struct ImageAspect {
 struct ImageConfig {
     uint32_t width = 0;
     uint32_t height = 0;
+    void dimensions(uint32_t w, uint32_t h) { width = w; height = h; }
     uint32_t depth = 1;
     uint32_t mipLevels = 1;
+    void autoMipLevels();
     uint32_t arrayLayers = 1;
     VkFormat format = VK_FORMAT_UNDEFINED;
     VkImageType imageType = VK_IMAGE_TYPE_2D;
     VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
     VkImageUsageFlags usage = 0;
-    VkMemoryPropertyFlags memoryProperties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    VkMemoryPropertyFlags memProps = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
     VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT;
     VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
     VkPhysicalDevice pDevice = VK_NULL_HANDLE; // Optional, for memory type finding
-    
-    // Builder pattern methods for easy configuration
-    ImageConfig& withDimensions(uint32_t w, uint32_t h, uint32_t d = 1);
-    ImageConfig& withFormat(VkFormat fmt);
-    ImageConfig& withUsage(VkImageUsageFlags usageFlags);
-    ImageConfig& withMemProps(VkMemoryPropertyFlags memProps);
-    ImageConfig& withMipLevels(uint32_t levels);
-    ImageConfig& withSamples(VkSampleCountFlagBits sampleCount);
-    ImageConfig& withTiling(VkImageTiling imageTiling);
-    ImageConfig& withPhysicalDevice(VkPhysicalDevice pDevice);
-
-    ImageConfig& withAutoMipLevels();
 };
 
 // Image view configuration
@@ -86,18 +76,6 @@ struct ImageViewConfig {
         VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
         VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY
     };
-
-    // You generally only need these setters
-    ImageViewConfig& withType(VkImageViewType viewType);
-    ImageViewConfig& withFormat(VkFormat fmt);
-    ImageViewConfig& withAspectMask(VkImageAspectFlags aspect);
-    ImageViewConfig& withBaseMipLevel(uint32_t baseLevel);
-    ImageViewConfig& withMipLevels(uint32_t levels);
-    ImageViewConfig& withBaseArrayLayer(uint32_t baseLayer);
-    ImageViewConfig& withArrayLayers(uint32_t layers);
-    ImageViewConfig& withComponents(VkComponentMapping comp);
-
-    ImageViewConfig& withAutoMipLevels(uint32_t width, uint32_t height);
 };
 
 // Main ImageVk class

@@ -75,11 +75,11 @@ void Swapchain::createSwapChain(SDL_Window* window) {
 }
 
 void Swapchain::createImageViews() {
-    ImageViewConfig viewConfig = ImageViewConfig()
-        .withType(VK_IMAGE_VIEW_TYPE_2D)
-        .withAspectMask(ImageAspect::Color)
-        .withMipLevels(1)
-        .withArrayLayers(1);
+    ImageViewConfig viewConfig;
+    viewConfig.type = VK_IMAGE_VIEW_TYPE_2D;
+    viewConfig.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    viewConfig.mipLevels = 1;
+    viewConfig.arrayLayers = 1;
 
     for (auto& img : images) {
         img.createView(viewConfig);

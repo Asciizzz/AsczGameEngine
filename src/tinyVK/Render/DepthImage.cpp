@@ -8,16 +8,16 @@ using namespace tinyVk;
 void DepthImage::create(VkPhysicalDevice pDevice, uint32_t width, uint32_t height) {
     cleanup(); // Clean up existing resources if any
 
-    ImageConfig depthConfig = ImageConfig()
-        .withPhysicalDevice(pDevice)
-        .withDimensions(width, height)
-        .withFormat(findDepthFormat(pDevice))
-        .withUsage(ImageUsage::DepthStencil | ImageUsage::Sampled);
+    ImageConfig imgCfg;
+    imgCfg.pDevice = pDevice;
+    imgCfg.dimensions(width, height);
+    imgCfg.format = findDepthFormat(pDevice);
+    imgCfg.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
-    ImageViewConfig depthViewConfig = ImageViewConfig()
-        .withAspectMask(VK_IMAGE_ASPECT_DEPTH_BIT);
+    ImageViewConfig depthViewConfig;
+    depthViewConfig.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 
-    createImage(depthConfig);
+    createImage(imgCfg);
     createView(depthViewConfig);
 }
 
