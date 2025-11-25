@@ -193,9 +193,12 @@ void Scene::update(FrameStart frameStart) noexcept {
                 tinyMesh* mesh = fsr().get<tinyMesh>(meshRD3D->mesh);
                 if (!mesh || !cam.collideAABB(mesh->ABmin(), mesh->ABmax(), currentWorld)) continue;
 
+                // Submit draw entry
+                const Skeleton3D* skele3D = nGetComp<Skeleton3D>(meshRD3D->skeleNode);
                 draw.submit({
                     meshRD3D->mesh,
-                    currentWorld
+                    currentWorld,
+                    skele3D ? &skele3D->skinData() : nullptr
                 });
             }
         }

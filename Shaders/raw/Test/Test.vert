@@ -25,21 +25,64 @@ layout(location = 9) in uvec4 other;
 layout(location = 0) out vec3 fragWorld;
 layout(location = 1) out vec3 fragNrml;
 layout(location = 2) out vec2 fragUV;
-layout(location = 3) out vec4 fragTangent;
+layout(location = 3) out vec3 fragTangent;
 layout(location = 4) out vec4 fragOther;
 
 void main() {
     mat4 model = mat4(mat4_0, mat4_1, mat4_2, mat4_3);
 
-    vec4 worldPos4 = model * vec4(inPos_Tu.xyz, 1.0);
+    vec3 basePos    = inPos_Tu.xyz;
+    vec3 baseNormal = inNrml_Tv.xyz;
+    vec3 baseTangent = inTangent.xyz;
+
+// ----------------------------------
+    // We will implement morphing in the future
+
+
+// ----------------------------------
+
+    vec4 skinnedPos = vec4(0.0);
+    vec3 skinnedNormal = vec3(0.0);
+    vec3 skinnedTangent = vec3(0.0);
+
+    uint boneOffset = other.x;
+    uint boneCount = other.y;
+
+    if (boneCount == 0) { // No skinning
+        skinnedPos = vec4(basePos, 1.0);
+        skinnedNormal = baseNormal;
+        skinnedTangent = baseTangent;
+
+        fragOther = vec4(0.0); // No skinning
+    } else {
+        fragOther = inBoneWs;
+
+        // We havent setup skinning yet, so just pass through
+        skinnedPos = vec4(basePos, 1.0);
+        skinnedNormal = baseNormal;
+        skinnedTangent = baseTangent;
+
+        // for (uint i = 0; i < 4; ++i) {
+        //     uint id = inBoneIDs[i];
+
+        //     float w = inBoneWs[i];
+        //     mat4 boneMat = id < boneCount ? skinData[id] : mat4(1.0);
+
+        //     skinnedPos     += w * (boneMat * vec4(basePos, 1.0));
+        //     skinnedNormal  += w * mat3(boneMat) * baseNormal;
+        //     skinnedTangent += w * mat3(boneMat) * baseTangent;
+        // }
+    }
+
+// ----------------------------------
+
+    vec4 worldPos4 = model * skinnedPos;
+    fragWorld = worldPos4.xyz;
 
     mat3 normalMat = transpose(inverse(mat3(model)));
-    fragNrml = normalMat * inNrml_Tv.xyz;
+    fragNrml = normalMat * skinnedNormal;
     fragUV = inPos_Tu.zw;
-    fragTangent = inTangent;
-
-    // Debug, if this model is rigged, push to the fragOther the bone color
-    fragOther = inBoneWs;
+    fragTangent = skinnedTangent;
 
     gl_Position = glb.proj * glb.view * worldPos4;
 }

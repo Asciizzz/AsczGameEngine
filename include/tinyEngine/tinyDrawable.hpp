@@ -40,7 +40,7 @@ public:
         tinyHandle mesh;
         glm::mat4 model = glm::mat4(1.0f);
 
-        std::vector<glm::mat4>* skins = nullptr;
+        const std::vector<glm::mat4>* skins = nullptr;
     };
 
     struct MeshRange {

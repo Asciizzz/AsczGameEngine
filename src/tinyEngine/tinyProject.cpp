@@ -149,7 +149,10 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
 
         if (ogNode.hasSKEL3D()) {
             rtSKELE3D* skele3D = scene.nWriteComp<rtSKELE3D>(nodeHandle);
-            skele3D->init(&r().view<tinySkeleton>(), linkHandle(ogNode.SKEL3D_skeleIndx, glbSkeleRHandle));
+            skele3D->init(
+                &r().view<tinySkeleton>(),
+                linkHandle(ogNode.SKEL3D_skeleIndx, glbSkeleRHandle)
+            );
         }
 
         for (int childIndex : ogNode.children) {
