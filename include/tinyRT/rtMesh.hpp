@@ -5,9 +5,9 @@
 namespace tinyRT {
 
 struct MeshRender3D {
-    MeshRender3D& assignMesh(tinyHandle meshHandle, const std::vector<float>& morphWeights = {}) noexcept {
+    MeshRender3D& assignMesh(tinyHandle meshHandle, const std::vector<float>& mrphWeights = {}) noexcept {
         meshHandle_ = meshHandle;
-        morphWeights_ = morphWeights;
+        mrphWeights_ = mrphWeights;
         return *this;
     }
     MeshRender3D& assignSkeleNode(tinyHandle skeleNodeHandle) noexcept {
@@ -18,15 +18,14 @@ struct MeshRender3D {
     tinyHandle meshHandle() const noexcept { return meshHandle_; }
     tinyHandle skeleNodeHandle() const noexcept { return skeleNodeHandle_; }
 
-    std::vector<float>& morphWeights() noexcept { return morphWeights_; }
-    
-    const std::vector<float>& morphWeights() const noexcept { return morphWeights_; }
+    std::vector<float>& mrphWeights() noexcept { return mrphWeights_; }
+    const std::vector<float>& mrphWeights() const noexcept { return mrphWeights_; }
 
 private:
     tinyHandle meshHandle_;
     tinyHandle skeleNodeHandle_;
 
-    std::vector<float> morphWeights_;
+    std::vector<float> mrphWeights_;
 };
 
 }

@@ -202,7 +202,7 @@ void Scene::update(FrameStart frameStart) noexcept {
                         meshRD3D->skeleNodeHandle(),
                         skele3D ? &skele3D->skinData() : nullptr
                     },
-                    &meshRD3D->morphWeights()
+                    &meshRD3D->mrphWeights()
                 });
             }
 
@@ -261,7 +261,7 @@ tinyHandle Scene::instantiate(tinyHandle sceneHandle, tinyHandle parent) noexcep
         if (const rtMESHRD3D* fromMeshRD = fromScene->nGetComp<rtMESHRD3D>(fromHandle)) {
             rtMESHRD3D* toMeshRD = nWriteComp<rtMESHRD3D>(toHandle);
             toMeshRD->
-                assignMesh(fromMeshRD->meshHandle(), fromMeshRD->morphWeights()).
+                assignMesh(fromMeshRD->meshHandle(), fromMeshRD->mrphWeights()).
                 assignSkeleNode(getToHandle(fromMeshRD->skeleNodeHandle()));
         }
 

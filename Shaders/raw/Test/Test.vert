@@ -56,12 +56,12 @@ void main() {
     uint mrphWsOffset = other.z;
     uint mrphWsCount = other.w;
 
-    uint vertexCount = uint(pConst.props.y);
+    uint vertexCount = pConst.props.y;
     uint vertexId = gl_VertexIndex;
 
     if (mrphWsCount > 0 && vertexCount > 0) {
         for (uint m = 0; m < mrphWsCount; ++m) {
-            float weight = mrphWeights[m];
+            float weight = mrphWeights[mrphWsOffset + m];
 
             if (abs(weight) < 0.0001) continue; // negligible
 

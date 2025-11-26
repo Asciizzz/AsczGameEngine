@@ -40,8 +40,6 @@ void main() {
     vec3 lightDir = vec3(1.0, 1.0, 1.0);
 
     Material mat = materials[pConst.props.x];
-    // mat.base = rainbowColors[pConst.props.x % 7];
-    mat.base = fragOther;
 
     outColor = mat.base * abs(dot(normalize(fragNrml), normalize(lightDir)));
 }

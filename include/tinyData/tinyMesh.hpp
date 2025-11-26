@@ -159,8 +159,6 @@ struct tinyMesh {
                 mrphDltsBuffer_, 0, VK_WHOLE_SIZE
             } })
             .updateDescSets(dvk_->device);
-        
-        printf("Allocated morph delta descriptor set for mesh\n");
 
         clearData(); // Optional
     }

@@ -547,7 +547,7 @@ static void RenderSceneNodeHierarchy() {
                     ImGui::Separator();
                     std::string compList = "";
                     if (node->has<rtTRANFM3D>()) compList += "[Tranfm 3D] ";
-                    if (node->has<rtMESHRD3D>()) compList += "[Mesh Rd 3D] ";
+                    if (node->has<rtMESHRD3D>()) compList += "[MeshRd 3D] ";
                     compList = compList.empty() ? "[None]" : compList;
                     ImGui::Text("%s", compList.c_str());
                 } else {
@@ -897,6 +897,21 @@ static void RenderMESHRD3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle)
             ImGui::EndTooltip();
         }
     );
+
+    // Render the morph weights
+    if (!mesh || mesh->mrphCount() == 0) return;
+
+    std::vector<float>& weights = meshRD->mrphWeights();
+
+    for (size_t i = 0; i < mesh->mrphCount(); ++i) {
+        std::string label = "Morph " + std::to_string(i) + "##" + std::to_string(nHandle.value) + std::to_string(i);
+        ImGui::SliderFloat(
+            label.c_str(),
+            &weights[i],
+            0.0f,
+            1.0f
+        );
+    }
 }
 
 /*
