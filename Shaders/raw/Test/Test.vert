@@ -4,11 +4,6 @@ layout(push_constant) uniform PushConstant {
     uvec4 props; // .x = material index, .y = vertex count
 } pConst;
 
-layout(set = 0, binding = 0) uniform GlobalUBO {
-    mat4 proj;
-    mat4 view;
-} glb;
-
 layout(location = 0) in vec4  inPos_Tu;
 layout(location = 1) in vec4  inNrml_Tv;
 layout(location = 2) in vec4  inTangent;
@@ -27,9 +22,17 @@ layout(location = 2) out vec2 fragUV;
 layout(location = 3) out vec3 fragTangent;
 layout(location = 4) out vec4 fragOther;
 
+layout(set = 0, binding = 0) uniform GlobalUBO {
+    mat4 proj;
+    mat4 view;
+} glb;
 
 layout (std430, set = 2, binding = 0) readonly buffer SkinBuffer {
     mat4 skinData[];
+};
+
+layout(std430, set = 3, binding = 0) readonly buffer MrphWeightsBuffer {
+    float mrphWeights[];
 };
 
 struct Mrph {
@@ -37,12 +40,8 @@ struct Mrph {
     vec3 dNrml;
     vec3 dTang;
 };
-layout(std430, set = 3, binding = 0) readonly buffer MrphDeltaBuffer {
+layout(std430, set = 4, binding = 0) readonly buffer MrphDeltaBuffer {
     Mrph mrphDeltas[];
-};
-
-layout(std430, set = 4, binding = 0) readonly buffer MrphWeightsBuffer {
-    float mrphWeights[];
 };
 
 void main() {
@@ -60,8 +59,20 @@ void main() {
     uint vertexCount = uint(pConst.props.y);
     uint vertexId = gl_VertexIndex;
 
-    // Just fun debug - if there is morph, fragOther = red, else green
-    fragOther = vec4(mrphWsCount > 0 ? 1.0 : 0.0, mrphWsCount == 0 ? 1.0 : 0.0, 0.0, 1.0);
+    if (mrphWsCount > 0 && vertexCount > 0) {
+        for (uint m = 0; m < mrphWsCount; ++m) {
+            float weight = mrphWeights[m];
+
+            if (abs(weight) < 0.0001) continue; // negligible
+
+            uint morphIndex = m * vertexCount + vertexId;
+            Mrph delta = mrphDeltas[morphIndex];
+
+            basePos    += weight * delta.dPos;
+            baseNormal += weight * delta.dNrml;
+            baseTangent += weight * delta.dTang;
+        }
+    }
 
 // ----------------------------------
 

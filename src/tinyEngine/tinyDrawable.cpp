@@ -52,6 +52,19 @@ void tinyDrawable::init(const CreateInfo& info) {
 
     VkDevice device = dvk_->device;
 
+    auto writeDescSetDynamicBuffer = [&](VkDescriptorSet dstSet, VkBuffer buffer, VkDeviceSize size) {
+        DescWrite()
+            .setDstSet(dstSet)
+            .setType(DescType::StorageBufferDynamic)
+            .setDescCount(1)
+            .setBufferInfo({ VkDescriptorBufferInfo{
+                buffer,
+                0,
+                size
+            } })
+            .updateDescSets(device);
+    };
+
 // ------------------ Setup instance buffer ------------------
 
     instaSize_x1_.unaligned = MAX_INSTANCES * sizeof(InstaData);
@@ -69,19 +82,6 @@ void tinyDrawable::init(const CreateInfo& info) {
 
 // ------------------ Setup material data ------------------
 
-    auto writeDescSetDynamicBuffer = [&](VkDescriptorSet dstSet, VkBuffer buffer, VkDeviceSize size) {
-        DescWrite()
-            .setDstSet(dstSet)
-            .setType(DescType::StorageBufferDynamic)
-            .setDescCount(1)
-            .setBufferInfo({ VkDescriptorBufferInfo{
-                buffer,
-                0,
-                size
-            } })
-            .updateDescSets(device);
-    };
-
     matBuffer_
         .setDataSize(matSize_x1_.aligned * maxFramesInFlight_)
         .setUsageFlags(BufferUsage::Storage)
@@ -89,16 +89,9 @@ void tinyDrawable::init(const CreateInfo& info) {
         .createBuffer(dvk_)
         .mapMemory();
 
-    matDescLayout_.create(device, {
-        {0, DescType::StorageBufferDynamic, 1, ShaderStage::Fragment, nullptr}
-    });
-
-    matDescPool_.create(device, {
-        {DescType::StorageBufferDynamic, 1}
-    }, 1);
-
+    matDescLayout_.create(device, { {0, DescType::StorageBufferDynamic, 1, ShaderStage::Fragment, nullptr} });
+    matDescPool_.create(device, { {DescType::StorageBufferDynamic, 1} }, 1);
     matDescSet_.allocate(device, matDescPool_, matDescLayout_);
-
     writeDescSetDynamicBuffer(matDescSet_, matBuffer_, matSize_x1_.unaligned);
 
 // ------------------ Setup textures data ------------------
@@ -117,24 +110,18 @@ void tinyDrawable::init(const CreateInfo& info) {
         .createBuffer(dvk_)
         .mapMemory();
 
-    skinDescLayout_.create(device, {
-        {0, DescType::StorageBufferDynamic, 1, ShaderStage::Vertex, nullptr}
-    });
-
-    skinDescPool_.create(device, {
-        {DescType::StorageBufferDynamic, 1}
-    }, 1);
-
+    skinDescLayout_.create(device, { {0, DescType::StorageBufferDynamic, 1, ShaderStage::Vertex, nullptr} });
+    skinDescPool_.create(device, { {DescType::StorageBufferDynamic, 1} }, 1);
     skinDescSet_.allocate(device, skinDescPool_, skinDescLayout_);
-
     writeDescSetDynamicBuffer(skinDescSet_, skinBuffer_, skinSize_x1_.unaligned);
 
 // ------------------ Setup morph data ------------------
     
     // Create pool and layout for deltas
     mrphDltsDescLayout_.create(device, { {0, DescType::StorageBuffer, 1, ShaderStage::Vertex, nullptr} });
-    mrphDltsDescPool_.create(device, { {DescType::StorageBuffer, 1} }, 1);
+    mrphDltsDescPool_.create(device, { {DescType::StorageBuffer, MAX_MORPH_DLTS} }, MAX_MORPH_DLTS);
 
+    // Create dynamic buffer for weights
     mrphWsSize_x1_.unaligned = MAX_MORPH_WS * sizeof(float);
     mrphWsSize_x1_.aligned = dvk_->alignSizeSSBO(mrphWsSize_x1_.unaligned);
 
@@ -147,9 +134,7 @@ void tinyDrawable::init(const CreateInfo& info) {
 
     mrphWsDescLayout_.create(device, { {0, DescType::StorageBufferDynamic, 1, ShaderStage::Vertex, nullptr} });
     mrphWsDescPool_.create(device, { {DescType::StorageBufferDynamic, 1} }, 1);
-
     mrphWsDescSet_.allocate(device, mrphWsDescPool_, mrphWsDescLayout_);
-
     writeDescSetDynamicBuffer(mrphWsDescSet_, mrphWsBuffer_, mrphWsSize_x1_.unaligned);
 }
 
@@ -210,11 +195,11 @@ void tinyDrawable::submit(const MeshEntry& entry) noexcept {
 
         // Create shader groups
         for (const auto& [shaderH, submeshIndices] : shaderToSubmeshes) {
-            MeshRange meshRange;
-            meshRange.mesh = entry.mesh;
-            meshRange.submeshes = submeshIndices;
+            DrawGroup drawGroup;
+            drawGroup.mesh = entry.mesh;
+            drawGroup.submeshes = submeshIndices;
 
-            shaderGroups_[shaderH].push_back(meshRange);
+            shaderGroups_[shaderH].push_back(drawGroup);
         }
 
         meshIt = meshInstaMap_.find(entry.mesh);
@@ -274,23 +259,23 @@ void tinyDrawable::submit(const MeshEntry& entry) noexcept {
 void tinyDrawable::finalize() {
     uint32_t curInstances = 0;
 
-    for (auto& [shaderHandle, shaderGroupVec] : shaderGroups_) { // For each shader group:
-        for (MeshRange& meshRange : shaderGroupVec) {            // For each mesh group:
-            const auto& meshIt = meshInstaMap_.find(meshRange.mesh);
+    for (auto& [shaderHandle, drawGroupVec] : shaderGroups_) { // For each shader group:
+        for (DrawGroup& drawGroup : drawGroupVec) {            // For each mesh group:
+            const auto& meshIt = meshInstaMap_.find(drawGroup.mesh);
             if (meshIt == meshInstaMap_.end()) continue; // Should not happen
 
             const std::vector<InstaData>& dataVec = meshIt->second;
 
             // Update mesh range info
-            meshRange.instaOffset = curInstances;
-            meshRange.instaCount = static_cast<uint32_t>(dataVec.size());
+            drawGroup.instaOffset = curInstances;
+            drawGroup.instaCount = static_cast<uint32_t>(dataVec.size());
 
             // Copy data
             size_t dataOffset = curInstances * sizeof(InstaData) + instaOffset(frameIndex_);
             size_t dataSize = dataVec.size() * sizeof(InstaData);
             instaBuffer_.copyData(dataVec.data(), dataSize, dataOffset);
 
-            curInstances += meshRange.instaCount;
+            curInstances += drawGroup.instaCount;
         }
     }
 

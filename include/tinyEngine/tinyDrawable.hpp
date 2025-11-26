@@ -16,6 +16,7 @@ public:
     static constexpr size_t MAX_TEXTURES  = 65536;  // Hopefully not needing this many
     static constexpr size_t MAX_BONES     = 102400; // 6.5mb ~ 400 model x 256 bones x 64 bytes (mat4) - plenty
     static constexpr size_t MAX_MORPH_WS  = 65536;  // Morph WEIGHTS, not Delta, 65536 x 4 bytes = 256kb, literally invisible
+    static constexpr size_t MAX_MORPH_DLTS = 102400; // Max descriptor sets count for morph deltas
 
     static std::vector<VkVertexInputBindingDescription> bindingDesc() noexcept;
     static std::vector<VkVertexInputAttributeDescription> attributeDescs() noexcept;
@@ -49,7 +50,7 @@ public:
         const std::vector<float>* mrphWeights = nullptr;
     };
 
-    struct MeshRange {
+    struct DrawGroup {
         tinyHandle mesh;
         std::vector<uint32_t> submeshes;
 
@@ -121,7 +122,7 @@ public:
     void finalize();
 
 
-    const std::unordered_map<tinyHandle, std::vector<MeshRange>>& shaderGroups() const noexcept {
+    const std::unordered_map<tinyHandle, std::vector<DrawGroup>>& shaderGroups() const noexcept {
         return shaderGroups_;
     }
 
@@ -135,7 +136,7 @@ private:
 
     // True implementation
     std::unordered_map<tinyHandle, std::vector<InstaData>> meshInstaMap_; // Mesh handle -> Instance data
-    std::unordered_map<tinyHandle, std::vector<MeshRange>> shaderGroups_; // Shader handle -> mesh groups
+    std::unordered_map<tinyHandle, std::vector<DrawGroup>> shaderGroups_; // Shader handle -> mesh groups
 
     // Instances (runtime)
     tinyVk::DataBuffer instaBuffer_;

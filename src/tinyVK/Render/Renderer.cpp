@@ -239,21 +239,26 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
     VkDescriptorSet skinSet = draw.skinDescSet();
     uint32_t skinOffset = draw.skinOffset(currentFrame);
 
-    const auto& shaderGroups = draw.shaderGroups();
-    for (const auto& [shaderHandle, meshRangeVec] : shaderGroups) { // For each shader groups:
+    VkDescriptorSet mrphWsSet = draw.mrphWsDescSet();
+    uint32_t mrphWsOffset = draw.mrphWsOffset(currentFrame);
+
+    for (const auto& [shaderHandle, drawGroupVec] : draw.shaderGroups()) { // For each shader groups:
         // In the future you will change this to a r.get<tinyShader>(shaderHandle)
         testPipeline->bindCmd(currentCmd);
+
+        // Bind runtime descriptor sets once
         testPipeline->bindSets(currentCmd, 0, &glbSet, 1, &glbOffset, 1);
         testPipeline->bindSets(currentCmd, 1, &matSet, 1, &matOffset, 1);
         testPipeline->bindSets(currentCmd, 2, &skinSet, 1, &skinOffset, 1);
+        testPipeline->bindSets(currentCmd, 3, &mrphWsSet, 1, &mrphWsOffset, 1);
 
-        // Bind the instance buffer once then use the ranges to draw
+        // Bind instances once
         VkBuffer buffers[] = { draw.instaBuffer() };
         VkDeviceSize offsets[] = { draw.instaOffset(currentFrame) };
         vkCmdBindVertexBuffers(currentCmd, 2, 1, buffers, offsets); // Binding 2
 
-        for (const auto& meshRange : meshRangeVec) {
-            const auto* rMesh = sharedRes.fsGet<tinyMesh>(meshRange.mesh);
+        for (const auto& drawGroup : drawGroupVec) {
+            const auto* rMesh = sharedRes.fsGet<tinyMesh>(drawGroup.mesh);
             if (!rMesh) continue; // Mesh not found in registry
 
             VkBuffer staticBuffer = rMesh->vstaticBuffer();
@@ -268,7 +273,11 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
             VkIndexType indxType = rMesh->indxType();
             vkCmdBindIndexBuffer(currentCmd, indxBuffer, 0, indxType);
 
-            for (uint32_t submeshIdx : meshRange.submeshes) {
+            // Bind per-mesh morph delta descriptor set (set 4) (non dynamic)
+            VkDescriptorSet mrphDltsSet = rMesh->mrphDltsDescSet();
+            testPipeline->bindSets(currentCmd, 4, &mrphDltsSet, 1, nullptr, 0);
+
+            for (uint32_t submeshIdx : drawGroup.submeshes) {
                 const auto& submesh = rMesh->submeshes()[submeshIdx];
 
                 uint32_t matIdx = draw.matIndex(submesh.material);
@@ -282,10 +291,10 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
                 vkCmdDrawIndexed(
                     currentCmd, 
                     submesh.indxCount,
-                    meshRange.instaCount,
+                    drawGroup.instaCount,
                     submesh.indxOffset,
                     0,
-                    meshRange.instaOffset
+                    drawGroup.instaOffset
                 );
             }
         }
