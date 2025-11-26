@@ -38,9 +38,13 @@ vec4 rainbowColors[7] = vec4[](
 
 void main() {
     vec3 lightDir = vec3(1.0, 1.0, 1.0);
+    float lDot = dot(normalize(fragNrml), normalize(lightDir));
+    lDot = clamp(lDot, 0.0, 1.0);
+
+    lDot = mix(0.8, 1.0, lDot);
 
     Material mat = materials[pConst.props.x];
 
-    outColor = mat.base * abs(dot(normalize(fragNrml), normalize(lightDir)));
+    outColor = mat.base * lDot;
 }
 
