@@ -113,12 +113,14 @@ struct tinyMesh {
             .setUsageFlags(BufferUsage::Index)
             .createDeviceLocalBuffer(dvk_, indxRaw_.data());
 
+    // Morph delta
+
         if (mrphTargets_.empty() || mrphLayout == VK_NULL_HANDLE || mrphPool == VK_NULL_HANDLE) {
             clearData(); // Optional
             return;
         }
 
-    // Morph delta buffer
+        hasMorphs_ = true;
 
         mrphDeltas_.resize(mrphCount_ * vrtxCount_);
         for (size_t i = 0; i < mrphCount_; ++i) {
@@ -134,10 +136,21 @@ struct tinyMesh {
 
         mrphWeights_ = std::vector<float>(mrphCount_, 0.0f);
 
-        mrphDsBuffer_
+        mrphDltsBuffer_
             .setDataSize(mrphDeltas_.size() * sizeof(tinyMorph::Delta))
             .setUsageFlags(BufferUsage::Vertex)
             .createDeviceLocalBuffer(dvk_, mrphDeltas_.data());
+
+        mrphDltsDescSet_.allocate(dvk_->device, mrphPool, mrphLayout);
+
+        DescWrite()
+            .setDstSet(mrphDltsDescSet_)
+            .setType(DescType::StorageBuffer)
+            .setDescCount(1)
+            .setBufferInfo({ VkDescriptorBufferInfo{
+                mrphDltsBuffer_, 0, VK_WHOLE_SIZE
+            } })
+            .updateDescSets(dvk_->device);
     }
 
     void clearData() noexcept {
@@ -163,7 +176,9 @@ struct tinyMesh {
     VkBuffer vstaticBuffer() const noexcept { return vstaticBuffer_; }
     VkBuffer vriggedBuffer() const noexcept { return vriggedBuffer_; }
     VkBuffer indxBuffer() const noexcept { return indxBuffer_; }
-    VkBuffer mrphDsBuffer() const noexcept { return mrphDsBuffer_; }
+
+    VkBuffer mrphDltsBuffer() const noexcept { return mrphDltsBuffer_; }
+    VkDescriptorSet mrphDltsDescSet() const noexcept { return mrphDltsDescSet_; }
 
     const std::vector<tinyVertex::Static>& vstaticData() const noexcept { return vstaticData_; }
     const std::vector<tinyVertex::Rigged>& vriggedData() const noexcept { return vriggedData_; }
@@ -194,7 +209,10 @@ private:
     tinyVk::DataBuffer    vstaticBuffer_;
     tinyVk::DataBuffer    vriggedBuffer_;
     tinyVk::DataBuffer    indxBuffer_;
-    tinyVk::DataBuffer    mrphDsBuffer_; // Delta buffer
+
+    // Morph Deltas (Morph Weights are dynamic for each instance)
+    tinyVk::DataBuffer    mrphDltsBuffer_;
+    tinyVk::DescSet       mrphDltsDescSet_;
 
     size_t      vrtxCount_  = 0;
     size_t      indxCount_  = 0;

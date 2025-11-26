@@ -162,7 +162,6 @@ private:
     uint32_t            skinCount_ = 0;
     std::unordered_map<tinyHandle, SkinRange> skinRanges_; // Skeleton node handle -> SkinRange (NOT skeleton itself)
 
-    
     // Morph Deltas (static)
     tinyVk::DescSLayout mrphDltsDescLayout_;
     tinyVk::DescPool    mrphDltsDescPool_;
