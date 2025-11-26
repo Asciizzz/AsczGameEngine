@@ -266,11 +266,11 @@ void tinyDrawable::finalize() {
 
             const std::vector<InstaData>& dataVec = meshIt->second;
 
-            // Update mesh range info
+            // Update draw group range
             drawGroup.instaOffset = curInstances;
             drawGroup.instaCount = static_cast<uint32_t>(dataVec.size());
 
-            // Copy data
+            // Copy instance data
             size_t dataOffset = curInstances * sizeof(InstaData) + instaOffset(frameIndex_);
             size_t dataSize = dataVec.size() * sizeof(InstaData);
             instaBuffer_.copyData(dataVec.data(), dataSize, dataOffset);

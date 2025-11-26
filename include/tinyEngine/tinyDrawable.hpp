@@ -134,7 +134,7 @@ private:
     tinyRegistry* fsr_ = nullptr;
     const tinyVk::Device* dvk_ = nullptr;
 
-    // True implementation
+    // Batching data (build time)
     std::unordered_map<tinyHandle, std::vector<InstaData>> meshInstaMap_; // Mesh handle -> Instance data
     std::unordered_map<tinyHandle, std::vector<DrawGroup>> shaderGroups_; // Shader handle -> mesh groups
 
