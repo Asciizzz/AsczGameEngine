@@ -16,7 +16,6 @@ layout (std430, set = 2, binding = 0) readonly buffer SkinBuffer {
 layout(location = 0) in vec4  inPos_Tu;
 layout(location = 1) in vec4  inNrml_Tv;
 layout(location = 2) in vec4  inTangent;
-
 layout(location = 3) in uvec4 inBoneIDs;
 layout(location = 4) in vec4  inBoneWs;
 

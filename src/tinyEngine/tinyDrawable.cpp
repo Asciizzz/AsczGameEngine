@@ -50,7 +50,9 @@ void tinyDrawable::init(const CreateInfo& info) {
     fsr_ = info.fsr;
     dvk_ = info.dvk;
 
-// Setup instance buffer
+    VkDevice device = dvk_->device;
+
+// ------------------ Setup instance buffer ------------------
 
     instaSize_x1_.unaligned = MAX_INSTANCES * sizeof(InstaData);
     instaSize_x1_.aligned = instaSize_x1_.unaligned; // Vertex attributes doesnt need minAlignment
@@ -65,7 +67,20 @@ void tinyDrawable::init(const CreateInfo& info) {
     matSize_x1_.unaligned = MAX_MATERIALS * sizeof(tinyMaterial::Data);
     matSize_x1_.aligned = dvk_->alignSizeSSBO(matSize_x1_.unaligned); // SSBO DO need alignment
 
-// Setup material data
+// ------------------ Setup material data ------------------
+
+    auto writeDescSetDynamicBuffer = [&](VkDescriptorSet dstSet, VkBuffer buffer, VkDeviceSize size) {
+        DescWrite()
+            .setDstSet(dstSet)
+            .setType(DescType::StorageBufferDynamic)
+            .setDescCount(1)
+            .setBufferInfo({ VkDescriptorBufferInfo{
+                buffer,
+                0,
+                size
+            } })
+            .updateDescSets(device);
+    };
 
     matBuffer_
         .setDataSize(matSize_x1_.aligned * maxFramesInFlight_)
@@ -74,31 +89,23 @@ void tinyDrawable::init(const CreateInfo& info) {
         .createBuffer(dvk_)
         .mapMemory();
 
-    matDescLayout_.create(dvk_->device, {
+    matDescLayout_.create(device, {
         {0, DescType::StorageBufferDynamic, 1, ShaderStage::Fragment, nullptr}
     });
 
-    matDescPool_.create(dvk_->device, {
+    matDescPool_.create(device, {
         {DescType::StorageBufferDynamic, 1}
     }, 1);
 
-    matDescSet_.allocate(dvk_->device, matDescPool_, matDescLayout_);
+    matDescSet_.allocate(device, matDescPool_, matDescLayout_);
 
-    DescWrite()
-        .setDstSet(matDescSet_)
-        .setType(DescType::StorageBufferDynamic)
-        .setDescCount(1)
-        .setBufferInfo({ VkDescriptorBufferInfo{
-            matBuffer_,
-            0,
-            matSize_x1_.unaligned // true size
-        } })
-        .updateDescSets(dvk_->device);
+    writeDescSetDynamicBuffer(matDescSet_, matBuffer_, matSize_x1_.unaligned);
 
-// Setup textures data
-        // Later
+// ------------------ Setup textures data ------------------
+    
+    // Later
 
-// Setup skin data
+// ------------------ Setup skin data ------------------
 
     skinSize_x1_.unaligned = MAX_BONES * sizeof(glm::mat4);
     skinSize_x1_.aligned = dvk_->alignSizeSSBO(skinSize_x1_.unaligned);
@@ -110,28 +117,24 @@ void tinyDrawable::init(const CreateInfo& info) {
         .createBuffer(dvk_)
         .mapMemory();
 
-    skinDescLayout_.create(dvk_->device, {
+    skinDescLayout_.create(device, {
         {0, DescType::StorageBufferDynamic, 1, ShaderStage::Vertex, nullptr}
     });
 
-    skinDescPool_.create(dvk_->device, {
+    skinDescPool_.create(device, {
         {DescType::StorageBufferDynamic, 1}
     }, 1);
 
-    skinDescSet_.allocate(dvk_->device, skinDescPool_, skinDescLayout_);
+    skinDescSet_.allocate(device, skinDescPool_, skinDescLayout_);
 
-    DescWrite()
-        .setDstSet(skinDescSet_)
-        .setType(DescType::StorageBufferDynamic)
-        .setDescCount(1)
-        .setBufferInfo({ VkDescriptorBufferInfo{
-            skinBuffer_,
-            0,
-            skinSize_x1_.unaligned // true size
-        } })
-        .updateDescSets(dvk_->device);
+    writeDescSetDynamicBuffer(skinDescSet_, skinBuffer_, skinSize_x1_.unaligned);
 
-// Setup morph weights data
+// ------------------ Setup morph data ------------------
+    
+    // Create pool and layout for deltas
+    mrphDltsDescLayout_.create(device, { {0, DescType::StorageBuffer, 1, ShaderStage::Vertex, nullptr} });
+    mrphDltsDescPool_.create(device, { {DescType::StorageBuffer, 1} }, 1);
+
     mrphWsSize_x1_.unaligned = MAX_MORPH_WS * sizeof(float);
     mrphWsSize_x1_.aligned = dvk_->alignSizeSSBO(mrphWsSize_x1_.unaligned);
 
@@ -142,26 +145,12 @@ void tinyDrawable::init(const CreateInfo& info) {
         .createBuffer(dvk_)
         .mapMemory();
 
-    mrphWsDescLayout_.create(dvk_->device, {
-        {0, DescType::StorageBufferDynamic, 1, ShaderStage::Vertex, nullptr}
-    });
+    mrphWsDescLayout_.create(device, { {0, DescType::StorageBufferDynamic, 1, ShaderStage::Vertex, nullptr} });
+    mrphWsDescPool_.create(device, { {DescType::StorageBufferDynamic, 1} }, 1);
 
-    mrphWsDescPool_.create(dvk_->device, {
-        {DescType::StorageBufferDynamic, 1}
-    }, 1);
+    mrphWsDescSet_.allocate(device, mrphWsDescPool_, mrphWsDescLayout_);
 
-    mrphWsDescSet_.allocate(dvk_->device, mrphWsDescPool_, mrphWsDescLayout_);
-
-    DescWrite()
-        .setDstSet(mrphWsDescSet_)
-        .setType(DescType::StorageBufferDynamic)
-        .setDescCount(1)
-        .setBufferInfo({ VkDescriptorBufferInfo{
-            mrphWsBuffer_,
-            0,
-            mrphWsSize_x1_.unaligned // true size
-        } })
-        .updateDescSets(dvk_->device);
+    writeDescSetDynamicBuffer(mrphWsDescSet_, mrphWsBuffer_, mrphWsSize_x1_.unaligned);
 }
 
 

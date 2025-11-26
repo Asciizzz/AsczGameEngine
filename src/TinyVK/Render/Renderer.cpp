@@ -262,7 +262,7 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
 
             VkBuffer vBuffers[] = { staticBuffer, riggedBuffer };
             VkDeviceSize vOffsets[] = { 0, 0 };
-            vkCmdBindVertexBuffers(currentCmd, 0, 2, vBuffers, vOffsets); // Bindings 0 and 1
+            vkCmdBindVertexBuffers(currentCmd, 0, 2, vBuffers, vOffsets); // Bindings 0, 1
 
             VkBuffer indxBuffer = rMesh->indxBuffer();
             VkIndexType indxType = rMesh->indxType();

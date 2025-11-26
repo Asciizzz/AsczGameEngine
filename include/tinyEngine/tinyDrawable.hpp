@@ -134,11 +134,11 @@ private:
     std::unordered_map<tinyHandle, std::vector<InstaData>> meshInstaMap_; // Mesh handle -> Instance data
     std::unordered_map<tinyHandle, std::vector<MeshRange>> shaderGroups_; // Shader handle -> mesh groups
 
-    // Instances
+    // Instances (runtime)
     tinyVk::DataBuffer instaBuffer_;
     Size_x1            instaSize_x1_;
 
-    // Materials
+    // Materials (runtime)
     tinyVk::DescSLayout matDescLayout_;
     tinyVk::DescPool    matDescPool_;
     tinyVk::DescSet     matDescSet_;
@@ -147,13 +147,13 @@ private:
     std::vector<tinyMaterial::Data> matData_;
     std::unordered_map<tinyHandle, uint32_t> matIdxMap_;
 
-    // Textures
+    // Textures (static)
     tinyVk::DescSLayout texDescLayout_;
     tinyVk::DescPool    texDescPool_;
     tinyVk::DescSet     texDescSet_; // Dynamic descriptor set for textures
     std::unordered_set<tinyHandle> texInUse_;
 
-    // Skinning
+    // Skinning (runtime)
     tinyVk::DescSLayout skinDescLayout_;
     tinyVk::DescPool    skinDescPool_;
     tinyVk::DescSet     skinDescSet_;
@@ -162,7 +162,12 @@ private:
     uint32_t            skinCount_ = 0;
     std::unordered_map<tinyHandle, SkinRange> skinRanges_; // Skeleton node handle -> SkinRange (NOT skeleton itself)
 
-    // Morphing
+    
+    // Morph Deltas (static)
+    tinyVk::DescSLayout mrphDltsDescLayout_;
+    tinyVk::DescPool    mrphDltsDescPool_;
+
+    // Morph Weights (runtime)
     tinyVk::DescSLayout mrphWsDescLayout_;
     tinyVk::DescPool    mrphWsDescPool_;
     tinyVk::DescSet     mrphWsDescSet_;
