@@ -115,6 +115,8 @@ public:
     inline VkDeviceSize skinOffset(uint32_t frameIndex) const noexcept { return frameIndex * skinSize_x1_.aligned; }
     inline VkDeviceSize mrphWsOffset(uint32_t frameIndex) const noexcept { return frameIndex * mrphWsSize_x1_.aligned; }
 
+
+
 // --------------------------- Bacthking --------------------------
 
     void startFrame(uint32_t frameIndex) noexcept;
@@ -125,6 +127,16 @@ public:
     const std::unordered_map<tinyHandle, std::vector<DrawGroup>>& shaderGroups() const noexcept {
         return shaderGroups_;
     }
+
+// --------------------------- Dummy -----------------------------
+
+// Collection of dummy data to avoid empty struct issues
+    struct Dummy {
+        tinyVk::DataBuffer morphDltsBuffer;
+        tinyVk::DescSet    morphDltsDescSet;
+    };
+
+    const Dummy& dummy() const noexcept { return dummy_; }
 
 private:
 // Basic info
@@ -177,4 +189,6 @@ private:
     tinyVk::DataBuffer  mrphWsBuffer_;
     Size_x1             mrphWsSize_x1_;
     uint32_t            mrphWsCount_ = 0;
+
+    Dummy dummy_;
 };

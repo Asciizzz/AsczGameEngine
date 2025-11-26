@@ -221,6 +221,8 @@ void Renderer::drawSky(const tinyProject* project, const PipelineRaster* skyPipe
     vkCmdDraw(currentCmd, 3, 1, 0, 0);
 }
 
+#define NULL_TERNARY(x, t, f) ((x) != VK_NULL_HANDLE) ? (t) : (f)
+
 void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const PipelineRaster* testPipeline) const {
     const SceneRes& sharedRes = scene->res();
     
@@ -275,6 +277,8 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
 
             // Bind per-mesh morph delta descriptor set (set 4) (non dynamic)
             VkDescriptorSet mrphDltsSet = rMesh->mrphDltsDescSet();
+            mrphDltsSet = NULL_TERNARY(mrphDltsSet, mrphDltsSet, draw.dummy().morphDltsDescSet);
+
             testPipeline->bindSets(currentCmd, 4, &mrphDltsSet, 1, nullptr, 0);
 
             for (uint32_t submeshIdx : drawGroup.submeshes) {
@@ -285,7 +289,7 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
                 testPipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, 0, glm::uvec4(
                     matIdx,             // Material index
                     rMesh->vrtxCount(), // Vertex count
-                    0, 0                 // Reserved
+                    0, 0                // Reserved
                 ));
 
                 vkCmdDrawIndexed(

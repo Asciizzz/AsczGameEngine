@@ -58,9 +58,7 @@ void tinyDrawable::init(const CreateInfo& info) {
             .setType(DescType::StorageBufferDynamic)
             .setDescCount(1)
             .setBufferInfo({ VkDescriptorBufferInfo{
-                buffer,
-                0,
-                size
+                buffer, 0, size
             } })
             .updateDescSets(device);
     };
@@ -136,6 +134,28 @@ void tinyDrawable::init(const CreateInfo& info) {
     mrphWsDescPool_.create(device, { {DescType::StorageBufferDynamic, 1} }, 1);
     mrphWsDescSet_.allocate(device, mrphWsDescPool_, mrphWsDescLayout_);
     writeDescSetDynamicBuffer(mrphWsDescSet_, mrphWsBuffer_, mrphWsSize_x1_.unaligned);
+
+
+// --------------------------- Dummy -----------------------------
+
+    // Dummy morph delta buffer
+
+    dummy_.morphDltsBuffer
+        .setDataSize(sizeof(VkBuffer))
+        .setUsageFlags(BufferUsage::Storage)
+        .setMemPropFlags(MemProp::HostVisibleAndCoherent)
+        .createBuffer(dvk_)
+        .mapMemory();
+
+    dummy_.morphDltsDescSet.allocate(device, mrphDltsDescPool_, mrphDltsDescLayout_);
+    DescWrite()
+        .setDstSet(dummy_.morphDltsDescSet)
+        .setType(DescType::StorageBuffer)
+        .setDescCount(1)
+        .setBufferInfo({ VkDescriptorBufferInfo{
+            dummy_.morphDltsBuffer, 0, VK_WHOLE_SIZE
+        } })
+        .updateDescSets(device);
 }
 
 
