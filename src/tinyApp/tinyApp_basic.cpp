@@ -78,7 +78,9 @@ void tinyApp::initComponents() {
         .withDescriptorLayouts({
             project->descSLayout_Global(),
             project->drawable().matDescLayout(),
-            project->drawable().skinDescLayout()
+            project->drawable().skinDescLayout(),
+            project->drawable().mrphDltsDescLayout(), // Static, align with mesh
+            project->drawable().mrphWsDescLayout(), // Dynamic, based on instance
         })
         .withPushConstants(ShaderStage::VertexAndFragment, 0, 16)
         .withShaders("Shaders/bin/Test/Test.vert.spv", "Shaders/bin/Test/Test.frag.spv")

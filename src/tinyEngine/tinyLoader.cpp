@@ -663,9 +663,6 @@ void loadMesh(tinyMesh& mesh,
         default: break;
     }
 
-    // if (hasRigging) mesh.setVrtxs(allVertices);
-    // else mesh.setVrtxs(tinyVertex::Rigged::makeStatic(allVertices));
-
     mesh.setVrtxStatic(staticData);
     mesh.setVrtxRigged(riggedData);
 
@@ -709,40 +706,31 @@ void loadMesh(tinyMesh& mesh,
             }
             
             // Skip only if we couldn't read ANY data at all
-            if (!hasAnyData) {
-                continue;
-            }
+            if (!hasAnyData) continue;
 
-            // ---- build tinyMorph array ------------------------------------------------
-            std::vector<tinyMorph::Delta> deltas(pData.vrtxCount);
+            // ---- build morph target ------------------------------------------------
+
+            tinyMorph::Target mTarget;
+            std::vector<tinyMorph::Delta>& deltas = mTarget.deltas;
+            deltas.resize(pData.vrtxCount);
+
             for (size_t v = 0; v < pData.vrtxCount; ++v) {
                 deltas[v].dPos  = dPos[v];
                 deltas[v].dNrml = dNrm[v];
-                // glTF tangent delta is vec3 (xyz), w is unchanged → we keep 0
                 deltas[v].dTang = dTan[v];
             }
 
             // ---- name (optional) ----------------------------------------------------
             // glTF stores target names at the mesh level in mesh.extras["targetNames"]
-            std::string name = "";
             if (tgtIdx < gltfMesh.extras.Get("targetNames").ArrayLen()) {
-                name = gltfMesh.extras.Get("targetNames").Get(static_cast<int>(tgtIdx)).Get<std::string>();
+                mTarget.name = gltfMesh.extras.Get("targetNames").Get(static_cast<int>(tgtIdx)).Get<std::string>();
             }
-            
-            // Fallback to default naming if no name provided
-            if (name.empty()) {
-                name = "MorphTarget_" + std::to_string(tgtIdx);
-            }
-            
-            name = sanitizeAsciiz(name, "morph", tgtIdx);
+
+            mTarget.name = sanitizeAsciiz(mTarget.name, "morph", tgtIdx);
 
             // ---- add to mesh ---------------------------------------------------------
-            // tinyMorphTarget mt;
-            // mt.name   = std::move(name);
-            // mt.deltas = std::move(deltas);
-            // mesh.addMrphTarget(mt);
 
-            // For the time being just ignore these
+            mesh.addMrphTarget(std::move(mTarget));
         }
     }
 }

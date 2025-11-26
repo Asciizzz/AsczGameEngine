@@ -1,17 +1,13 @@
 #version 450
 
 layout(push_constant) uniform PushConstant {
-    vec4 props; // .x = material index, .y = isRigged flag
+    uvec4 props; // .x = material index, .y = vertex count
 } pConst;
 
 layout(set = 0, binding = 0) uniform GlobalUBO {
     mat4 proj;
     mat4 view;
 } glb;
-
-layout (std430, set = 2, binding = 0) readonly buffer SkinBuffer {
-    mat4 skinData[];
-};
 
 layout(location = 0) in vec4  inPos_Tu;
 layout(location = 1) in vec4  inNrml_Tv;
@@ -23,13 +19,31 @@ layout(location = 5) in vec4  model4_0;
 layout(location = 6) in vec4  model4_1;
 layout(location = 7) in vec4  model4_2;
 layout(location = 8) in vec4  model4_3;
-layout(location = 9) in uvec4 other;
+layout(location = 9) in uvec4 other; // .x = boneOffset, .y = boneCount, .z = mrphWsOffset, .w = mrphWsCount
 
 layout(location = 0) out vec3 fragWorld;
 layout(location = 1) out vec3 fragNrml;
 layout(location = 2) out vec2 fragUV;
 layout(location = 3) out vec3 fragTangent;
 layout(location = 4) out vec4 fragOther;
+
+
+layout (std430, set = 2, binding = 0) readonly buffer SkinBuffer {
+    mat4 skinData[];
+};
+
+struct Mrph {
+    vec3 dPos;
+    vec3 dNrml;
+    vec3 dTang;
+};
+layout(std430, set = 3, binding = 0) readonly buffer MrphDeltaBuffer {
+    Mrph mrphDeltas[];
+};
+
+layout(std430, set = 4, binding = 0) readonly buffer MrphWeightsBuffer {
+    float mrphWeights[];
+};
 
 void main() {
     mat4 model = mat4(model4_0, model4_1, model4_2, model4_3);
@@ -39,7 +53,12 @@ void main() {
     vec3 baseTangent = inTangent.xyz;
 
 // ----------------------------------
-    // We will implement morphing in the future
+
+    uint mrphWsOffset = other.z;
+    uint mrphWsCount = other.w;
+
+    uint vertexCount = uint(pConst.props.y);
+    uint vertexId = gl_VertexIndex;
 
 
 // ----------------------------------

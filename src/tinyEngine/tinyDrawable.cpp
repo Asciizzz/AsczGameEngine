@@ -253,6 +253,7 @@ void tinyDrawable::submit(const MeshEntry& entry) noexcept {
         instaData.other.y = skinRangeIt->second.skinCount;
     }
 
+    // If mesh has morph targets
     if (entry.mrphWeights && !entry.mrphWeights->empty()) {
         uint32_t thisCount = static_cast<uint32_t>(entry.mrphWeights->size());
 
@@ -260,9 +261,8 @@ void tinyDrawable::submit(const MeshEntry& entry) noexcept {
         size_t mrphWsDataOffset = mrphWsCount_ * sizeof(float) + mrphWsOffset(frameIndex_);
         mrphWsBuffer_.copyData(entry.mrphWeights->data(), mrphWsDataSize, mrphWsDataOffset);
 
-        instaData.other.z = mrphWsCount_;
-        instaData.other.w = thisCount;
-        printf("Morph [%u, %u]\n", instaData.other.z, instaData.other.w);
+        instaData.other.z = mrphWsCount_; // Offset
+        instaData.other.w = thisCount;    // Count
         mrphWsCount_ += thisCount;
     }
 

@@ -273,7 +273,11 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
 
                 uint32_t matIdx = draw.matIndex(submesh.material);
 
-                testPipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, 0, glm::uvec4(matIdx, isRigged ? 1 : 0, 0, 0));
+                testPipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, 0, glm::uvec4(
+                    matIdx,             // Material index
+                    rMesh->vrtxCount(), // Vertex count
+                    0, 0                 // Reserved
+                ));
 
                 vkCmdDrawIndexed(
                     currentCmd, 

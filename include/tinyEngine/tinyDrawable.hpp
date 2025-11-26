@@ -94,6 +94,9 @@ public:
     VkDescriptorSet mrphWsDescSet() const noexcept { return mrphWsDescSet_; }
     VkDescriptorSetLayout mrphWsDescLayout() const noexcept { return mrphWsDescLayout_; }
 
+    VkDescriptorSetLayout mrphDltsDescLayout() const noexcept { return mrphDltsDescLayout_; }
+    VkDescriptorPool mrphDltsDescPool() const noexcept { return mrphDltsDescPool_; }
+
     // Helpers
 
     uint32_t matIndex(tinyHandle matHandle) const noexcept {

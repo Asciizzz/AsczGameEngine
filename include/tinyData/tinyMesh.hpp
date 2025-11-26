@@ -84,6 +84,11 @@ struct tinyMesh {
         return *this;   
     }
 
+    tinyMesh& addMrphTarget(const tinyMorph::Target& target) {
+        mrphTargets_.push_back(target);
+        return *this;
+    }
+
     void vkCreate(const tinyVk::Device* device, VkDescriptorSetLayout mrphLayout = VK_NULL_HANDLE, VkDescriptorPool mrphPool = VK_NULL_HANDLE) {
         using namespace tinyVk;
         dvk_ = device;
@@ -113,11 +118,13 @@ struct tinyMesh {
             .setUsageFlags(BufferUsage::Index)
             .createDeviceLocalBuffer(dvk_, indxRaw_.data());
 
-    // Morph delta
+    // Morph deltas
 
-        if (mrphTargets_.empty() || mrphLayout == VK_NULL_HANDLE || mrphPool == VK_NULL_HANDLE) {
+        if (mrphTargets_.empty() ||
+            mrphLayout == VK_NULL_HANDLE ||
+            mrphPool == VK_NULL_HANDLE) {
             clearData(); // Optional
-            return;
+            return; // Can't create morph data
         }
 
         hasMorphs_ = true;
@@ -134,15 +141,16 @@ struct tinyMesh {
             );
         }
 
+        // Construct an empty weights array for CPU use
         mrphWeights_ = std::vector<float>(mrphCount_, 0.0f);
 
         mrphDltsBuffer_
             .setDataSize(mrphDeltas_.size() * sizeof(tinyMorph::Delta))
-            .setUsageFlags(BufferUsage::Vertex)
+            .setUsageFlags(BufferUsage::Storage)
             .createDeviceLocalBuffer(dvk_, mrphDeltas_.data());
 
+        // Write descriptor set
         mrphDltsDescSet_.allocate(dvk_->device, mrphPool, mrphLayout);
-
         DescWrite()
             .setDstSet(mrphDltsDescSet_)
             .setType(DescType::StorageBuffer)
@@ -151,6 +159,8 @@ struct tinyMesh {
                 mrphDltsBuffer_, 0, VK_WHOLE_SIZE
             } })
             .updateDescSets(dvk_->device);
+
+        clearData(); // Optional
     }
 
     void clearData() noexcept {
