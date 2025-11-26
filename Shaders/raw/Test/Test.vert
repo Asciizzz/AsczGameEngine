@@ -60,6 +60,8 @@ void main() {
     uint vertexCount = uint(pConst.props.y);
     uint vertexId = gl_VertexIndex;
 
+    // Just fun debug - if there is morph, fragOther = red, else green
+    fragOther = vec4(mrphWsCount > 0 ? 1.0 : 0.0, mrphWsCount == 0 ? 1.0 : 0.0, 0.0, 1.0);
 
 // ----------------------------------
 
