@@ -126,12 +126,6 @@ struct tinyMesh {
             vrtxCount = stas.size();
             vstaticData = stas;
 
-            for (const auto& v : stas) {
-                glm::vec3 pos(v.pos_tu.x, v.pos_tu.y, v.pos_tu.z);
-                ABmin = glm::min(ABmin, pos);
-                ABmax = glm::max(ABmax, pos);
-            }
-
             return *this;
         }
 
