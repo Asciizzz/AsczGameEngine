@@ -60,11 +60,24 @@ public:
         glm::uvec4 other = glm::uvec4(0); // Additional data
     };
 
-    struct MeshEntry {
+    struct Entry {
         tinyHandle mesh;
+        uint32_t submesh;
+
+        inline tinyHandle hash() const {
+            tinyHandle h{};
+            uint64_t x = mesh.value;
+
+            // A simple 64-bit mixing function (very cheap, very good)
+            x ^= uint64_t(submesh) + 0x9e3779b97f4a7c15ULL + (x << 6) + (x >> 2);
+
+            h.value = x;
+            return h;
+        }
+
+
         glm::mat4 model = glm::mat4(1.0f);
 
-        // const std::vector<glm::mat4>* skinData = nullptr;
         struct SkeleData {
             tinyHandle skeleNode;
             const std::vector<glm::mat4>* skinData = nullptr;
@@ -75,7 +88,7 @@ public:
 
     struct DrawGroup {
         tinyHandle mesh;
-        std::vector<uint32_t> submeshes;
+        uint32_t submesh; // Single submesh instead of whole mesh
 
         size_t instaIndex = 0;
 
@@ -156,7 +169,7 @@ public:
 // --------------------------- Bacthking --------------------------
 
     void startFrame(uint32_t frameIndex) noexcept;
-    void submit(const MeshEntry& entry) noexcept;
+    void submit(const Entry& entry) noexcept;
     void finalize();
 
     const std::vector<ShaderGroup>& shaderGroups() const noexcept { return shaderGroups_; }
@@ -180,7 +193,7 @@ private:
     const tinyVk::Device* dvk_ = nullptr;
 
     // Batching data (reset each frame)
-    std::vector<std::vector<InstaData>> meshInstaData_;
+    std::vector<std::vector<InstaData>> instaGroups_;
     std::vector<ShaderGroup> shaderGroups_;
     std::vector<tinyMaterial::Data> matData_;
     std::vector<SkinRange> skinRanges_; // Need this since many instances can share same skin data

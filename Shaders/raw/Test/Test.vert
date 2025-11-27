@@ -9,8 +9,9 @@ layout(push_constant) uniform PushConstant {
     .y = morphWeightsCount
     .z = vertexFlag: {
         VERTEX_FLAG_NONE    = 0, (also means static mesh)
-        VERTEX_FLAG_SKINNED = 1 << 0,
-        VERTEX_FLAG_MORPHED = 1 << 1
+        VERTEX_FLAG_RIG     = 1 << 0,
+        VERTEX_FLAG_MORPH   = 1 << 1,
+        VERTEX_FLAG_COLOR   = 1 << 2
     }
     .w = reserved
 

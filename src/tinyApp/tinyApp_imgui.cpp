@@ -878,7 +878,7 @@ static void RenderMESHRD3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle)
                     const tinyMesh* rMesh = fs.r().get<tinyMesh>(dHandle);
                     if (!rMesh) { ImGui::EndDragDropTarget(); return; }
 
-                    meshRD->assignMesh(dHandle, rMesh->mrphWeights());
+                    // meshRD->assignMesh(dHandle, rMesh->mrphWeights());
 
                     ImGui::EndDragDropTarget();
                 }
@@ -899,11 +899,13 @@ static void RenderMESHRD3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle)
     );
 
     // Render the morph weights
-    if (!mesh || mesh->mrphCount() == 0) return;
+    // if (!mesh || mesh->mrphCount() == 0) return;
+
+    return;
 
     std::vector<float>& weights = meshRD->mrphWeights();
 
-    for (size_t i = 0; i < mesh->mrphCount(); ++i) {
+    for (size_t i = 0; i < 0; ++i) {
         std::string label = "Morph " + std::to_string(i) + "##" + std::to_string(nHandle.value) + std::to_string(i);
         ImGui::SliderFloat(
             label.c_str(),

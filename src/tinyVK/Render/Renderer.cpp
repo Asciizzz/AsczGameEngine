@@ -264,42 +264,62 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
             const auto* rMesh = sharedRes.fsGet<tinyMesh>(drawGroup.mesh);
             if (!rMesh) continue; // Mesh not found in registry
 
-            VkBuffer staticBuffer = rMesh->vstaticBuffer();
-            VkBuffer riggedBuffer = rMesh->vriggedBuffer();
+            const auto* submesh = rMesh->submesh(drawGroup.submesh);
+            if (!submesh) continue; // Submesh not found (should not happen)
+
+            VkBuffer staticBuffer = submesh->vstaticBuffer;
+            VkBuffer riggedBuffer = submesh->vriggedBuffer;
 
             VkBuffer vBuffers[] = { staticBuffer, riggedBuffer };
             VkDeviceSize vOffsets[] = { 0, 0 };
             vkCmdBindVertexBuffers(currentCmd, 0, 2, vBuffers, vOffsets); // Bindings 0, 1
 
-            VkBuffer indxBuffer = rMesh->indxBuffer();
-            VkIndexType indxType = rMesh->indxType();
+            VkBuffer indxBuffer = submesh->indxBuffer;
+            VkIndexType indxType = submesh->indxType;
             vkCmdBindIndexBuffer(currentCmd, indxBuffer, 0, indxType);
 
             // Bind per-mesh morph delta descriptor set (set 4) (non dynamic)
-            VkDescriptorSet mrphDltsSet = rMesh->mrphDltsDescSet();
+            VkDescriptorSet mrphDltsSet = submesh->mrphDltsDescSet;
             mrphDltsSet = NULL_TERNARY(mrphDltsSet, mrphDltsSet, draw.dummy().morphDltsDescSet);
 
             testPipeline->bindSets(currentCmd, 4, &mrphDltsSet, 1, nullptr, 0);
 
-            for (uint32_t submeshIdx : drawGroup.submeshes) {
-                const auto& submesh = rMesh->submeshes()[submeshIdx];
+            // Draw entire range instead of submesh
+            testPipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, 0, glm::uvec4(
+                submesh->vrtxCount,
+                submesh->typeFlags(),
+                submesh->mrphCount,
+                draw.matIndex(submesh->material)
+            ));
 
-                testPipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, 0, glm::uvec4(
-                    rMesh->vrtxCount(),
-                    rMesh->isRigged() ? 1u : 0u,
-                    rMesh->mrphCount(),
-                    draw.matIndex(submesh.material)
-                ));
+            vkCmdDrawIndexed(
+                currentCmd, 
+                submesh->indxCount,
+                drawGroup.instaCount,
+                0,
+                0,
+                drawGroup.instaOffset
+            );
 
-                vkCmdDrawIndexed(
-                    currentCmd, 
-                    submesh.indxCount,
-                    drawGroup.instaCount,
-                    submesh.indxOffset,
-                    0,
-                    drawGroup.instaOffset
-                );
-            }
+            // for (uint32_t submeshIdx : drawGroup.submeshes) {
+            //     const auto& submesh = rMesh->submeshes()[submeshIdx];
+
+            //     testPipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, 0, glm::uvec4(
+            //         rMesh->vrtxCount(),
+            //         rMesh->isRigged() ? 1u : 0u,
+            //         rMesh->mrphCount(),
+            //         draw.matIndex(submesh.material)
+            //     ));
+
+            //     vkCmdDrawIndexed(
+            //         currentCmd, 
+            //         submesh.indxCount,
+            //         drawGroup.instaCount,
+            //         submesh.indxOffset,
+            //         0,
+            //         drawGroup.instaOffset
+            //     );
+            // }
         }
     }
 }

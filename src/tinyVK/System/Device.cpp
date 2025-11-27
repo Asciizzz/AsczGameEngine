@@ -8,7 +8,8 @@ using namespace tinyVk;
 // ---------------- EXTENSIONS ----------------
 const std::vector<const char*> Device::deviceExtensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-    VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME
+    VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
+    VK_KHR_INDEX_TYPE_UINT8_EXTENSION_NAME
 };
 
 // ---------------- CONSTRUCTOR / DESTRUCTOR ----------------
@@ -74,6 +75,7 @@ void Device::createLogicalDevice() {
         queueInfos.push_back(info);
     }
 
+
     // Vulkan 1.2 core features
     VkPhysicalDeviceFeatures deviceFeatures{};
     deviceFeatures.samplerAnisotropy = VK_TRUE;
@@ -89,6 +91,14 @@ void Device::createLogicalDevice() {
     vk12Features.descriptorBindingVariableDescriptorCount = VK_TRUE;  // if you use runtime arrays
     vk12Features.descriptorBindingPartiallyBound = VK_TRUE;           // optional
 
+    // Enable indexTypeUint8 feature
+    VkPhysicalDeviceIndexTypeUint8Features indexTypeUint8Features{};
+    indexTypeUint8Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_INDEX_TYPE_UINT8_FEATURES;
+    indexTypeUint8Features.indexTypeUint8 = VK_TRUE;
+
+    // Chain features: indexTypeUint8 -> vk12Features
+    indexTypeUint8Features.pNext = &vk12Features;
+
     VkDeviceCreateInfo ci{};
     ci.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     ci.queueCreateInfoCount = static_cast<uint32_t>(queueInfos.size());
@@ -96,7 +106,7 @@ void Device::createLogicalDevice() {
     ci.pEnabledFeatures = &deviceFeatures;
     ci.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
     ci.ppEnabledExtensionNames = deviceExtensions.data();
-    ci.pNext = &vk12Features;
+    ci.pNext = &indexTypeUint8Features;
 
     if (vkCreateDevice(pDevice, &ci, nullptr, &device) != VK_SUCCESS)
         throw std::runtime_error("Failed to create logical device");

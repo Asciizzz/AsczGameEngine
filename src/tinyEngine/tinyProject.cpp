@@ -85,7 +85,7 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
         for (auto& mMesh : model.meshes) {
             mMesh.mesh.vkCreate(dvk_, drawable_->mrphDltsDescLayout(), drawable_->mrphDltsDescPool());
 
-            for (auto& submesh : mMesh.mesh.submeshes()) {
+            for (auto& submesh : mMesh.mesh.submeshes) {
                 if (validIndex(submesh.material.index, glmMatRHandle)) {
                     submesh.material = glmMatRHandle[submesh.material.index];
                 } else {
@@ -145,7 +145,7 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
             tinyHandle meshHandle = linkHandle(ogNode.MESHRD_meshIndx, glbMeshRHandle);
             if (const tinyMesh* meshPtr = fs().r().get<tinyMesh>(meshHandle)) {
                 meshrd->
-                    assignMesh(meshHandle, meshPtr->mrphWeights()).
+                    assignMesh(meshHandle, {}).
                     assignSkeleNode(
                         nodeMap.count(ogNode.MESHRD_skeleNodeIndx) ?
                         nodeMap[ogNode.MESHRD_skeleNodeIndx] : tinyHandle()

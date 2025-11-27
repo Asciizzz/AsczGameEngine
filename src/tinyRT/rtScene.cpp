@@ -190,20 +190,31 @@ void Scene::update(FrameStart frameStart) noexcept {
 
             if (rtMESHRD3D* meshRD3D = rt_.get<rtMESHRD3D>(compHandle)) {
                 // Frustum culling
-                tinyMesh* mesh = fsr().get<tinyMesh>(meshRD3D->meshHandle());
-                if (!mesh || !cam.collideAABB(mesh->ABmin(), mesh->ABmax(), currentWorld)) continue;
+                const tinyMesh* mesh = fsr().get<tinyMesh>(meshRD3D->meshHandle());
 
-                // Submit draw entry
+                // Mesh culling
+                if (!mesh || !cam.collideAABB(mesh->ABmin, mesh->ABmax, currentWorld)) continue;
+
                 const Skeleton3D* skele3D = this->nGetComp<Skeleton3D>(meshRD3D->skeleNodeHandle());
-                draw.submit({
-                    meshRD3D->meshHandle(),
-                    currentWorld,
-                    { // skin data
-                        meshRD3D->skeleNodeHandle(),
-                        skele3D ? &skele3D->skinData() : nullptr
-                    },
-                    &meshRD3D->mrphWeights()
-                });
+
+                // Submit draw entries
+                for (uint32_t subIdx = 0; subIdx < mesh->submeshes.size(); ++subIdx) {
+                    const tinyMesh::Submesh* submesh = mesh->submesh(subIdx);
+
+                    // Submesh culling
+                    if (!cam.collideAABB(submesh->ABmin, submesh->ABmax, currentWorld)) continue;
+
+                    draw.submit({
+                        meshRD3D->meshHandle(),
+                        subIdx,
+                        currentWorld,
+                        { // skin data
+                            meshRD3D->skeleNodeHandle(),
+                            skele3D ? &skele3D->skinData() : nullptr
+                        },
+                        &meshRD3D->mrphWeights()
+                    });
+                }
             }
 
             if (rtSKELE3D* skel3D = rt_.get<rtSKELE3D>(compHandle)) {
