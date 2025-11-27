@@ -55,13 +55,6 @@ namespace tinyVertex {
     }
 };
 
-// HUGE UPDATE (IN PROGRESS)
-/*
-
-Completely redesign this mesh structure to be submesh based
-
-*/
-
 struct tinyMesh {
     tinyMesh() noexcept = default;
 
@@ -85,129 +78,165 @@ struct tinyMesh {
             std::string name;
         };
 
-        std::vector<tinyVertex::Static> vstaticData; // Required
-        std::vector<tinyVertex::Rigged> vriggedData; // Optional
-        std::vector<tinyVertex::Color>  vcolorData;  // Optional
-        std::vector<uint8_t>            indxRaw; // Will be casted to proper type
-
-        // Will be introduced later, too much hassle I am tired
-        std::vector<MorphTarget> mrphTargets; // Optional
-
-        tinyHandle material;
-
-        uint32_t vrtxCount = 0;
-        uint32_t indxCount = 0;
-        uint32_t mrphCount = 0;
-
-        uint32_t    indxStride = 0;
-        VkIndexType indxType = VK_INDEX_TYPE_UINT8;
-
-        tinyVertex::Type vrtxTypes = tinyVertex::Type::Static;
-        inline bool hasType(tinyVertex::Type t) const {
-            return (static_cast<uint32_t>(vrtxTypes) & static_cast<uint32_t>(t)) != 0;
-        }
-        inline uint32_t vrtxFlags() const {
-            return static_cast<uint32_t>(vrtxTypes);
-        }
-
-        // Basic vertex data
-        tinyVk::DataBuffer vstaticBuffer;
-        tinyVk::DataBuffer vriggedBuffer;
-        tinyVk::DataBuffer vcolorBuffer;
-        tinyVk::DataBuffer indxBuffer;
-
-        // MORPH DATA LELELE
-        tinyVk::DescSet mrphDltsDescSet;
-        tinyVk::DataBuffer mrphDltsBuffer;
-
-        glm::vec3 ABmin = glm::vec3( std::numeric_limits<float>::max());
-        glm::vec3 ABmax = glm::vec3(-std::numeric_limits<float>::max());
-
         // Methods
 
         Submesh& setVrtxStatic(const std::vector<tinyVertex::Static>& stas) {
-            vrtxTypes |= tinyVertex::Type::Static;
-            vrtxCount = stas.size();
-            vstaticData = stas;
+            vrtxTypes_ |= tinyVertex::Type::Static;
+            vrtxCount_ = stas.size();
+            vstaticData_ = stas;
 
             return *this;
         }
 
         Submesh& setVrtxRigged(const std::vector<tinyVertex::Rigged>& rigs) {
-            if (rigs.size() != vrtxCount) return *this; // Error, size mismatch
+            if (rigs.size() != vrtxCount_) return *this; // Error, size mismatch
 
-            vrtxTypes |= tinyVertex::Type::Rig;
-            vriggedData = rigs;
+            vrtxTypes_ |= tinyVertex::Type::Rig;
+            vriggedData_ = rigs;
             return *this;
         }
 
         Submesh& setVrtxColor(const std::vector<tinyVertex::Color>& colors) {
-            if (colors.size() != vrtxCount) return *this; // Error, size mismatch
+            if (colors.size() != vrtxCount_) return *this; // Error, size mismatch
 
-            vrtxTypes |= tinyVertex::Type::Color;
-            vcolorData = colors;
+            vrtxTypes_ |= tinyVertex::Type::Color;
+            vcolorData_ = colors;
             return *this;
         }
 
         Submesh& addMrphTarget(const MorphTarget& target) {
-            if (target.morphs.size() != vrtxCount) return *this; // Error, size mismatch
+            if (target.morphs.size() != vrtxCount_) return *this; // Error, size mismatch
 
-            vrtxTypes |= tinyVertex::Type::Morph;
-            mrphTargets.push_back(target);
+            vrtxTypes_ |= tinyVertex::Type::Morph;
+            mrphTargets_.push_back(target);
             return *this;
         }
 
         template<typename IndexT>
         Submesh& setIndxs(const std::vector<IndexT>& indices) {
-            indxCount = indices.size();
-            indxStride = sizeof(IndexT);
-            indxType = strideToType(indxStride);
+            indxCount_ = indices.size();
+            indxStride_ = sizeof(IndexT);
+            indxType_ = strideToType(indxStride_);
 
-            size_t byteSize = indxCount * indxStride;
-            indxRaw.resize(byteSize);
-            std::memcpy(indxRaw.data(), indices.data(), byteSize);
+            size_t byteSize = indxCount_ * indxStride_;
+            indxRaw_.resize(byteSize);
+            std::memcpy(indxRaw_.data(), indices.data(), byteSize);
 
             return *this;   
         }
-        
-        void vkCreate(const tinyVk::Device* dvk_, VkDescriptorSetLayout mrphDltsLayout = VK_NULL_HANDLE, VkDescriptorPool mrphDltsPool = VK_NULL_HANDLE) {
+
+        void vkCreate(const tinyVk::Device* dvk_) {
             using namespace tinyVk;
 
-        // Vertex buffers
+        // Vertex and Index Buffers
 
-            vstaticBuffer
-                .setDataSize(vstaticData.size() * sizeof(tinyVertex::Static))
+            vstaticBuffer_
+                .setDataSize(vstaticData_.size() * sizeof(tinyVertex::Static))
                 .setUsageFlags(BufferUsage::Vertex)
-                .createDeviceLocalBuffer(dvk_, vstaticData.data());
+                .createDeviceLocalBuffer(dvk_, vstaticData_.data());
 
-            if (!hasType(tinyVertex::Type::Rig)) vriggedData.push_back(tinyVertex::Rigged()); // Dummy entry to avoid errors
-            vriggedBuffer
-                .setDataSize(vriggedData.size() * sizeof(tinyVertex::Rigged))
+            if (!vrtxHas(tinyVertex::Type::Rig)) vriggedData_.push_back(tinyVertex::Rigged()); // Dummy entry to avoid errors
+            vriggedBuffer_
+                .setDataSize(vriggedData_.size() * sizeof(tinyVertex::Rigged))
                 .setUsageFlags(BufferUsage::Vertex)
-                .createDeviceLocalBuffer(dvk_, vriggedData.data());
+                .createDeviceLocalBuffer(dvk_, vriggedData_.data());
 
-            if (!hasType(tinyVertex::Type::Color)) vcolorData.push_back(tinyVertex::Color()); // Dummy white color
+            if (!vrtxHas(tinyVertex::Type::Color)) vcolorData_.push_back(tinyVertex::Color()); // Dummy white color
 
-            vcolorBuffer
-                .setDataSize(vcolorData.size() * sizeof(tinyVertex::Color))
+            vcolorBuffer_
+                .setDataSize(vcolorData_.size() * sizeof(tinyVertex::Color))
                 .setUsageFlags(BufferUsage::Vertex)
-                .createDeviceLocalBuffer(dvk_, vcolorData.data());
+                .createDeviceLocalBuffer(dvk_, vcolorData_.data());
 
-            indxBuffer
-                .setDataSize(indxRaw.size())
+            indxBuffer_
+                .setDataSize(indxRaw_.size())
                 .setUsageFlags(BufferUsage::Index)
-                .createDeviceLocalBuffer(dvk_, indxRaw.data());
+                .createDeviceLocalBuffer(dvk_, indxRaw_.data());
 
             // Will implement morphs later
         }
         
         void clearCPU() {
-            vstaticData.clear();
-            vriggedData.clear();
-            vcolorData.clear();
-            indxRaw.clear();
-            mrphTargets.clear();
+            vstaticData_.clear();
+            vriggedData_.clear();
+            vcolorData_.clear();
+            indxRaw_.clear();
+            mrphTargets_.clear();
         }
+
+    // Getters
+        inline uint32_t vrtxFlags() const { return static_cast<uint32_t>(vrtxTypes_); }
+        inline uint32_t vrtxHas(tinyVertex::Type t) const { return (static_cast<uint32_t>(vrtxTypes_) & static_cast<uint32_t>(t)) != 0; }
+
+        const std::vector<tinyVertex::Static>& vstaticData() const { return vstaticData_; }
+        const std::vector<tinyVertex::Rigged>& vriggedData() const { return vriggedData_; }
+        const std::vector<tinyVertex::Color>&  vcolorData() const  { return vcolorData_;  }
+        const std::vector<uint8_t>&            indxRaw() const     { return indxRaw_;    }
+
+        inline tinyHandle material() const { return material_; }
+        void setMaterial(tinyHandle mat) { material_ = mat; }
+
+        inline uint32_t vrtxCount() const { return vrtxCount_; }
+        inline uint32_t indxCount() const { return indxCount_; }
+        inline VkIndexType indxType() const { return indxType_; }
+        
+        inline uint32_t mrphCount() const { return mrphCount_; }
+        inline uint32_t mrphOffset() const { return mrphOffset_; }
+        void setMrphOffset(uint32_t offset) { mrphOffset_ = offset; }
+
+        VkBuffer vstaticBuffer() const { return vstaticBuffer_; }
+        VkBuffer vriggedBuffer() const { return vriggedBuffer_; }
+        VkBuffer vcolorBuffer() const  { return vcolorBuffer_;  }
+        VkBuffer indxBuffer() const    { return indxBuffer_;    }
+
+        const glm::vec3& ABmin() const { return ABmin_; }
+        const glm::vec3& ABmax() const { return ABmax_; }
+        
+        void setABmin(const glm::vec3& abMin) { ABmin_ = abMin; }
+        void setABmax(const glm::vec3& abMax) { ABmax_ = abMax; }
+        void setAABB(const glm::vec3& abMin, const glm::vec3& abMax) {
+            ABmin_ = abMin;
+            ABmax_ = abMax;
+        }
+
+        void expandABmin(const glm::vec3& point) { ABmin_ = glm::min(ABmin_, point); }
+        void expandABmax(const glm::vec3& point) { ABmax_ = glm::max(ABmax_, point); }
+        void expandAABB(const glm::vec3& point) {
+            expandABmin(point);
+            expandABmax(point);
+        }
+    private:
+        friend class tinyMesh; // Not needed but good to have
+
+        std::vector<tinyVertex::Static> vstaticData_; // Required
+        std::vector<tinyVertex::Rigged> vriggedData_; // Optional
+        std::vector<tinyVertex::Color>  vcolorData_;  // Optional
+        std::vector<uint8_t>            indxRaw_; // Will be casted to proper type
+
+        // Will be introduced later, too much hassle I am tired
+        std::vector<MorphTarget> mrphTargets_; // Optional
+
+        tinyHandle material_;
+
+        uint32_t vrtxCount_ = 0;
+        uint32_t indxCount_ = 0;
+
+        uint32_t    indxStride_ = 0;
+        VkIndexType indxType_ = VK_INDEX_TYPE_UINT8;
+
+        uint32_t mrphCount_ = 0;
+        uint32_t mrphOffset_ = 0; // Offset in the big morph deltas buffer
+
+        tinyVertex::Type vrtxTypes_ = tinyVertex::Type::Static;
+
+        // Basic vertex data
+        tinyVk::DataBuffer vstaticBuffer_;
+        tinyVk::DataBuffer vriggedBuffer_;
+        tinyVk::DataBuffer vcolorBuffer_;
+        tinyVk::DataBuffer indxBuffer_;
+
+        glm::vec3 ABmin_ = glm::vec3( std::numeric_limits<float>::max());
+        glm::vec3 ABmax_ = glm::vec3(-std::numeric_limits<float>::max());
 
         static VkIndexType strideToType(size_t stride) noexcept {
             switch (stride) {
@@ -219,38 +248,47 @@ struct tinyMesh {
         }
     };
 
-    void vkCreate(const tinyVk::Device* dvk_, VkDescriptorSetLayout mrphDltsLayout = VK_NULL_HANDLE, VkDescriptorPool mrphDltsPool = VK_NULL_HANDLE) {
-        for (auto& submesh : submeshes) {
-            submesh.vkCreate(dvk_, mrphDltsLayout, mrphDltsPool);
+    size_t append(Submesh&& submesh) {
+        ABmin_ = glm::min(ABmin_, submesh.ABmin());
+        ABmax_ = glm::max(ABmax_, submesh.ABmax());
 
-            ABmin = glm::min(ABmin, submesh.ABmin);
-            ABmax = glm::max(ABmax, submesh.ABmax);
+        submeshes_.push_back(std::move(submesh));
+        return submeshes_.size() - 1;
+    }
+
+    void vkCreate(const tinyVk::Device* dvk_, VkDescriptorSetLayout mrphDltsLayout = VK_NULL_HANDLE, VkDescriptorPool mrphDltsPool = VK_NULL_HANDLE) {
+        for (auto& submesh : submeshes_) {
+            submesh.vkCreate(dvk_);
         }
     }
 
-    size_t append(Submesh&& submesh) {
-        ABmin = glm::min(ABmin, submesh.ABmin);
-        ABmax = glm::max(ABmax, submesh.ABmax);
+    std::vector<tinyMesh::Submesh>&       submeshes()       { return submeshes_; }
+    const std::vector<tinyMesh::Submesh>& submeshes() const { return submeshes_; }
 
-        submeshes.push_back(std::move(submesh));
-        return submeshes.size() - 1;
-    }
+    Submesh* submesh(size_t index) { return index < submeshes_.size() ? &submeshes_[index] : nullptr; }
+    const Submesh* submesh(size_t index) const { return const_cast<tinyMesh*>(this)->submesh(index); }
 
-    std::vector<Submesh> submeshes;
+    const glm::vec3& ABmin() const { return ABmin_; }
+    const glm::vec3& ABmax() const { return ABmax_; }
+    void setABmin(const glm::vec3& abMin) { ABmin_ = abMin; }
+    void setABmax(const glm::vec3& abMax) { ABmax_ = abMax; }
 
-    Submesh* submesh(size_t index) {
-        return index < submeshes.size() ? &submeshes[index] : nullptr;
-    }
-    const Submesh* submesh(size_t index) const {
-        return index < submeshes.size() ? &submeshes[index] : nullptr;
-    }
+private:
+
+    std::vector<Submesh> submeshes_;
+
+    glm::vec3 ABmin_ = glm::vec3(std::numeric_limits<float>::max());
+    glm::vec3 ABmax_ = glm::vec3(std::numeric_limits<float>::lowest());
+
+    tinyVk::DescSet mrphDltsDescSet_;
+    tinyVk::DataBuffer mrphDltsBuffer_;
 
     // void vkCreate(const tinyVk::Device* device, VkDescriptorSetLayout mrphLayout = VK_NULL_HANDLE, VkDescriptorPool mrphPool = VK_NULL_HANDLE) {
 
 
     // // Morph deltas
 
-    //     if (mrphTargets_.empty() ||
+    //     if (mrphTargets__.empty() ||
     //         mrphLayout == VK_NULL_HANDLE ||
     //         mrphPool == VK_NULL_HANDLE) {
     //         clearData(); // Optional
@@ -259,15 +297,15 @@ struct tinyMesh {
 
     //     hasMorphs_ = true;
 
-    //     mrphDeltas_.resize(mrphCount_ * vrtxCount_);
+    //     mrphDeltas_.resize(mrphCount_ * vrtxCount__);
     //     for (size_t i = 0; i < mrphCount_; ++i) {
     //         // Should not happen, hopefully
-    //         assert(mrphTargets_[i].deltas.size() == vrtxCount_ && "Morph target delta count must match vertex count");
+    //         assert(mrphTargets__[i].deltas.size() == vrtxCount__ && "Morph target delta count must match vertex count");
 
     //         std::memcpy(
-    //             mrphDeltas_.data() + i * vrtxCount_,
-    //             mrphTargets_[i].deltas.data(),
-    //             vrtxCount_ * sizeof(tinyMorph::Delta)
+    //             mrphDeltas_.data() + i * vrtxCount__,
+    //             mrphTargets__[i].deltas.data(),
+    //             vrtxCount__ * sizeof(tinyMorph::Delta)
     //         );
     //     }
 
@@ -292,7 +330,4 @@ struct tinyMesh {
 
     //     clearData(); // Optional
     // }
-
-    glm::vec3 ABmin = glm::vec3(std::numeric_limits<float>::max());
-    glm::vec3 ABmax = glm::vec3(std::numeric_limits<float>::lowest());
 };

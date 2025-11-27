@@ -73,6 +73,6 @@ public:
 
     glm::mat4 getVP() const { return projectionMatrix * viewMatrix; }
 
-    bool collideAABB(glm::vec3 abMin, glm::vec3 abMax, glm::mat4 model) const;
+    bool collideAABB(const glm::vec3& abMin, const glm::vec3& abMax, const glm::mat4& model) const;
 
 };

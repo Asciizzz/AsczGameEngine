@@ -455,7 +455,7 @@ static bool readDeltaAccessor(const tinygltf::Model& model, int accessorIdx, std
 }
 
 void loadMesh(tinyMesh& mesh, const tinygltf::Model& gltfModel, const tinygltf::Mesh& gltfMesh, const std::vector<tinygltf::Primitive>& primitives) {
-    mesh.submeshes.clear();
+    mesh.submeshes().clear();
 
     // iterate each primitive -> one Submesh
     for (const auto& primitive : primitives) {
@@ -466,7 +466,6 @@ void loadMesh(tinyMesh& mesh, const tinygltf::Model& gltfModel, const tinygltf::
         if (!readAccessorFromMap(gltfModel, primitive.attributes, "POSITION", positions)) {
             throw std::runtime_error("Primitive missing POSITION");
         }
-        submesh.vrtxCount = static_cast<uint32_t>(positions.size());
 
         // --- 2) Read optional attributes into local arrays ---
         std::vector<glm::vec3> normals;
@@ -491,9 +490,10 @@ void loadMesh(tinyMesh& mesh, const tinygltf::Model& gltfModel, const tinygltf::
         std::vector<tinyVertex::Rigged> vrigged;
         std::vector<tinyVertex::Color>  vcolor;
 
-        vstatic.resize(submesh.vrtxCount);
-        if (hasRigging) vrigged.resize(submesh.vrtxCount);
-        if (!colors.empty()) vcolor.resize(submesh.vrtxCount);
+        uint32_t vrtxCount = static_cast<uint32_t>(positions.size());
+        vstatic.resize(vrtxCount);
+        if (hasRigging) vrigged.resize(vrtxCount);
+        if (!colors.empty()) vcolor.resize(vrtxCount);
 
         // Default values
         const glm::vec3 defaultNormal(0.0f, 0.0f, 1.0f);
@@ -503,7 +503,7 @@ void loadMesh(tinyMesh& mesh, const tinygltf::Model& gltfModel, const tinygltf::
         const glm::uvec4 defaultBoneIDs(0u,0u,0u,0u);
         const glm::vec4 defaultBoneWs(1.0f,0.0f,0.0f,0.0f);
 
-        for (size_t i = 0; i < submesh.vrtxCount; ++i) {
+        for (size_t i = 0; i < vrtxCount; ++i) {
             glm::vec3 pos = positions[i];
             glm::vec3 nrm = (i < normals.size()) ? normals[i] : defaultNormal;
             glm::vec4 tan = (i < tangents.size()) ? tangents[i] : defaultTangent;
@@ -533,8 +533,9 @@ void loadMesh(tinyMesh& mesh, const tinygltf::Model& gltfModel, const tinygltf::
             }
 
             // expand submesh AABB while building static vertices
-            submesh.ABmin = glm::min(submesh.ABmin, pos);
-            submesh.ABmax = glm::max(submesh.ABmax, pos);
+            // submesh.ABmin() = glm::min(submesh.ABmin(), pos);
+            // submesh.ABmax() = glm::max(submesh.ABmax(), pos);
+            submesh.expandAABB(pos);
         }
 
         // --- 4) Indices: read if present, otherwise generate a sequential index list ---
@@ -579,8 +580,8 @@ void loadMesh(tinyMesh& mesh, const tinygltf::Model& gltfModel, const tinygltf::
             }
         } else {
             // non-indexed primitive: create a trivial index list
-            primIndices.resize(submesh.vrtxCount);
-            for (uint32_t i = 0; i < submesh.vrtxCount; ++i) primIndices[i] = i;
+            primIndices.resize(vrtxCount);
+            for (uint32_t i = 0; i < vrtxCount; ++i) primIndices[i] = i;
         }
 
         // --- 5) Assign arrays into submesh and update flags ---
@@ -589,12 +590,12 @@ void loadMesh(tinyMesh& mesh, const tinygltf::Model& gltfModel, const tinygltf::
         if (!vcolor.empty()) submesh.setVrtxColor(vcolor);
 
         // material
-        submesh.material = tinyHandle(primitive.material);
+        submesh.setMaterial(tinyHandle(primitive.material));
 
         // set index buffer with smallest suitable type - use templated setIndxs
         // choose smallest index type that can contain the max index
         uint32_t maxIndex = 0;
-        for (uint32_t idx : primIndices) if (idx > maxIndex) maxIndex = idx;
+        for (uint32_t idx : primIndices) if (idx > maxIndex) idx = maxIndex;
 
         if (maxIndex <= std::numeric_limits<uint8_t>::max()) {
             std::vector<uint8_t> tmp; tmp.reserve(primIndices.size());
@@ -635,14 +636,14 @@ void loadMesh(tinyMesh& mesh, const tinygltf::Model& gltfModel, const tinygltf::
             if (!hasAnyData) continue; // skip empty target
 
             // Fill all missing data with zeros
-            if (dPos.size() != submesh.vrtxCount) dPos.resize(submesh.vrtxCount, glm::vec3(0.0f));
-            if (dNrm.size() != submesh.vrtxCount) dNrm.resize(submesh.vrtxCount, glm::vec3(0.0f));
-            if (dTan.size() != submesh.vrtxCount) dTan.resize(submesh.vrtxCount, glm::vec3(0.0f));
+            if (dPos.size() != vrtxCount) dPos.resize(vrtxCount, glm::vec3(0.0f));
+            if (dNrm.size() != vrtxCount) dNrm.resize(vrtxCount, glm::vec3(0.0f));
+            if (dTan.size() != vrtxCount) dTan.resize(vrtxCount, glm::vec3(0.0f));
 
             // Build MorphTarget using tinyVertex::Morph (assumes fields dPos,dNrml,dTang)
             tinyMesh::Submesh::MorphTarget mt;
-            mt.morphs.resize(submesh.vrtxCount);
-            for (size_t v = 0; v < submesh.vrtxCount; ++v) {
+            mt.morphs.resize(vrtxCount);
+            for (size_t v = 0; v < vrtxCount; ++v) {
                 mt.morphs[v].dPos  = dPos[v];
                 mt.morphs[v].dNrml = dNrm[v];
                 mt.morphs[v].dTang = dTan[v];
@@ -1370,9 +1371,9 @@ tinyModel tinyLoader::loadModelFromOBJ(const std::string& filePath) {
         tinyMesh::Submesh submesh;
         submesh.setVrtxStatic(vertices);
         submesh.setIndxs(indices);
-        submesh.material = (materialId >= 0) ? tinyHandle(materialId) : tinyHandle();
-        submesh.ABmin = ABmin;
-        submesh.ABmax = ABmax;
+        submesh.setMaterial((materialId >= 0) ? tinyHandle(materialId) : tinyHandle());
+        submesh.setABmin(ABmin);
+        submesh.setABmax(ABmax);
 
         mesh.append(std::move(submesh));
 

@@ -148,20 +148,20 @@ void tinyDrawable::init(const CreateInfo& info) {
 
     // Dummy morph delta buffer
 
-    dummy_.morphDltsBuffer
+    dummy_.mrphDltsBuffer
         .setDataSize(sizeof(VkBuffer))
         .setUsageFlags(BufferUsage::Storage)
         .setMemPropFlags(MemProp::HostVisibleAndCoherent)
         .createBuffer(dvk_)
         .mapMemory();
 
-    dummy_.morphDltsDescSet.allocate(device, mrphDltsDescPool_, mrphDltsDescLayout_);
+    dummy_.mrphDltsDescSet.allocate(device, mrphDltsDescPool_, mrphDltsDescLayout_);
     DescWrite()
-        .setDstSet(dummy_.morphDltsDescSet)
+        .setDstSet(dummy_.mrphDltsDescSet)
         .setType(DescType::StorageBuffer)
         .setDescCount(1)
         .setBufferInfo({ VkDescriptorBufferInfo{
-            dummy_.morphDltsBuffer, 0, VK_WHOLE_SIZE
+            dummy_.mrphDltsBuffer, 0, VK_WHOLE_SIZE
         } })
         .updateDescSets(device);
 }
@@ -228,10 +228,10 @@ void tinyDrawable::submit(const Entry& entry) noexcept {
 
         tinyHandle shaderHandle;
 
-        if (const tinyMaterial* rMat = fsr_->get<tinyMaterial>(submesh->material)) {
+        if (const tinyMaterial* rMat = fsr_->get<tinyMaterial>(submesh->material())) {
             // If material not in buffer, add it
-            if (handleMap_.find(submesh->material) == handleMap_.end()) {
-                handleMap_[submesh->material] = matData_.size();
+            if (handleMap_.find(submesh->material()) == handleMap_.end()) {
+                handleMap_[submesh->material()] = matData_.size();
                 matData_.push_back(rMat->data);
             }
 

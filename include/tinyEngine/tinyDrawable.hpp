@@ -178,8 +178,8 @@ public:
 
 // Collection of dummy data to avoid empty struct issues
     struct Dummy {
-        tinyVk::DataBuffer morphDltsBuffer;
-        tinyVk::DescSet    morphDltsDescSet;
+        tinyVk::DataBuffer mrphDltsBuffer;
+        tinyVk::DescSet    mrphDltsDescSet;
     };
 
     const Dummy& dummy() const noexcept { return dummy_; }

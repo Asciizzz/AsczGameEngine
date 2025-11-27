@@ -85,11 +85,9 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
         for (auto& mMesh : model.meshes) {
             mMesh.mesh.vkCreate(dvk_, drawable_->mrphDltsDescLayout(), drawable_->mrphDltsDescPool());
 
-            for (auto& submesh : mMesh.mesh.submeshes) {
-                if (validIndex(submesh.material.index, glmMatRHandle)) {
-                    submesh.material = glmMatRHandle[submesh.material.index];
-                } else {
-                    submesh.material = tinyHandle();
+            for (auto& submesh : mMesh.mesh.submeshes()) {
+                if (validIndex(submesh.material().index, glmMatRHandle)) {
+                    submesh.setMaterial(glmMatRHandle[submesh.material().index]);
                 }
             }
 

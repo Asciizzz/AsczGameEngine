@@ -267,35 +267,36 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
             const auto* submesh = rMesh->submesh(drawGroup.submesh);
             if (!submesh) continue; // Submesh not found (should not happen)
 
-            VkBuffer staticBuffer = submesh->vstaticBuffer;
-            VkBuffer riggedBuffer = submesh->vriggedBuffer;
-            VkBuffer colorBuffer  = submesh->vcolorBuffer;
+            VkBuffer staticBuffer = submesh->vstaticBuffer();
+            VkBuffer riggedBuffer = submesh->vriggedBuffer();
+            VkBuffer colorBuffer  = submesh->vcolorBuffer();
 
             VkBuffer vBuffers[] = { staticBuffer, riggedBuffer, colorBuffer };
             VkDeviceSize vOffsets[] = { 0, 0, 0 };
             vkCmdBindVertexBuffers(currentCmd, 0, 3, vBuffers, vOffsets); // Bindings 0, 1, 2
 
-            VkBuffer indxBuffer = submesh->indxBuffer;
-            VkIndexType indxType = submesh->indxType;
+            VkBuffer indxBuffer = submesh->indxBuffer();
+            VkIndexType indxType = submesh->indxType();
             vkCmdBindIndexBuffer(currentCmd, indxBuffer, 0, indxType);
 
             // Bind per-mesh morph delta descriptor set (set 4) (non dynamic)
-            VkDescriptorSet mrphDltsSet = submesh->mrphDltsDescSet;
-            mrphDltsSet = NULL_TERNARY(mrphDltsSet, mrphDltsSet, draw.dummy().morphDltsDescSet);
+            // VkDescriptorSet mrphDltsSet = submesh->mrphDltsDescSet();
+            VkDescriptorSet mrphDltsSet = VK_NULL_HANDLE;
+            mrphDltsSet = NULL_TERNARY(mrphDltsSet, mrphDltsSet, draw.dummy().mrphDltsDescSet);
 
             testPipeline->bindSets(currentCmd, 4, &mrphDltsSet, 1, nullptr, 0);
 
             // Draw entire range instead of submesh
             testPipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, 0, glm::uvec4(
                 submesh->vrtxFlags(),
-                submesh->vrtxCount,
-                submesh->mrphCount,
-                draw.matIndex(submesh->material)
+                submesh->vrtxCount(),
+                submesh->mrphCount(),
+                draw.matIndex(submesh->material())
             ));
 
             vkCmdDrawIndexed(
                 currentCmd, 
-                submesh->indxCount,
+                submesh->indxCount(),
                 drawGroup.instaCount,
                 0,
                 0,

@@ -193,17 +193,16 @@ void Scene::update(FrameStart frameStart) noexcept {
                 const tinyMesh* mesh = fsr().get<tinyMesh>(meshRD3D->meshHandle());
 
                 // Mesh culling
-                if (!mesh || !cam.collideAABB(mesh->ABmin, mesh->ABmax, currentWorld)) continue;
+                if (!mesh || !cam.collideAABB(mesh->ABmin(), mesh->ABmax(), currentWorld)) continue;
 
                 const Skeleton3D* skele3D = this->nGetComp<Skeleton3D>(meshRD3D->skeleNodeHandle());
 
                 // Submit draw entries
-                for (uint32_t subIdx = 0; subIdx < mesh->submeshes.size(); ++subIdx) {
+                for (uint32_t subIdx = 0; subIdx < mesh->submeshes().size(); ++subIdx) {
                     const tinyMesh::Submesh* submesh = mesh->submesh(subIdx);
 
                     // Submesh culling
-                    if (!cam.collideAABB(submesh->ABmin, submesh->ABmax, currentWorld)) continue;
-
+                    if (!cam.collideAABB(submesh->ABmin(), submesh->ABmax(), currentWorld)) continue;
                     draw.submit({
                         meshRD3D->meshHandle(),
                         subIdx,

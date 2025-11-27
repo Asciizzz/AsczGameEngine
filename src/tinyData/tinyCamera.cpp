@@ -253,7 +253,7 @@ float tinyCamera::getRoll(bool radians) const {
 }
 
 
-bool tinyCamera::collideAABB(glm::vec3 abMin, glm::vec3 abMax, glm::mat4 model) const {
+bool tinyCamera::collideAABB(const glm::vec3& abMin, const glm::vec3& abMax, const glm::mat4& model) const {
     // Compute AABB center & half extents in local space
     glm::vec3 localCenter = (abMin + abMax) * 0.5f;
     glm::vec3 localHalf   = (abMax - abMin) * 0.5f;
