@@ -1,7 +1,7 @@
 #version 450
 
 layout(push_constant) uniform PushConstant {
-    uvec4 props; // .x = material index, .y = vertex count
+    uvec4 data;
 } pConst;
 
 layout(location = 0) in vec4  inPos_Tu;
@@ -14,7 +14,7 @@ layout(location = 5) in vec4  model4_0;
 layout(location = 6) in vec4  model4_1;
 layout(location = 7) in vec4  model4_2;
 layout(location = 8) in vec4  model4_3;
-layout(location = 9) in uvec4 other; // .x = boneOffset, .y = boneCount, .z = mrphWsOffset, .w = mrphWsCount
+layout(location = 9) in uvec4 other; // .x = boneOffset, .y = mrphWsOffset, .z = matOverride, .w = reserved
 
 layout(location = 0) out vec3 fragWorld;
 layout(location = 1) out vec3 fragNrml;
@@ -53,13 +53,14 @@ void main() {
 
 // ----------------------------------
 
-    uint mrphWsOffset = other.z;
-    uint mrphWsCount = other.w;
 
-    uint vertexCount = pConst.props.y;
+    uint vertexCount = pConst.data.x;
     uint vertexId = gl_VertexIndex;
 
-    if (mrphWsCount > 0 && vertexCount > 0) {
+    uint mrphWsCount = pConst.data.y;
+
+    if (mrphWsCount > 0 && vertexCount > 0 && false) {
+        uint mrphWsOffset = other.y;
         for (uint m = 0; m < mrphWsCount; ++m) {
             float weight = mrphWeights[mrphWsOffset + m];
 
@@ -81,9 +82,8 @@ void main() {
     vec3 skinnedTangent = vec3(0.0);
 
     uint boneOffset = other.x;
-    uint boneCount = other.y;
 
-    if (boneCount == 0) { // No skinning
+    if (pConst.data.z == 0) { // No skinning
         skinnedPos = vec4(basePos, 1.0);
         skinnedNormal = baseNormal;
         skinnedTangent = baseTangent;
@@ -92,11 +92,11 @@ void main() {
             uint id = inBoneIDs[i] + boneOffset;
 
             float w = inBoneWs[i];
-            mat4 boneMat = id < boneCount ? skinData[id] : mat4(1.0);
+            mat4 skinMat = skinData[id];
 
-            skinnedPos     += w * (boneMat * vec4(basePos, 1.0));
-            skinnedNormal  += w * mat3(boneMat) * baseNormal;
-            skinnedTangent += w * mat3(boneMat) * baseTangent;
+            skinnedPos     += w * (skinMat * vec4(basePos, 1.0));
+            skinnedNormal  += w * mat3(skinMat) * baseNormal;
+            skinnedTangent += w * mat3(skinMat) * baseTangent;
         }
     }
 

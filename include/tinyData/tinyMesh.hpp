@@ -97,7 +97,7 @@ struct tinyMesh {
         vrtxCount_ = vstaticData_.size(); 
         indxCount_ = indxRaw_.size() / indxStride_;
         mrphCount_ = mrphTargets_.size();
-    
+
     // Vertex buffers
 
         vstaticBuffer_
@@ -178,10 +178,9 @@ struct tinyMesh {
     size_t indxCount() const noexcept { return indxCount_; }
     size_t indxStride() const noexcept { return indxStride_; }
     VkIndexType indxType() const noexcept { return indxType_; }
-    size_t mrphCount() const noexcept { return mrphCount_; }
 
+    size_t mrphCount() const noexcept { return mrphCount_; }
     bool isRigged() const noexcept { return isRigged_; }
-    bool hasMorphs() const noexcept { return hasMorphs_; }
 
     VkBuffer vstaticBuffer() const noexcept { return vstaticBuffer_; }
     VkBuffer vriggedBuffer() const noexcept { return vriggedBuffer_; }

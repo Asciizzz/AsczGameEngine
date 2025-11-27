@@ -244,8 +244,9 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
     VkDescriptorSet mrphWsSet = draw.mrphWsDescSet();
     uint32_t mrphWsOffset = draw.mrphWsOffset(currentFrame);
 
-    for (const auto& [shaderHandle, drawGroupVec] : draw.shaderGroups()) { // For each shader groups:
+    for (const auto& shaderGroup : draw.shaderGroups()) { // For each shader groups:
         // In the future you will change this to a r.get<tinyShader>(shaderHandle)
+        tinyHandle shaderHandle = shaderGroup.shader;
         testPipeline->bindCmd(currentCmd);
 
         // Bind runtime descriptor sets once
@@ -259,13 +260,12 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
         VkDeviceSize offsets[] = { draw.instaOffset(currentFrame) };
         vkCmdBindVertexBuffers(currentCmd, 2, 1, buffers, offsets); // Binding 2
 
-        for (const auto& drawGroup : drawGroupVec) {
+        for (const auto& drawGroup : shaderGroup.drawGroups) {
             const auto* rMesh = sharedRes.fsGet<tinyMesh>(drawGroup.mesh);
             if (!rMesh) continue; // Mesh not found in registry
 
             VkBuffer staticBuffer = rMesh->vstaticBuffer();
             VkBuffer riggedBuffer = rMesh->vriggedBuffer();
-            bool isRigged = rMesh->isRigged();
 
             VkBuffer vBuffers[] = { staticBuffer, riggedBuffer };
             VkDeviceSize vOffsets[] = { 0, 0 };
@@ -284,12 +284,11 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
             for (uint32_t submeshIdx : drawGroup.submeshes) {
                 const auto& submesh = rMesh->submeshes()[submeshIdx];
 
-                uint32_t matIdx = draw.matIndex(submesh.material);
-
                 testPipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, 0, glm::uvec4(
-                    matIdx,             // Material index
-                    rMesh->vrtxCount(), // Vertex count
-                    0, 0                // Reserved
+                    rMesh->vrtxCount(),
+                    rMesh->isRigged() ? 1u : 0u,
+                    rMesh->mrphCount(),
+                    draw.matIndex(submesh.material)
                 ));
 
                 vkCmdDrawIndexed(

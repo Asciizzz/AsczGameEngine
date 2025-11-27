@@ -1,7 +1,7 @@
 #version 450
 
 layout(push_constant) uniform PushConstant {
-    uvec4 props;
+    uvec4 data;
 } pConst;
 
 layout(location = 0) in vec3 fragWorld;
@@ -41,9 +41,9 @@ void main() {
     float lDot = dot(normalize(fragNrml), normalize(lightDir));
     lDot = clamp(lDot, 0.0, 1.0);
 
-    lDot = mix(0.8, 1.0, lDot);
+    lDot = mix(0.6, 1.0, lDot);
 
-    Material mat = materials[pConst.props.x];
+    Material mat = materials[pConst.data.w];
 
     outColor = mat.base * lDot;
 }

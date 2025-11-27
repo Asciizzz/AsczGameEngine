@@ -8,6 +8,29 @@
 #include "tinyData/tinyMaterial.hpp"
 #include "tinyData/tinyTexture.hpp"
 
+/* RENDER RULES:
+
+Instance Data: {
+    mat4 model matrix,
+    uvec4 props {
+        x: skin offset
+        y: morph offset
+        z: material override index
+        w: unused
+    }
+}
+
+Push Constant: {
+    uvec4 props {
+        x: vertex count
+        y: skins count
+        z: morph weights count
+        w: material index
+    }
+}
+
+
+*/
 
 class tinyDrawable {
 public:
@@ -54,8 +77,21 @@ public:
         tinyHandle mesh;
         std::vector<uint32_t> submeshes;
 
+        size_t instaIndex = 0;
+
+        // Determine later
         uint32_t instaOffset = 0;
         uint32_t instaCount = 0;
+    };
+
+    struct ShaderGroup {
+        tinyHandle shader;
+
+        std::vector<DrawGroup> drawGroups;
+        size_t add(const DrawGroup& group) {
+            drawGroups.push_back(group);
+            return drawGroups.size() - 1;
+        }
     };
 
     struct SkinRange {
@@ -101,8 +137,8 @@ public:
     // Helpers
 
     uint32_t matIndex(tinyHandle matHandle) const noexcept {
-        auto it = matIdxMap_.find(matHandle);
-        return (it != matIdxMap_.end()) ? it->second : 0;
+        auto it = handleMap_.find(matHandle);
+        return (it != handleMap_.end()) ? it->second : 0;
     }
 
     Size_x1 instaSize_x1() const noexcept { return instaSize_x1_; }
@@ -123,10 +159,7 @@ public:
     void submit(const MeshEntry& entry) noexcept;
     void finalize();
 
-
-    const std::unordered_map<tinyHandle, std::vector<DrawGroup>>& shaderGroups() const noexcept {
-        return shaderGroups_;
-    }
+    const std::vector<ShaderGroup>& shaderGroups() const noexcept { return shaderGroups_; }
 
 // --------------------------- Dummy -----------------------------
 
@@ -146,9 +179,15 @@ private:
     tinyRegistry* fsr_ = nullptr;
     const tinyVk::Device* dvk_ = nullptr;
 
-    // Batching data (build time)
-    std::unordered_map<tinyHandle, std::vector<InstaData>> meshInstaMap_; // Mesh handle -> Instance data
-    std::unordered_map<tinyHandle, std::vector<DrawGroup>> shaderGroups_; // Shader handle -> mesh groups
+    // Batching data (reset each frame)
+    std::vector<std::vector<InstaData>> meshInstaData_;
+    std::vector<ShaderGroup> shaderGroups_;
+    std::vector<tinyMaterial::Data> matData_;
+    std::vector<SkinRange> skinRanges_; // Need this since many instances can share same skin data
+
+    uint32_t            skinCount_ = 0;
+    uint32_t            mrphWsCount_ = 0;
+    std::unordered_map<tinyHandle, size_t> handleMap_;
 
     // Instances (runtime)
     tinyVk::DataBuffer instaBuffer_;
@@ -160,14 +199,12 @@ private:
     tinyVk::DescSet     matDescSet_;
     tinyVk::DataBuffer  matBuffer_;
     Size_x1             matSize_x1_;
-    std::vector<tinyMaterial::Data> matData_;
-    std::unordered_map<tinyHandle, uint32_t> matIdxMap_;
 
     // Textures (static)
     tinyVk::DescSLayout texDescLayout_;
     tinyVk::DescPool    texDescPool_;
     tinyVk::DescSet     texDescSet_; // Dynamic descriptor set for textures
-    std::unordered_set<tinyHandle> texInUse_;
+    std::unordered_map<tinyHandle, uint32_t> texIdxMap_;
 
     // Skinning (runtime)
     tinyVk::DescSLayout skinDescLayout_;
@@ -175,8 +212,6 @@ private:
     tinyVk::DescSet     skinDescSet_;
     tinyVk::DataBuffer  skinBuffer_;
     Size_x1             skinSize_x1_;
-    uint32_t            skinCount_ = 0;
-    std::unordered_map<tinyHandle, SkinRange> skinRanges_; // Skeleton node handle -> SkinRange (NOT skeleton itself)
 
     // Morph Deltas (static)
     tinyVk::DescSLayout mrphDltsDescLayout_;
@@ -188,7 +223,6 @@ private:
     tinyVk::DescSet     mrphWsDescSet_;
     tinyVk::DataBuffer  mrphWsBuffer_;
     Size_x1             mrphWsSize_x1_;
-    uint32_t            mrphWsCount_ = 0;
 
     Dummy dummy_;
 };
