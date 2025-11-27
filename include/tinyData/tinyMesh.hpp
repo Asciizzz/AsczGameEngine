@@ -148,6 +148,8 @@ struct tinyMesh {
 
             vrtxTypes |= tinyVertex::Type::Color;
             vcolorData = colors;
+
+            printf("Has color data\n");
             return *this;
         }
 

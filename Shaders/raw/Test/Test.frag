@@ -8,7 +8,7 @@ layout(location = 0) in vec3 fragWorld;
 layout(location = 1) in vec3 fragNrml;
 layout(location = 2) in vec2 fragUV;
 layout(location = 3) in vec3 fragTangent;
-layout(location = 4) in vec4 fragOther;
+layout(location = 4) in vec4 fragColor;
 
 struct Material {
     vec4 base;
@@ -45,6 +45,6 @@ void main() {
 
     Material mat = materials[pConst.data.w];
 
-    outColor = mat.base * lDot;
+    outColor = mat.base * lDot * fragColor;
 }
 

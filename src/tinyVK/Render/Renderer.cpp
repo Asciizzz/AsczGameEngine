@@ -258,7 +258,7 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
         // Bind instances once
         VkBuffer buffers[] = { draw.instaBuffer() };
         VkDeviceSize offsets[] = { draw.instaOffset(currentFrame) };
-        vkCmdBindVertexBuffers(currentCmd, 2, 1, buffers, offsets); // Binding 2
+        vkCmdBindVertexBuffers(currentCmd, 3, 1, buffers, offsets); // Binding 3
 
         for (const auto& drawGroup : shaderGroup.drawGroups) {
             const auto* rMesh = sharedRes.fsGet<tinyMesh>(drawGroup.mesh);
@@ -269,10 +269,11 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
 
             VkBuffer staticBuffer = submesh->vstaticBuffer;
             VkBuffer riggedBuffer = submesh->vriggedBuffer;
+            VkBuffer colorBuffer = submesh->vcolorBuffer;
 
-            VkBuffer vBuffers[] = { staticBuffer, riggedBuffer };
-            VkDeviceSize vOffsets[] = { 0, 0 };
-            vkCmdBindVertexBuffers(currentCmd, 0, 2, vBuffers, vOffsets); // Bindings 0, 1
+            VkBuffer vBuffers[] = { staticBuffer, riggedBuffer, colorBuffer };
+            VkDeviceSize vOffsets[] = { 0, 0, 0 };
+            vkCmdBindVertexBuffers(currentCmd, 0, 3, vBuffers, vOffsets); // Bindings 0, 1, 2
 
             VkBuffer indxBuffer = submesh->indxBuffer;
             VkIndexType indxType = submesh->indxType;

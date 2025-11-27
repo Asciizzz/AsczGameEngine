@@ -17,24 +17,34 @@ layout(push_constant) uniform PushConstant {
 
 */
 
+bool vHasSkin() {
+    return (pConst.data.z & 1) != 0;
+}
+bool vHasMorph() {
+    return (pConst.data.z & 2) != 0;
+}
+bool vHasColor() {
+    return (pConst.data.z & 4) != 0;
+}
+
 layout(location = 0) in vec4  inPos_Tu;
 layout(location = 1) in vec4  inNrml_Tv;
 layout(location = 2) in vec4  inTangent;
 layout(location = 3) in uvec4 inBoneIDs;
 layout(location = 4) in vec4  inBoneWs;
-// layout(location = 5) in vec4  inColor; // Vertex color // In the future
+layout(location = 5) in vec4  inColor; // Vertex color
 
-layout(location = 5) in vec4  model4_0;
-layout(location = 6) in vec4  model4_1;
-layout(location = 7) in vec4  model4_2;
-layout(location = 8) in vec4  model4_3;
-layout(location = 9) in uvec4 other; // .x = boneOffset, .y = mrphWsOffset, .z = matOverride, .w = reserved
+layout(location = 6) in vec4  model4_0;
+layout(location = 7) in vec4  model4_1;
+layout(location = 8) in vec4  model4_2;
+layout(location = 9) in vec4  model4_3;
+layout(location = 10)in uvec4 other; // .x = boneOffset, .y = mrphWsOffset, .z = matOverride, .w = reserved
 
 layout(location = 0) out vec3 fragWorld;
 layout(location = 1) out vec3 fragNrml;
 layout(location = 2) out vec2 fragUV;
 layout(location = 3) out vec3 fragTangent;
-layout(location = 4) out vec4 fragOther;
+layout(location = 4) out vec4 fragColor;
 
 layout(set = 0, binding = 0) uniform GlobalUBO {
     mat4 proj;
@@ -97,11 +107,7 @@ void main() {
 
     uint boneOffset = other.x;
 
-    if (pConst.data.z == 0) { // No skinning
-        skinnedPos = vec4(basePos, 1.0);
-        skinnedNormal = baseNormal;
-        skinnedTangent = baseTangent;
-    } else {
+    if (vHasSkin()) {
         for (uint i = 0; i < 4; ++i) {
             uint id = inBoneIDs[i] + boneOffset;
 
@@ -112,6 +118,10 @@ void main() {
             skinnedNormal  += w * mat3(skinMat) * baseNormal;
             skinnedTangent += w * mat3(skinMat) * baseTangent;
         }
+    } else  { // No skinning
+        skinnedPos = vec4(basePos, 1.0);
+        skinnedNormal = baseNormal;
+        skinnedTangent = baseTangent;
     }
 
 // ----------------------------------
@@ -123,6 +133,8 @@ void main() {
     fragNrml = normalMat * skinnedNormal;
     fragUV = inPos_Tu.zw;
     fragTangent = skinnedTangent;
+
+    fragColor = vHasColor() ? inColor : vec4(1.0);
 
     gl_Position = glb.proj * glb.view * worldPos4;
 }

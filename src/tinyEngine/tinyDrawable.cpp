@@ -3,26 +3,31 @@
 using namespace tinyVk;
 
 std::vector<VkVertexInputBindingDescription> tinyDrawable::bindingDesc() noexcept {
-    VkVertexInputBindingDescription dataBinding{};
-    dataBinding.binding = 0;
-    dataBinding.stride = sizeof(tinyVertex::Static);
-    dataBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+    VkVertexInputBindingDescription vstaticBinding{};
+    vstaticBinding.binding = 0;
+    vstaticBinding.stride = sizeof(tinyVertex::Static);
+    vstaticBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-    VkVertexInputBindingDescription rigBinding{};
-    rigBinding.binding = 1;
-    rigBinding.stride = sizeof(tinyVertex::Rigged);
-    rigBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+    VkVertexInputBindingDescription vriggedBinding{};
+    vriggedBinding.binding = 1;
+    vriggedBinding.stride = sizeof(tinyVertex::Rigged);
+    vriggedBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+    VkVertexInputBindingDescription vcolorBinding{};
+    vcolorBinding.binding = 2;
+    vcolorBinding.stride = sizeof(tinyVertex::Color);
+    vcolorBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
     VkVertexInputBindingDescription instaBinding{};
-    instaBinding.binding = 2;
+    instaBinding.binding = 3;
     instaBinding.stride = sizeof(InstaData);
     instaBinding.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
 
-    return { dataBinding, rigBinding, instaBinding };
+    return { vstaticBinding, vriggedBinding, vcolorBinding, instaBinding };
 }
 
 std::vector<VkVertexInputAttributeDescription> tinyDrawable::attributeDescs() noexcept {
-    std::vector<VkVertexInputAttributeDescription> descs(10);
+    std::vector<VkVertexInputAttributeDescription> descs(11);
 
     // Data buffer (binding = 0)
     descs[0] = { 0, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(tinyVertex::Static, pos_tu)  };
@@ -33,12 +38,15 @@ std::vector<VkVertexInputAttributeDescription> tinyDrawable::attributeDescs() no
     descs[3] = { 3, 1, VK_FORMAT_R32G32B32A32_UINT,   offsetof(tinyVertex::Rigged, boneIDs) };
     descs[4] = { 4, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(tinyVertex::Rigged, boneWs)  };
 
-    // Insta buffer (binding = 2)
-    descs[5] = { 5, 2, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(InstaData, model) + sizeof(glm::vec4) * 0 };
-    descs[6] = { 6, 2, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(InstaData, model) + sizeof(glm::vec4) * 1 };
-    descs[7] = { 7, 2, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(InstaData, model) + sizeof(glm::vec4) * 2 };
-    descs[8] = { 8, 2, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(InstaData, model) + sizeof(glm::vec4) * 3 };
-    descs[9] = { 9, 2, VK_FORMAT_R32G32B32A32_UINT,   offsetof(InstaData, other) };
+    // Color buffer (binding = 2)
+    descs[5] = { 5, 2, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(tinyVertex::Color, color) };
+
+    // Insta buffer (binding = 3)
+    descs[6] = { 6, 3, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(InstaData, model) + sizeof(glm::vec4) * 0 };
+    descs[7] = { 7, 3, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(InstaData, model) + sizeof(glm::vec4) * 1 };
+    descs[8] = { 8, 3, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(InstaData, model) + sizeof(glm::vec4) * 2 };
+    descs[9] = { 9, 3, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(InstaData, model) + sizeof(glm::vec4) * 3 };
+    descs[10] = { 10, 3, VK_FORMAT_R32G32B32A32_UINT,   offsetof(InstaData, other) };
 
     return descs;
 }
