@@ -4,11 +4,24 @@ layout(push_constant) uniform PushConstant {
     uvec4 data;
 } pConst;
 
+/* pConst.data explanation:
+    .x = vertexCount
+    .y = morphWeightsCount
+    .z = vertexFlag: {
+        VERTEX_FLAG_NONE    = 0, (also means static mesh)
+        VERTEX_FLAG_SKINNED = 1 << 0,
+        VERTEX_FLAG_MORPHED = 1 << 1
+    }
+    .w = reserved
+
+*/
+
 layout(location = 0) in vec4  inPos_Tu;
 layout(location = 1) in vec4  inNrml_Tv;
 layout(location = 2) in vec4  inTangent;
 layout(location = 3) in uvec4 inBoneIDs;
 layout(location = 4) in vec4  inBoneWs;
+// layout(location = 5) in vec4  inColor; // Vertex color // In the future
 
 layout(location = 5) in vec4  model4_0;
 layout(location = 6) in vec4  model4_1;

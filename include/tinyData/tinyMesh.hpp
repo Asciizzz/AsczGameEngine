@@ -21,6 +21,11 @@ namespace tinyMorph {
         std::string name;
         std::vector<Delta> deltas;
     };
+
+    enum class Type : uint8_t {
+        Rig,
+        Color
+    };
 }
 
 namespace tinyVertex {
@@ -53,6 +58,8 @@ struct tinyMesh {
     tinyMesh& operator=(tinyMesh&&) noexcept = default;
 
 // -----------------------------------------
+
+    
 
     struct Submesh {
         uint32_t indxOffset = 0;
