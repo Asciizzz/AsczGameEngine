@@ -259,56 +259,12 @@ bool readAccessorFromMap(const tinygltf::Model& model,
 }
 
 
-std::string sanitizeAsciiz(const std::string& originalName, const std::string& key, size_t fallbackIndex) {
+std::string checkString(const std::string& originalName, const std::string& key, size_t fallbackIndex) {
     if (originalName.empty()) {
         return key + "_" + std::to_string(fallbackIndex);
-    }
-    
-    // Check if name is already ASCII-safe (letters, numbers, underscore)
-    bool isAsciiSafe = true;
-    for (char c : originalName) {
-        if (!std::isalnum(static_cast<unsigned char>(c)) && c != '_') {
-            isAsciiSafe = false;
-            break;
-        }
-    }
-    
-    if (isAsciiSafe && !originalName.empty() && !std::isdigit(originalName[0])) {
-        // Name is already safe and doesn't start with a digit
+    } else {
         return originalName;
     }
-    
-    // Generate hash from original name for uniqueness
-    std::hash<std::string> hasher;
-    size_t nameHash = hasher(originalName);
-    
-    // Create ASCII-safe identifier
-    std::string safeName = key + "_";
-    
-    // Try to preserve recognizable ASCII parts
-    for (char c : originalName) {
-        if (std::isalnum(static_cast<unsigned char>(c))) {
-            safeName += c;
-            if (safeName.length() > 30) break; // Limit length (increased for longer keys)
-        }
-    }
-    
-    // If no ASCII chars were preserved, use the fallback index
-    if (safeName == key + "_") {
-        safeName += std::to_string(fallbackIndex);
-    }
-    
-    // Add hash suffix for uniqueness (truncated to 4 hex digits)
-    char hashHex[8];
-    snprintf(hashHex, sizeof(hashHex), "%04X", static_cast<unsigned int>(nameHash & 0xFFFF));
-    safeName += "_0x" + std::string(hashHex);
-    
-    // Ensure it doesn't start with a digit
-    if (!safeName.empty() && std::isdigit(safeName[0])) {
-        safeName = key + "_" + safeName;
-    }
-    
-    return safeName;
 }
 
 // Utility: make local transform from a glTF node
@@ -408,7 +364,7 @@ void loadTextures(std::vector<tinyModel::Texture>& textures, tinygltf::Model& mo
         }
 
         tinyModel::Texture texEntry;
-        texEntry.name = sanitizeAsciiz(gltfTexture.name, "texture", textures.size());
+        texEntry.name = checkString(gltfTexture.name, "texture", textures.size());
         texEntry.texture = std::move(texture);
 
         textures.push_back(std::move(texEntry));
@@ -422,7 +378,7 @@ void loadMaterials(std::vector<tinyModel::Material>& materials, tinygltf::Model&
     for (size_t matIndex = 0; matIndex < model.materials.size(); matIndex++) {
         const auto& gltfMaterial = model.materials[matIndex];
         tinyModel::Material material;
-        material.name = sanitizeAsciiz(gltfMaterial.name, "material", matIndex);
+        material.name = checkString(gltfMaterial.name, "material", matIndex);
 
         // Extract base color factor (default is white if not specified)
         const auto& baseColorFactor = gltfMaterial.pbrMetallicRoughness.baseColorFactor;
@@ -477,69 +433,28 @@ struct PrimitiveData {
     size_t vrtxCount = 0;
 };
 
-template <typename T>
-static bool readDeltaAccessor(const tinygltf::Model& model,
-                              int accessorIdx,
-                              std::vector<T>& out,
-                              size_t requiredCount)
-{
-    // ---- 1. Invalid accessor index ----
-    if (accessorIdx < 0 || static_cast<size_t>(accessorIdx) >= model.accessors.size()) {
-        out.assign(requiredCount, T(0));  // fill with zero
-        return false;
+static bool readDeltaAccessor(const tinygltf::Model& model, int accessorIdx, std::vector<glm::vec3>& out) {
+    if (accessorIdx < 0 || accessorIdx >= static_cast<int>(model.accessors.size())) return false;
+    const auto& accessor = model.accessors[accessorIdx];
+    if (accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT) return false;
+    if (accessor.type != TINYGLTF_TYPE_VEC3) return false;
+    if (accessor.bufferView < 0 || accessor.bufferView >= static_cast<int>(model.bufferViews.size())) return false;
+    const auto& bufferView = model.bufferViews[accessor.bufferView];
+    if (bufferView.buffer < 0 || bufferView.buffer >= static_cast<int>(model.buffers.size())) return false;
+    const auto& buffer = model.buffers[bufferView.buffer];
+
+    size_t stride = bufferView.byteStride ? bufferView.byteStride : sizeof(float) * 3;
+    const unsigned char* data = buffer.data.data() + bufferView.byteOffset + accessor.byteOffset;
+    out.resize(accessor.count);
+
+    for (size_t i = 0; i < accessor.count; ++i) {
+        const float* elem = reinterpret_cast<const float*>(data + i * stride);
+        out[i] = glm::vec3(elem[0], elem[1], elem[2]);
     }
-
-    const auto& acc = model.accessors[accessorIdx];
-
-    // ---- 2. Must be vec3 + float ----
-    if (acc.type != TINYGLTF_TYPE_VEC3 ||
-        acc.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT) {
-        out.assign(requiredCount, T(0));
-        return false;
-    }
-
-    // ---- 3. Buffer view must exist ----
-    if (acc.bufferView < 0 || static_cast<size_t>(acc.bufferView) >= model.bufferViews.size()) {
-        out.assign(requiredCount, T(0));
-        return false;
-    }
-
-    const auto& bv  = model.bufferViews[acc.bufferView];
-    const auto& buf = model.buffers[bv.buffer];
-
-    // ---- 4. Bounds check on buffer data ----
-    size_t byteOffset = bv.byteOffset + acc.byteOffset;
-    size_t totalBytesNeeded = acc.count * sizeof(T);
-    if (byteOffset + totalBytesNeeded > buf.data.size()) {
-        out.assign(requiredCount, T(0));
-        return false;
-    }
-
-    // ---- 5. Stride (safe) ----
-    size_t stride = acc.ByteStride(bv);
-    if (stride == 0) stride = sizeof(T);
-
-    const uint8_t* src = buf.data.data() + byteOffset;
-
-    // ---- 6. Read only requiredCount (in case accessor is larger) ----
-    out.resize(requiredCount);
-    for (size_t i = 0; i < requiredCount; ++i) {
-        if (i >= acc.count) {
-            out[i] = T(0);
-        } else {
-            std::memcpy(&out[i], src + i * stride, sizeof(T));
-        }
-    }
-
     return true;
 }
 
-void loadMesh(tinyMesh& mesh,
-              const tinygltf::Model& gltfModel,
-              const tinygltf::Mesh& gltfMesh,
-              const std::vector<tinygltf::Primitive>& primitives,
-              bool hasRigging)
-{
+void loadMesh(tinyMesh& mesh, const tinygltf::Model& gltfModel, const tinygltf::Mesh& gltfMesh, const std::vector<tinygltf::Primitive>& primitives) {
     mesh.submeshes.clear();
 
     // iterate each primitive -> one Submesh
@@ -567,10 +482,9 @@ void loadMesh(tinyMesh& mesh,
         readAccessorFromMap(gltfModel, primitive.attributes, "TEXCOORD_0", uvs);
         readAccessorFromMap(gltfModel, primitive.attributes, "COLOR_0",   colors);
 
-        if (hasRigging) {
-            readAccessorFromMap(gltfModel, primitive.attributes, "JOINTS_0", boneIDs);
-            readAccessorFromMap(gltfModel, primitive.attributes, "WEIGHTS_0", boneWs);
-        }
+        readAccessorFromMap(gltfModel, primitive.attributes, "JOINTS_0", boneIDs);
+        readAccessorFromMap(gltfModel, primitive.attributes, "WEIGHTS_0", boneWs);
+        bool hasRigging = !boneIDs.empty() && !boneWs.empty();
 
         // --- 3) Build per-vertex arrays for this submesh (fill defaults if missing) ---
         std::vector<tinyVertex::Static> vstatic;
@@ -599,7 +513,7 @@ void loadMesh(tinyMesh& mesh,
             s.setPos(pos).setNrml(nrm).setUV(uv).setTang(tan);
             vstatic[i] = s;
 
-            if (hasRigging) {
+            if (!boneIDs.empty() && !boneWs.empty()) {
                 if (i < boneIDs.size() && i < boneWs.size()) {
                     tinyVertex::Rigged r;
                     r.boneIDs = boneIDs[i];
@@ -695,30 +609,35 @@ void loadMesh(tinyMesh& mesh,
         }
 
         // --- 6) Morph targets: read per-primitive targets into submesh.mrphTargets ---
-        // primitive.targets is a vector< map<string,int> >
+
         for (size_t tgtIdx = 0; tgtIdx < primitive.targets.size(); ++tgtIdx) {
             const auto& target = primitive.targets[tgtIdx];
 
             // prepare delta arrays per-vertex for this primitive
-            std::vector<glm::vec3> dPos(submesh.vrtxCount, glm::vec3(0.0f));
-            std::vector<glm::vec3> dNrm(submesh.vrtxCount, glm::vec3(0.0f));
-            std::vector<glm::vec3> dTan(submesh.vrtxCount, glm::vec3(0.0f));
+            std::vector<glm::vec3> dPos;
+            std::vector<glm::vec3> dNrm;
+            std::vector<glm::vec3> dTan;
             bool hasAnyData = false;
 
             auto posIt = target.find("POSITION");
             if (posIt != target.end()) {
-                if (readDeltaAccessor(gltfModel, posIt->second, dPos, submesh.vrtxCount)) hasAnyData = true;
+                hasAnyData = hasAnyData || readDeltaAccessor(gltfModel, posIt->second, dPos);
             }
             auto nrmIt = target.find("NORMAL");
             if (nrmIt != target.end()) {
-                if (readDeltaAccessor(gltfModel, nrmIt->second, dNrm, submesh.vrtxCount)) hasAnyData = true;
+                hasAnyData = hasAnyData || readDeltaAccessor(gltfModel, nrmIt->second, dNrm);
             }
             auto tanIt = target.find("TANGENT");
             if (tanIt != target.end()) {
-                if (readDeltaAccessor(gltfModel, tanIt->second, dTan, submesh.vrtxCount)) hasAnyData = true;
+                hasAnyData = hasAnyData || readDeltaAccessor(gltfModel, tanIt->second, dTan);
             }
 
-            if (!hasAnyData) continue; // nothing to add for this target
+            if (!hasAnyData) continue; // skip empty target
+
+            // Fill all missing data with zeros
+            if (dPos.size() != submesh.vrtxCount) dPos.resize(submesh.vrtxCount, glm::vec3(0.0f));
+            if (dNrm.size() != submesh.vrtxCount) dNrm.resize(submesh.vrtxCount, glm::vec3(0.0f));
+            if (dTan.size() != submesh.vrtxCount) dTan.resize(submesh.vrtxCount, glm::vec3(0.0f));
 
             // Build MorphTarget using tinyVertex::Morph (assumes fields dPos,dNrml,dTang)
             tinyMesh::Submesh::MorphTarget mt;
@@ -731,19 +650,17 @@ void loadMesh(tinyMesh& mesh,
 
             // optional name from mesh.extras.targetNames (mesh-level)
             if (tgtIdx < gltfMesh.extras.Get("targetNames").ArrayLen()) {
-                mt.name = gltfMesh.extras.Get("targetNames").Get(static_cast<int>(tgtIdx)).Get<std::string>();
+                mt.name = gltfMesh.extras
+                            .Get("targetNames")
+                            .Get(static_cast<int>(tgtIdx))
+                            .Get<std::string>();
             }
-            mt.name = sanitizeAsciiz(mt.name, "morph", tgtIdx);
+            mt.name = checkString(mt.name, "morph", tgtIdx);
+
+            printf("  %zu name: %s\n", tgtIdx, mt.name.c_str());
 
             submesh.addMrphTarget(mt);
         }
-
-        // mark vertex types flags (Static always present)
-        // setVrtxStatic already sets type flag inside, but be explicit:
-        submesh.vrtxTypes = tinyVertex::Type::Static;
-        if (hasRigging) submesh.vrtxTypes = static_cast<tinyVertex::Type>(static_cast<uint8_t>(submesh.vrtxTypes) | static_cast<uint8_t>(tinyVertex::Type::Rig));
-        if (!vcolor.empty()) submesh.vrtxTypes = static_cast<tinyVertex::Type>(static_cast<uint8_t>(submesh.vrtxTypes) | static_cast<uint8_t>(tinyVertex::Type::Color));
-        if (!submesh.mrphTargets.empty()) submesh.vrtxTypes = static_cast<tinyVertex::Type>(static_cast<uint8_t>(submesh.vrtxTypes) | static_cast<uint8_t>(tinyVertex::Type::Morph));
 
         // push submesh into mesh
         mesh.append(std::move(submesh));
@@ -757,9 +674,9 @@ void loadMeshes(std::vector<tinyModel::Mesh>& meshes, tinygltf::Model& gltfModel
     for (size_t meshIndex = 0; meshIndex < gltfModel.meshes.size(); meshIndex++) {
         const tinygltf::Mesh& gltfMesh = gltfModel.meshes[meshIndex];
         tinyModel::Mesh meshEntry;
-        meshEntry.name = sanitizeAsciiz(gltfMesh.name, "mesh", meshIndex);
+        meshEntry.name = checkString(gltfMesh.name, "mesh", meshIndex);
 
-        loadMesh(meshEntry.mesh, gltfModel, gltfMesh, gltfMesh.primitives, !forceStatic);
+        loadMesh(meshEntry.mesh, gltfModel, gltfMesh, gltfMesh.primitives);
 
         meshes.push_back(std::move(meshEntry));
     }
@@ -802,7 +719,7 @@ void loadSkeleton(tinySkeleton& skeleton, UnorderedMap<int, std::pair<int, int>>
 
         tinyBone bone;
         std::string originalName = node.name.empty() ? "" : node.name;
-        bone.name = sanitizeAsciiz(originalName, "Bone", i);
+        bone.name = checkString(originalName, "Bone", i);
         bone.bindInverse = skeletonInverseBindMatrices[i];
         bone.bindPose = makeLocalFromNode(node);
 
@@ -837,7 +754,7 @@ void loadSkeletons(std::vector<tinyModel::Skeleton>& skeletons, UnorderedMap<int
     
         const tinygltf::Skin& skin = model.skins[skinIndex];
         loadSkeleton(skeletonEntry.skeleton, gltfNodeToSkeletonAndBoneIndex, skinIndex, model, skin);
-        skeletonEntry.name = sanitizeAsciiz(skin.name, "skeleton", skinIndex);
+        skeletonEntry.name = checkString(skin.name, "skeleton", skinIndex);
 
         skeletons.push_back(std::move(skeletonEntry));
     }
@@ -1009,7 +926,7 @@ void loadAnimations(tinyModel& tinyModel, const tinygltf::Model& model, const st
         const tinygltf::Animation& gltfAnim = model.animations[animIndex];
         tinyRT_ANIM3D::Clip anime;
 
-        anime.name = sanitizeAsciiz(gltfAnim.name, "animation", animIndex);
+        anime.name = checkString(gltfAnim.name, "animation", animIndex);
 
         // Process channels and samplers here...
 
@@ -1278,7 +1195,7 @@ tinyModel tinyLoader::loadModelFromOBJ(const std::string& filePath) {
     for (size_t matIndex = 0; matIndex < objMaterials.size(); matIndex++) {
         const auto& objMat = objMaterials[matIndex];
         Material material;
-        material.name = sanitizeAsciiz(objMat.name, "material", matIndex);
+        material.name = checkString(objMat.name, "material", matIndex);
 
         // Extract Kd (diffuse color) and set as base color
         // OBJ stores diffuse color in the 'diffuse' array [R, G, B]
@@ -1312,7 +1229,7 @@ tinyModel tinyLoader::loadModelFromOBJ(const std::string& filePath) {
                 if (lastSlash != std::string::npos) {
                     textureName = textureName.substr(lastSlash + 1);
                 }
-                texEntry.name = sanitizeAsciiz(textureName, "texture", result.textures.size());
+                texEntry.name = checkString(textureName, "texture", result.textures.size());
 
                 result.textures.push_back(std::move(texEntry));
                 material.albIndx = static_cast<int>(result.textures.size() - 1);
@@ -1449,6 +1366,13 @@ tinyModel tinyLoader::loadModelFromOBJ(const std::string& filePath) {
         //     static_cast<uint32_t>(indices.size()),
         //     (materialId >= 0) ? tinyHandle(materialId) : tinyHandle()
         // });
+
+        tinyMesh::Submesh submesh;
+        submesh.setVrtxStatic(vertices);
+        submesh.setIndxs(indices);
+        submesh.material = (materialId >= 0) ? tinyHandle(materialId) : tinyHandle();
+
+        mesh.append(std::move(submesh));
 
         tinyModel::Mesh meshEntry;
         meshEntry.mesh = std::move(mesh);
