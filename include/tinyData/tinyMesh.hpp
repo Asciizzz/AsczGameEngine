@@ -21,6 +21,10 @@ namespace tinyVertex {
         Static& setNrml(const glm::vec3& n) { nrml_tv.x = n.x; nrml_tv.y = n.y; nrml_tv.z = n.z; return *this; }
         Static& setUV  (const glm::vec2& uv){ pos_tu.w = uv.x; nrml_tv.w = uv.y; return *this; }
         Static& setTang(const glm::vec4& t) { tang = t; return *this; }
+
+        glm::vec3 pos () const { return glm::vec3(pos_tu.x, pos_tu.y, pos_tu.z); }
+        glm::vec3 nrml() const { return glm::vec3(nrml_tv.x, nrml_tv.y, nrml_tv.z); }
+        glm::vec2 uv  () const { return glm::vec2(pos_tu.w, nrml_tv.w); }
     };
 
     struct Rigged {

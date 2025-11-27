@@ -18,8 +18,7 @@ tinyCamera::tinyCamera()
     , viewMatrix(1.0f)
     , projectionMatrix(1.0f)
 {
-    updateVectors();
-    updateMatrices();
+    update();
 }
 
 tinyCamera::tinyCamera(const glm::vec3& position, float fov, float nearPlane, float farPlane)
@@ -41,13 +40,11 @@ tinyCamera::tinyCamera(const glm::vec3& position, float fov, float nearPlane, fl
     yaw = eulerAngles.y;
     roll = eulerAngles.z;
 
-    updateVectors();
-    updateMatrices();
+    update();
 }
 
 void tinyCamera::setPos(const glm::vec3& newPos) {
     pos = newPos;
-    updateViewMatrix();
 }
 
 void tinyCamera::setRotation(float newPitch, float newYaw, float newRoll) {
@@ -62,9 +59,6 @@ void tinyCamera::setRotation(float newPitch, float newYaw, float newRoll) {
     pitch = constrainedPitch;
     yaw = newYaw;
     roll = newRoll;
-
-    updateVectors();
-    updateViewMatrix();
 }
 
 void tinyCamera::setRotation(const glm::quat& quaternion) {
@@ -75,43 +69,23 @@ void tinyCamera::setRotation(const glm::quat& quaternion) {
     pitch = std::clamp(eulerAngles.x, -89.0f, 89.0f);
     yaw = eulerAngles.y;
     roll = eulerAngles.z;
-
-    updateVectors();
-    updateViewMatrix();
 }
 
 void tinyCamera::setFOV(float newFov) {
     fov = std::clamp(newFov, 1.0f, 120.0f);
-    updateProjectionMatrix();
 }
 
 void tinyCamera::setNearFar(float newNearPlane, float newFarPlane) {
     nearPlane = newNearPlane;
     farPlane = newFarPlane;
-    updateProjectionMatrix();
 }
 
 void tinyCamera::setAspectRatio(float newAspectRatio) {
     aspectRatio = newAspectRatio;
-    updateProjectionMatrix();
-}
-
-void tinyCamera::updateAspectRatio(uint32_t width, uint32_t height) {
-    if (height > 0) {
-        aspectRatio = static_cast<float>(width) / static_cast<float>(height);
-        updateProjectionMatrix();
-    }
-}
-
-void tinyCamera::updateMatrices() {
-    updateVectors();
-    updateViewMatrix();
-    updateProjectionMatrix();
 }
 
 void tinyCamera::translate(const glm::vec3& offset) {
     pos += offset;
-    updateViewMatrix();
 }
 
 void tinyCamera::rotate(float pitchDelta, float yawDelta, float rollDelta) {
@@ -145,8 +119,6 @@ void tinyCamera::rotate(float pitchDelta, float yawDelta, float rollDelta) {
     }
     
     orientation = glm::normalize(orientation);
-    updateVectors();
-    updateViewMatrix();
 }
 
 void tinyCamera::rotate(const glm::quat& deltaRotation) {
@@ -158,9 +130,6 @@ void tinyCamera::rotate(const glm::quat& deltaRotation) {
     pitch = std::clamp(eulerAngles.x, -89.0f, 89.0f);
     yaw = eulerAngles.y;
     roll = eulerAngles.z;
-
-    updateVectors();
-    updateViewMatrix();
 }
 
 void tinyCamera::updateVectors() {
@@ -188,6 +157,37 @@ void tinyCamera::updateProjectionMatrix() {
     
     // Vulkan uses inverted Y axis compared to OpenGL
     projectionMatrix[1][1] *= -1;
+}
+
+
+
+static void extractFrustumPlanes(const glm::mat4& VP, tinyCamera::Plane planes[6]) {
+    glm::vec4 r0 = glm::row(VP, 0);
+    glm::vec4 r1 = glm::row(VP, 1);
+    glm::vec4 r2 = glm::row(VP, 2);
+    glm::vec4 r3 = glm::row(VP, 3);
+
+    planes[0].eq = r3 + r0; // Left
+    planes[1].eq = r3 - r0; // Right
+    planes[2].eq = r3 + r1; // Bottom
+    planes[3].eq = r3 - r1; // Top
+    planes[4].eq = r3 + r2; // Near
+    planes[5].eq = r3 - r2; // Far
+
+    // Normalize planes
+    for (int i = 0; i < 6; ++i) {
+        glm::vec3 n = glm::vec3(planes[i].eq);
+        float len = glm::length(n);
+        planes[i].eq /= len;
+    }
+}
+
+void tinyCamera::update() {
+    updateVectors();
+    updateViewMatrix();
+    updateProjectionMatrix();
+
+    extractFrustumPlanes(getVP(), planes);
 }
 
 // Quaternion-specific methods
@@ -225,9 +225,6 @@ void tinyCamera::resetRoll() {
     glm::vec3 eulerRadians(glm::radians(pitch), glm::radians(yaw), 0.0f);
     orientation = glm::quat(eulerRadians);
     orientation = glm::normalize(orientation);
-
-    updateVectors();
-    updateViewMatrix();
 }
 
 // Euler angle getters (computed from quaternion)
@@ -253,4 +250,34 @@ float tinyCamera::getRoll(bool radians) const {
     while (rollValue < -180.0f) rollValue += 360.0f;
 
     return radians ? glm::radians(rollValue) : rollValue;
+}
+
+
+bool tinyCamera::collideAABB(glm::vec3 abMin, glm::vec3 abMax, glm::mat4 model) const {
+    // Compute AABB center & half extents in local space
+    glm::vec3 localCenter = (abMin + abMax) * 0.5f;
+    glm::vec3 localHalf   = (abMax - abMin) * 0.5f;
+
+    // Transform center to world
+    glm::vec4 wc = model * glm::vec4(localCenter, 1.0f);
+    glm::vec3 worldCenter = glm::vec3(wc);
+
+    // Transform half extents by absolute value of 3x3 upper-left of model
+    glm::mat3 rotScale = glm::mat3(model); // upper-left 3x3
+    glm::mat3 absRS = glm::mat3(
+        glm::abs(rotScale[0]),
+        glm::abs(rotScale[1]),
+        glm::abs(rotScale[2])
+    );
+    glm::vec3 worldHalf = absRS * localHalf;
+
+    // Test against planes (plane eq is normalized)
+    for (int i = 0; i < 6; ++i) {
+        glm::vec3 n = glm::vec3(planes[i].eq);
+        float d = planes[i].eq.w;
+        float radius = worldHalf.x * fabs(n.x) + worldHalf.y * fabs(n.y) + worldHalf.z * fabs(n.z);
+        float distance = glm::dot(n, worldCenter) + d;
+        if (distance + radius < 0.0f) return false; // outside
+    }
+    return true;
 }

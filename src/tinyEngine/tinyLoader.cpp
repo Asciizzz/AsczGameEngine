@@ -1261,6 +1261,9 @@ tinyModel tinyLoader::loadModelFromOBJ(const std::string& filePath) {
 
         std::vector<tinyVertex::Static> vertices;
         std::vector<uint32_t> indices;
+
+        glm::vec3 ABmin( std::numeric_limits<float>::max());
+        glm::vec3 ABmax(-std::numeric_limits<float>::max());
         
         // Custom hasher for vertex key tuple
         struct VertexKeyHasher {
@@ -1338,6 +1341,13 @@ tinyModel tinyLoader::loadModelFromOBJ(const std::string& filePath) {
                         
                         vertexIndex = currentVertexIndex++;
                         vertices.push_back(vertex);
+                        
+                        // Update AABB
+                        glm::vec3 pos = vertex.pos();
+                        ABmin = glm::min(ABmin, pos);
+                        ABmax = glm::max(ABmax, pos);
+
+
                         vertexMap[vertexKey] = vertexIndex;
                     }
                     
@@ -1357,20 +1367,12 @@ tinyModel tinyLoader::loadModelFromOBJ(const std::string& filePath) {
             }
         }
 
-        // Set mesh data
-        // mesh.setVrtxStatic(vertices);
-        // mesh.setIndxs(indices);
-
-        // mesh.submeshes().push_back(tinyMesh::Submesh{
-        //     0,
-        //     static_cast<uint32_t>(indices.size()),
-        //     (materialId >= 0) ? tinyHandle(materialId) : tinyHandle()
-        // });
-
         tinyMesh::Submesh submesh;
         submesh.setVrtxStatic(vertices);
         submesh.setIndxs(indices);
         submesh.material = (materialId >= 0) ? tinyHandle(materialId) : tinyHandle();
+        submesh.ABmin = ABmin;
+        submesh.ABmax = ABmax;
 
         mesh.append(std::move(submesh));
 

@@ -106,7 +106,9 @@ bool tinyApp::checkWindowResize() {
     int newWidth, newHeight;
     SDL_GetWindowSize(windowManager->window, &newWidth, &newHeight);
 
-    project->camera()->updateAspectRatio(newWidth, newHeight);
+    project->camera()->setAspectRatio(
+        static_cast<float>(newWidth) / static_cast<float>(newHeight)
+    );
 
     // Handle window resize in renderer (now handles depth resources internally)
     renderer->handleWindowResize(windowManager->window);
@@ -271,6 +273,7 @@ void tinyApp::mainLoop() {
         if (k_state[SDL_SCANCODE_D]) camPos += camRef.right * p_speed;
 
         camRef.pos = camPos;
+        camRef.update();
 
 // =================================
 
