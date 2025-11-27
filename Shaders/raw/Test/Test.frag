@@ -45,6 +45,6 @@ void main() {
 
     Material mat = materials[pConst.data.w];
 
-    outColor = mat.base * lDot * fragColor;
+    outColor = mat.base * fragColor * lDot;
 }
 

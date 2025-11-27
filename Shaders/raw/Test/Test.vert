@@ -5,26 +5,26 @@ layout(push_constant) uniform PushConstant {
 } pConst;
 
 /* pConst.data explanation:
-    .x = vertexCount
-    .y = morphWeightsCount
-    .z = vertexFlag: {
+    .x = vertexFlag: {
         VERTEX_FLAG_NONE    = 0, (also means static mesh)
         VERTEX_FLAG_RIG     = 1 << 0,
         VERTEX_FLAG_MORPH   = 1 << 1,
         VERTEX_FLAG_COLOR   = 1 << 2
     }
-    .w = reserved
+    .y = vertexCount
+    .z = morphWeightsCount
+    .w = material index
 
 */
 
 bool vHasSkin() {
-    return (pConst.data.z & 1) != 0;
+    return (pConst.data.x & 1) != 0;
 }
 bool vHasMorph() {
-    return (pConst.data.z & 2) != 0;
+    return (pConst.data.x & 2) != 0;
 }
 bool vHasColor() {
-    return (pConst.data.z & 4) != 0;
+    return (pConst.data.x & 4) != 0;
 }
 
 layout(location = 0) in vec4  inPos_Tu;
@@ -78,13 +78,13 @@ void main() {
 // ----------------------------------
 
 
-    uint vertexCount = pConst.data.x;
-    uint vertexId = gl_VertexIndex;
-
-    uint mrphWsCount = pConst.data.y;
+    uint vertexCount = pConst.data.y;
+    uint mrphWsCount = pConst.data.z;
 
     if (mrphWsCount > 0 && vertexCount > 0 && false) {
         uint mrphWsOffset = other.y;
+        uint vertexId = gl_VertexIndex;
+
         for (uint m = 0; m < mrphWsCount; ++m) {
             float weight = mrphWeights[mrphWsOffset + m];
 

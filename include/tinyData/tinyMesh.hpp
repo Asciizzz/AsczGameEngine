@@ -46,7 +46,7 @@ namespace tinyVertex {
     };
 
     inline Type& operator|=(Type& a, Type b) {
-        a = static_cast<Type>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
+        a = static_cast<Type>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
         return a;
     }
 };
@@ -99,10 +99,10 @@ struct tinyMesh {
         VkIndexType indxType = VK_INDEX_TYPE_UINT8;
 
         tinyVertex::Type vrtxTypes = tinyVertex::Type::Static;
-        bool hasType(tinyVertex::Type t) const {
-            return (static_cast<uint8_t>(vrtxTypes) & static_cast<uint8_t>(t)) != 0;
+        inline bool hasType(tinyVertex::Type t) const {
+            return (static_cast<uint32_t>(vrtxTypes) & static_cast<uint32_t>(t)) != 0;
         }
-        uint32_t typeFlags() const {
+        inline uint32_t vrtxFlags() const {
             return static_cast<uint32_t>(vrtxTypes);
         }
 
@@ -148,8 +148,6 @@ struct tinyMesh {
 
             vrtxTypes |= tinyVertex::Type::Color;
             vcolorData = colors;
-
-            printf("Has color data\n");
             return *this;
         }
 
@@ -191,6 +189,7 @@ struct tinyMesh {
                 .createDeviceLocalBuffer(dvk_, vriggedData.data());
 
             if (!hasType(tinyVertex::Type::Color)) vcolorData.push_back(tinyVertex::Color()); // Dummy white color
+
             vcolorBuffer
                 .setDataSize(vcolorData.size() * sizeof(tinyVertex::Color))
                 .setUsageFlags(BufferUsage::Vertex)

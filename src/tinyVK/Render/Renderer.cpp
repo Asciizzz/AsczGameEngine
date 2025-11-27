@@ -269,7 +269,7 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
 
             VkBuffer staticBuffer = submesh->vstaticBuffer;
             VkBuffer riggedBuffer = submesh->vriggedBuffer;
-            VkBuffer colorBuffer = submesh->vcolorBuffer;
+            VkBuffer colorBuffer  = submesh->vcolorBuffer;
 
             VkBuffer vBuffers[] = { staticBuffer, riggedBuffer, colorBuffer };
             VkDeviceSize vOffsets[] = { 0, 0, 0 };
@@ -287,8 +287,8 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
 
             // Draw entire range instead of submesh
             testPipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, 0, glm::uvec4(
+                submesh->vrtxFlags(),
                 submesh->vrtxCount,
-                submesh->typeFlags(),
                 submesh->mrphCount,
                 draw.matIndex(submesh->material)
             ));

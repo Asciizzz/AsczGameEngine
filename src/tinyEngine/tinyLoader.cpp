@@ -557,7 +557,7 @@ void loadMesh(tinyMesh& mesh,
         std::vector<glm::vec3> normals;
         std::vector<glm::vec4> tangents;
         std::vector<glm::vec2> uvs;
-        std::vector<tinyVertex::Color> colors; // assume normalized to vec4 by helper
+        std::vector<glm::vec4> colors; // assume normalized to vec4 by helper
         std::vector<glm::uvec4> boneIDs;
         std::vector<glm::vec4>   boneWs;
 
@@ -614,7 +614,8 @@ void loadMesh(tinyMesh& mesh,
             }
 
             if (!colors.empty()) {
-                vcolor[i] = (i < colors.size()) ? colors[i] : defaultColor;
+                glm::vec4 col = (i < colors.size()) ? colors[i] : glm::vec4(1.0f);
+                vcolor[i] = tinyVertex::Color{col};
             }
 
             // expand submesh AABB while building static vertices
