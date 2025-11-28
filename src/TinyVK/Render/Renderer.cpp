@@ -252,6 +252,7 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
     for (const auto& shaderGroup : shaderGroups) { // For each shader groups:
         // In the future you will change this to a r.get<tinyShader>(shaderHandle)
         tinyHandle shaderHandle = shaderGroup.shader;
+        printf("Shader [%u]\n", shaderHandle.idx());
 
         testPipeline->bindCmd(currentCmd);
 
@@ -271,6 +272,8 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
 
             const auto* rMesh = sharedRes.fsGet<tinyMesh>(meshGroup.mesh);
             if (!rMesh) continue; // Should not happen
+            
+            printf("  Mesh [%u]\n", meshGroup.mesh.idx());
 
             VkBuffer staticBuffer = rMesh->vstaticBuffer();
             VkBuffer indxBuffer   = rMesh->indxBuffer();
