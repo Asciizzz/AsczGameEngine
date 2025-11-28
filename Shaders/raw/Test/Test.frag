@@ -3,6 +3,7 @@
 layout(push_constant) uniform PushConstant {
     uvec4 data0;
     uvec4 data1;
+    uvec4 data2;
 } pConst;
 
 layout(location = 0) in vec3 fragWorld;

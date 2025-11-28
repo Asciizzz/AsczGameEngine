@@ -299,9 +299,12 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
                 );
                 testPipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, sizeof(glm::uvec4),
                     glm::uvec4(
-                        0, submesh->vcolorOffset,
-                        submesh->vmrphsOffset, static_cast<uint32_t>(submesh->mrphTargets.size())
+                        submesh->vstaticOffset, submesh->vriggedOffset,
+                        submesh->vcolorOffset,  submesh->vmrphsOffset
                     )
+                );
+                testPipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, 2 * sizeof(glm::uvec4),
+                    glm::uvec4(submesh->mrphTargets.size(), 0, 0, 0)
                 );
 
                 vkCmdDrawIndexed(

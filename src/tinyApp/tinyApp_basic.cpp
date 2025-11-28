@@ -82,7 +82,7 @@ void tinyApp::initComponents() {
             project->drawable().skinDescLayout(),
             project->drawable().mrphWsDescLayout(), // Dynamic, based on instance
         })
-        .withPushConstants(ShaderStage::VertexAndFragment, 0, 32)
+        .withPushConstants(ShaderStage::VertexAndFragment, 0, 48) // 3 x uvec4
         .withShaders("Shaders/bin/Test/Test.vert.spv", "Shaders/bin/Test/Test.frag.spv")
         .withVertexInput(
             tinyDrawable::bindingDesc(),

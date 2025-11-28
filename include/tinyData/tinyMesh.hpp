@@ -193,7 +193,7 @@ struct tinyMesh {
     void setABmin(const glm::vec3& abMin) { ABmin_ = abMin; }
     void setABmax(const glm::vec3& abMax) { ABmax_ = abMax; }
 
-    static constexpr uint32_t MAX_VERTEX_EXTENSIONS = 1000000; // No chance in hell we reach this lmao
+    static constexpr uint32_t MAX_VERTEX_EXTENSIONS = 32768; // No chance in hell we reach this lmao
 
     static void createVertexExtensionDescriptors(
         const tinyVk::Device* dvk,
@@ -255,18 +255,24 @@ struct tinyMesh {
 
         // Setup buffers
 
-        // Create helper function to create buffers
         auto createBuffer = [&](DataBuffer& buffer, size_t dataSize, VkBufferUsageFlags usage, const void* data) {
+            if (dataSize == 0) return;
             buffer
                 .setDataSize(dataSize)
                 .setUsageFlags(usage)
                 .createDeviceLocalBuffer(dvk_, data);
         };
 
+        bool vhasRigged = totalRiggedCount > 0;
+        bool vhasColor  = totalColorCount  > 0;
+        bool vhasMorph  = totalDeltaCount  > 0;
+
+        bool vhasExt = vhasRigged || vhasColor || vhasMorph;
+
         // Avoid zero-sized buffer creation
-        totalRiggedCount = totalRiggedCount > 0 ? totalRiggedCount : 1;
-        totalColorCount  = totalColorCount  > 0 ? totalColorCount  : 1;
-        totalDeltaCount  = totalDeltaCount  > 0 ? totalDeltaCount  : 1;
+        totalRiggedCount = vhasRigged ? totalRiggedCount : 1;
+        totalColorCount  = vhasColor  ? totalColorCount  : 1;
+        totalDeltaCount  = vhasMorph  ? totalDeltaCount  : 1;
 
         std::vector<tinyVertex::Static> vstaticRaw(totalStaticCount);
         std::vector<uint32_t>           indxRaw   (totalIndexCount);
@@ -331,6 +337,8 @@ struct tinyMesh {
 
         if (vrtxExtLayout == VK_NULL_HANDLE || vrtxExtPool == VK_NULL_HANDLE) return; // Can't create descriptor set
 
+        if (!vhasExt) return; // No need to create descriptor set
+
         vrtxExt_.allocate(dvk_->device, vrtxExtPool, vrtxExtLayout);
 
         // Write descriptor set
@@ -352,22 +360,22 @@ struct tinyMesh {
                 } })
             .updateDescSets(dvk_->device);
 
-        for (size_t i = 0; i < submeshes_.size(); ++i) {
-            const auto& sub = submeshes_[i];
-            printf("| %-3zu | Sta{%6u,%6u} | Rig{%6u,%6u} | Col{%6u,%6u} | Idx{%6u,%6u} |\n",
-                i,
-                sub.vstaticOffset, sub.vrtxCount,
-                sub.vriggedOffset, sub.vrtxTypes & tinyVertex::Type::Rig ? sub.vrtxCount : 0,
-                sub.vcolorOffset,  sub.vrtxTypes & tinyVertex::Type::Color ? sub.vrtxCount : 0,
-                sub.indxOffset,    sub.indxCount
-            );
-        }
+        // for (size_t i = 0; i < submeshes_.size(); ++i) {
+        //     const auto& sub = submeshes_[i];
+        //     printf("| %-3zu | Sta{%6u,%6u} | Rig{%6u,%6u} | Col{%6u,%6u} | Idx{%6u,%6u} |\n",
+        //         i,
+        //         sub.vstaticOffset, sub.vrtxCount,
+        //         sub.vriggedOffset, sub.vrtxTypes & tinyVertex::Type::Rig ? sub.vrtxCount : 0,
+        //         sub.vcolorOffset,  sub.vrtxTypes & tinyVertex::Type::Color ? sub.vrtxCount : 0,
+        //         sub.indxOffset,    sub.indxCount
+        //     );
+        // }
 
     }
 
     VkBuffer vstaticBuffer()     const { return vstaticBuffer_; }
-    VkBuffer indxBuffer()        const { return indxBuffer_;    }
-    VkDescriptorSet vrtxExtSet() const { return vrtxExt_;   }
+    VkBuffer indxBuffer()        const { return indxBuffer_; }
+    VkDescriptorSet vrtxExtSet() const { return vrtxExt_; }
 
 private:
 
@@ -386,52 +394,4 @@ private:
     tinyVk::DataBuffer vriggedBuffer_;
     tinyVk::DataBuffer vcolorBuffer_;
     tinyVk::DataBuffer vmrphsBuffer_;
-
-    // void vkCreate(const tinyVk::Device* device, VkDescriptorSetLayout mrphLayout = VK_NULL_HANDLE, VkDescriptorPool mrphPool = VK_NULL_HANDLE) {
-
-
-    // // Morph deltas
-
-    //     if (mrphTargets_.empty() ||
-    //         mrphLayout == VK_NULL_HANDLE ||
-    //         mrphPool == VK_NULL_HANDLE) {
-    //         clearData(); // Optional
-    //         return; // Can't create morph data
-    //     }
-
-    //     hasMorphs_ = true;
-
-    //     mrphDeltas_.resize(mrphCount_ * vrtxCount_);
-    //     for (size_t i = 0; i < mrphCount_; ++i) {
-    //         // Should not happen, hopefully
-    //         assert(mrphTargets_[i].deltas.size() == vrtxCount_ && "Morph target delta count must match vertex count");
-
-    //         std::memcpy(
-    //             mrphDeltas_.data() + i * vrtxCount_,
-    //             mrphTargets_[i].deltas.data(),
-    //             vrtxCount_ * sizeof(tinyMorph::Delta)
-    //         );
-    //     }
-
-    //     // Construct an empty weights array for CPU use
-    //     mrphWeights_ = std::vector<float>(mrphCount_, 0.0f);
-
-    //     mrphDltsBuffer_
-    //         .setDataSize(mrphDeltas_.size() * sizeof(tinyMorph::Delta))
-    //         .setUsageFlags(BufferUsage::Storage)
-    //         .createDeviceLocalBuffer(dvk_, mrphDeltas_.data());
-
-    //     // Write descriptor set
-    //     mrphDltsDescSet_.allocate(dvk_->device, mrphPool, mrphLayout);
-    //     DescWrite()
-    //         .setDstSet(mrphDltsDescSet_)
-    //         .setType(DescType::StorageBuffer)
-    //         .setDescCount(1)
-    //         .setBufferInfo({ VkDescriptorBufferInfo{
-    //             mrphDltsBuffer_, 0, VK_WHOLE_SIZE
-    //         } })
-    //         .updateDescSets(dvk_->device);
-
-    //     clearData(); // Optional
-    // }
 };

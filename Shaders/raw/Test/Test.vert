@@ -3,6 +3,7 @@
 layout(push_constant) uniform PushConstant {
     uvec4 data0;
     uvec4 data1;
+    uvec4 data2;
 } pConst;
 
 /* pConst explanation:
@@ -20,10 +21,19 @@ data0 {
 }
 
 data1 {
-    .x = rigOffset
-    .y = colorOffset
-    .z = mrphDltsOffset // Delta offsets
-    .w = mrphWsCount    // Weights count
+    .x = staticOffset (you could think of it as gl_VertexOffset)
+    .y = rigOffset
+    .z = colorOffset
+    .w = mrphDltsOffset // Delta offsets
+}
+
+data2 {
+    .x = mrphWsCount // Morph Weights count
+    .y = reserved
+    .z = reserved
+    .w = reserved
+}
+
 }
 
 */
@@ -32,9 +42,10 @@ bool vHasSkin() { return (pConst.data0.x & 1) != 0; }
 bool vHasMorph() { return (pConst.data0.x & 2) != 0; }
 bool vHasColor() { return (pConst.data0.x & 4) != 0; }
 
-uint rigOffset() { return pConst.data1.x; }
-uint colorOffset() { return pConst.data1.y; }
-uint mrphDltsOffset() { return pConst.data1.z; }
+uint staticOffset() { return pConst.data1.x; }
+uint rigOffset() { return pConst.data1.y; }
+uint colorOffset() { return pConst.data1.z; }
+uint mrphDltsOffset() { return pConst.data1.w; }
 
 layout(location = 0) in vec4  inPos_Tu;
 layout(location = 1) in vec4  inNrml_Tv;
@@ -81,6 +92,10 @@ layout (std430, set = 1, binding = 2) readonly buffer MrphDltsBuffer { Mrph mrph
 layout (std430, set = 3, binding = 0) readonly buffer SkinBuffer { mat4 skinData[];};
 layout (std430, set = 4, binding = 0) readonly buffer MrphWsBuffer { float mrphWs[]; };
 
+Rig getRig() {
+    return rigs[rigOffset() - staticOffset() + gl_VertexIndex];
+}
+
 void main() {
     mat4 model = mat4(model4_0, model4_1, model4_2, model4_3);
 
@@ -93,6 +108,7 @@ void main() {
     uint vertexCount = pConst.data0.y;
     uint mrphTargetCount = pConst.data0.z;
 
+    uint mrphWsCount = pConst.data2.x;
     if (mrphWsCount > 0 && vertexCount > 0 && false) {
         uint mrphWsOffset = other.y;
         uint vertexId = gl_VertexIndex;
@@ -120,7 +136,7 @@ void main() {
 
     if (vHasSkin()) {
         uint boneOffset = other.x;
-        Rig rig = rigs[rigOffset() + gl_VertexIndex];
+        Rig rig = getRig();
 
         for (uint i = 0; i < 4; ++i) {
             uint id = rig.boneIDs[i] + boneOffset;
