@@ -43,10 +43,16 @@ void main() {
     float lDot = dot(normalize(fragNrml), normalize(lightDir));
     lDot = clamp(lDot, 0.0, 1.0);
 
-    lDot = mix(0.6, 1.0, lDot);
+    lDot = mix(0.4, 1.0, lDot);
 
     Material mat = materials[pConst.data0.w];
 
-    outColor = mat.base * fragColor * lDot;
+    float alpha = mat.base.a;
+    if (alpha < 0.01) discard;
+
+    // Ignore fragColor if alpha is 0
+    vec3 fColor = fragColor.a > 0.0 ? fragColor.rgb : vec3(1.0);
+
+    outColor = vec4(fColor * mat.base.rgb * lDot, alpha);
 }
 

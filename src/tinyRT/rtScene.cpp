@@ -185,7 +185,7 @@ void Scene::update(FrameStart frameStart) noexcept {
             if (rtTRANFM3D* tranfm3D = rt_.get<rtTRANFM3D>(compHandle)) {
                 tranfm3D->local.update();
                 tranfm3D->world = parentMat * tranfm3D->local.Mat4;
-                currentWorld = tranfm3D->world;
+                currentWorld = currentWorld * tranfm3D->local.Mat4;
             }
 
             if (rtMESHRD3D* meshRD3D = rt_.get<rtMESHRD3D>(compHandle)) {
@@ -203,7 +203,7 @@ void Scene::update(FrameStart frameStart) noexcept {
 
                     // Submesh culling
                     if (!cam.collideAABB(submesh->ABmin, submesh->ABmax, currentWorld)) continue;
-                    
+
                     const std::vector<glm::mat4>* skinData = skele3D ? &skele3D->skinData() : nullptr;
 
                     const rtMESHRD3D::SubMorph* subMorph = meshRD3D->subMrph(subIdx);

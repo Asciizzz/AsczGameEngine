@@ -135,6 +135,7 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
                 glm::length(glm::vec3(ogNode.TRFM3D[1])),
                 glm::length(glm::vec3(ogNode.TRFM3D[2]))
             );
+            trfm->local.update();
         }
 
         if (ogNode.hasMESHR()) {
