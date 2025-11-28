@@ -586,28 +586,14 @@ void loadMesh(tinyMesh& mesh, const tinygltf::Model& gltfModel, const tinygltf::
 
         // --- 5) Assign arrays into submesh and update flags ---
         submesh.setVrtxStatic(vstatic);
+        submesh.setIndxs(primIndices);
+
         if (hasRigging) submesh.setVrtxRigged(vrigged);
         if (!vcolor.empty()) submesh.setVrtxColor(vcolor);
 
         // material
-        submesh.setMaterial(tinyHandle(primitive.material));
+        submesh.material = tinyHandle(primitive.material);
 
-        // set index buffer with smallest suitable type - use templated setIndxs
-        // choose smallest index type that can contain the max index
-        uint32_t maxIndex = 0;
-        for (uint32_t idx : primIndices) if (idx > maxIndex) idx = maxIndex;
-
-        if (maxIndex <= std::numeric_limits<uint8_t>::max()) {
-            std::vector<uint8_t> tmp; tmp.reserve(primIndices.size());
-            for (uint32_t i : primIndices) tmp.push_back(static_cast<uint8_t>(i));
-            submesh.setIndxs(tmp);
-        } else if (maxIndex <= std::numeric_limits<uint16_t>::max()) {
-            std::vector<uint16_t> tmp; tmp.reserve(primIndices.size());
-            for (uint32_t i : primIndices) tmp.push_back(static_cast<uint16_t>(i));
-            submesh.setIndxs(tmp);
-        } else {
-            submesh.setIndxs(primIndices); // uses uint32_t
-        }
 
         // --- 6) Morph targets: read per-primitive targets into submesh.mrphTargets ---
 
@@ -1371,9 +1357,9 @@ tinyModel tinyLoader::loadModelFromOBJ(const std::string& filePath) {
         tinyMesh::Submesh submesh;
         submesh.setVrtxStatic(vertices);
         submesh.setIndxs(indices);
-        submesh.setMaterial((materialId >= 0) ? tinyHandle(materialId) : tinyHandle());
-        submesh.setABmin(ABmin);
-        submesh.setABmax(ABmax);
+        submesh.material = (materialId >= 0) ? tinyHandle(materialId) : tinyHandle();
+        submesh.ABmin = ABmin;
+        submesh.ABmax = ABmax;
 
         mesh.append(std::move(submesh));
 

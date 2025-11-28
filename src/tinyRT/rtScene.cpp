@@ -202,7 +202,7 @@ void Scene::update(FrameStart frameStart) noexcept {
                     const tinyMesh::Submesh* submesh = mesh->submesh(subIdx);
 
                     // Submesh culling
-                    if (!cam.collideAABB(submesh->ABmin(), submesh->ABmax(), currentWorld)) continue;
+                    if (!cam.collideAABB(submesh->ABmin, submesh->ABmax, currentWorld)) continue;
                     draw.submit({
                         meshRD3D->meshHandle(),
                         subIdx,

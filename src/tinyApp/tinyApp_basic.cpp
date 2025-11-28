@@ -77,12 +77,12 @@ void tinyApp::initComponents() {
     testCfg
         .withDescriptorLayouts({
             project->descSLayout_Global(),
+            project->drawable().vrtxExtLayout(),
             project->drawable().matDescLayout(),
             project->drawable().skinDescLayout(),
             project->drawable().mrphWsDescLayout(), // Dynamic, based on instance
-            project->drawable().mrphDltsDescLayout(), // Static, align with mesh
         })
-        .withPushConstants(ShaderStage::VertexAndFragment, 0, 16)
+        .withPushConstants(ShaderStage::VertexAndFragment, 0, 32)
         .withShaders("Shaders/bin/Test/Test.vert.spv", "Shaders/bin/Test/Test.frag.spv")
         .withVertexInput(
             tinyDrawable::bindingDesc(),

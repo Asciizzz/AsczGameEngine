@@ -144,11 +144,6 @@ public:
     VkDescriptorSet mrphWsDescSet() const noexcept { return mrphWsDescSet_; }
     VkDescriptorSetLayout mrphWsDescLayout() const noexcept { return mrphWsDescLayout_; }
 
-    VkDescriptorSetLayout mrphDltsDescLayout() const noexcept { return mrphDltsDescLayout_; }
-    VkDescriptorPool mrphDltsDescPool() const noexcept { return mrphDltsDescPool_; }
-
-    // Helpers
-
     uint32_t matIndex(tinyHandle matHandle) const noexcept {
         auto it = handleMap_.find(matHandle);
         return (it != handleMap_.end()) ? it->second : 0;
@@ -165,6 +160,8 @@ public:
     inline VkDeviceSize mrphWsOffset(uint32_t frameIndex) const noexcept { return frameIndex * mrphWsSize_x1_.aligned; }
 
 
+    VkDescriptorSetLayout vrtxExtLayout() const noexcept { return vrtxExtLayout_; }
+    VkDescriptorPool      vrtxExtPool()   const noexcept { return vrtxExtPool_; }
 
 // --------------------------- Bacthking --------------------------
 
@@ -173,16 +170,6 @@ public:
     void finalize();
 
     const std::vector<ShaderGroup>& shaderGroups() const noexcept { return shaderGroups_; }
-
-// --------------------------- Dummy -----------------------------
-
-// Collection of dummy data to avoid empty struct issues
-    struct Dummy {
-        tinyVk::DataBuffer mrphDltsBuffer;
-        tinyVk::DescSet    mrphDltsDescSet;
-    };
-
-    const Dummy& dummy() const noexcept { return dummy_; }
 
 private:
 // Basic info
@@ -226,10 +213,6 @@ private:
     tinyVk::DataBuffer  skinBuffer_;
     Size_x1             skinSize_x1_;
 
-    // Morph Deltas (static)
-    tinyVk::DescSLayout mrphDltsDescLayout_;
-    tinyVk::DescPool    mrphDltsDescPool_;
-
     // Morph Weights (runtime)
     tinyVk::DescSLayout mrphWsDescLayout_;
     tinyVk::DescPool    mrphWsDescPool_;
@@ -237,5 +220,9 @@ private:
     tinyVk::DataBuffer  mrphWsBuffer_;
     Size_x1             mrphWsSize_x1_;
 
-    Dummy dummy_;
+// ==== Static default stuff ====
+
+    // Vertex extension
+    tinyVk::DescSLayout vrtxExtLayout_;
+    tinyVk::DescPool    vrtxExtPool_;
 };

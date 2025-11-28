@@ -53,6 +53,10 @@ namespace tinyVertex {
         a = static_cast<Type>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
         return a;
     }
+
+    inline bool operator&(Type a, Type b) {
+        return (static_cast<uint32_t>(a) & static_cast<uint32_t>(b)) != 0;
+    }
 };
 
 struct tinyMesh {
@@ -78,165 +82,124 @@ struct tinyMesh {
             std::string name;
         };
 
+        struct Range {
+            uint32_t offset = 0;
+            uint32_t count  = 0;
+        };
+
         // Methods
 
         Submesh& setVrtxStatic(const std::vector<tinyVertex::Static>& stas) {
-            vrtxTypes_ |= tinyVertex::Type::Static;
-            vrtxCount_ = stas.size();
-            vstaticData_ = stas;
+            vrtxTypes |= tinyVertex::Type::Static;
+            vrtxCount = stas.size();
+            vstaticData = stas;
 
             return *this;
         }
 
         Submesh& setVrtxRigged(const std::vector<tinyVertex::Rigged>& rigs) {
-            if (rigs.size() != vrtxCount_) return *this; // Error, size mismatch
+            if (rigs.size() != vrtxCount) return *this; // Error, size mismatch
 
-            vrtxTypes_ |= tinyVertex::Type::Rig;
-            vriggedData_ = rigs;
+            vrtxTypes |= tinyVertex::Type::Rig;
+            vriggedData = rigs;
             return *this;
         }
 
         Submesh& setVrtxColor(const std::vector<tinyVertex::Color>& colors) {
-            if (colors.size() != vrtxCount_) return *this; // Error, size mismatch
+            if (colors.size() != vrtxCount) return *this; // Error, size mismatch
 
-            vrtxTypes_ |= tinyVertex::Type::Color;
-            vcolorData_ = colors;
+            vrtxTypes |= tinyVertex::Type::Color;
+            vcolorData = colors;
             return *this;
         }
 
         Submesh& addMrphTarget(const MorphTarget& target) {
-            if (target.morphs.size() != vrtxCount_) return *this; // Error, size mismatch
+            if (target.morphs.size() != vrtxCount) return *this; // Error, size mismatch
 
-            vrtxTypes_ |= tinyVertex::Type::Morph;
-            mrphTargets_.push_back(target);
+            vrtxTypes |= tinyVertex::Type::Morph;
+            mrphTargets.push_back(target);
             return *this;
         }
 
-        template<typename IndexT>
-        Submesh& setIndxs(const std::vector<IndexT>& indices) {
-            indxCount_ = indices.size();
-            indxStride_ = sizeof(IndexT);
-            indxType_ = strideToType(indxStride_);
-
-            size_t byteSize = indxCount_ * indxStride_;
-            indxRaw_.resize(byteSize);
-            std::memcpy(indxRaw_.data(), indices.data(), byteSize);
-
-            return *this;   
+        Submesh& setIndxs(const std::vector<uint32_t>& indxs) {
+            indxCount = indxs.size();
+            indxData = indxs;
+            return *this;
         }
 
-        void vkCreate(const tinyVk::Device* dvk_) {
-            using namespace tinyVk;
+        // void vkCreate(const tinyVk::Device* dvk_) {
+        //     using namespace tinyVk;
 
         // Vertex and Index Buffers
 
-            vstaticBuffer_
-                .setDataSize(vstaticData_.size() * sizeof(tinyVertex::Static))
-                .setUsageFlags(BufferUsage::Vertex)
-                .createDeviceLocalBuffer(dvk_, vstaticData_.data());
+            // vstaticBuffer_
+            //     .setDataSize(vstaticData_.size() * sizeof(tinyVertex::Static))
+            //     .setUsageFlags(BufferUsage::Vertex)
+            //     .createDeviceLocalBuffer(dvk_, vstaticData_.data());
 
-            if (!vrtxHas(tinyVertex::Type::Rig)) vriggedData_.push_back(tinyVertex::Rigged()); // Dummy entry to avoid errors
-            vriggedBuffer_
-                .setDataSize(vriggedData_.size() * sizeof(tinyVertex::Rigged))
-                .setUsageFlags(BufferUsage::Vertex)
-                .createDeviceLocalBuffer(dvk_, vriggedData_.data());
+            // if (!vrtxHas(tinyVertex::Type::Rig)) vriggedData_.push_back(tinyVertex::Rigged()); // Dummy entry to avoid errors
+            // vriggedBuffer_
+            //     .setDataSize(vriggedData_.size() * sizeof(tinyVertex::Rigged))
+            //     .setUsageFlags(BufferUsage::Vertex)
+            //     .createDeviceLocalBuffer(dvk_, vriggedData_.data());
 
-            if (!vrtxHas(tinyVertex::Type::Color)) vcolorData_.push_back(tinyVertex::Color()); // Dummy white color
+            // if (!vrtxHas(tinyVertex::Type::Color)) vcolorData.push_back(tinyVertex::Color()); // Dummy white color
 
-            vcolorBuffer_
-                .setDataSize(vcolorData_.size() * sizeof(tinyVertex::Color))
-                .setUsageFlags(BufferUsage::Vertex)
-                .createDeviceLocalBuffer(dvk_, vcolorData_.data());
+            // vcolorBuffer_
+            //     .setDataSize(vcolorData.size() * sizeof(tinyVertex::Color))
+            //     .setUsageFlags(BufferUsage::Vertex)
+            //     .createDeviceLocalBuffer(dvk_, vcolorData.data());
 
-            indxBuffer_
-                .setDataSize(indxRaw_.size())
-                .setUsageFlags(BufferUsage::Index)
-                .createDeviceLocalBuffer(dvk_, indxRaw_.data());
+            // indxBuffer_
+            //     .setDataSize(indxRaw.size())
+            //     .setUsageFlags(BufferUsage::Index)
+            //     .createDeviceLocalBuffer(dvk_, indxRaw.data());
 
             // Will implement morphs later
-        }
-        
+        // }
+
         void clearCPU() {
-            vstaticData_.clear();
-            vriggedData_.clear();
-            vcolorData_.clear();
-            indxRaw_.clear();
-            mrphTargets_.clear();
+            vstaticData.clear();
+            indxData.clear();
+            vriggedData.clear();
+            vcolorData.clear();
+            mrphTargets.clear();
         }
 
-    // Getters
-        inline uint32_t vrtxFlags() const { return static_cast<uint32_t>(vrtxTypes_); }
-        inline uint32_t vrtxHas(tinyVertex::Type t) const { return (static_cast<uint32_t>(vrtxTypes_) & static_cast<uint32_t>(t)) != 0; }
-
-        const std::vector<tinyVertex::Static>& vstaticData() const { return vstaticData_; }
-        const std::vector<tinyVertex::Rigged>& vriggedData() const { return vriggedData_; }
-        const std::vector<tinyVertex::Color>&  vcolorData() const  { return vcolorData_;  }
-        const std::vector<uint8_t>&            indxRaw() const     { return indxRaw_;    }
-
-        inline tinyHandle material() const { return material_; }
-        void setMaterial(tinyHandle mat) { material_ = mat; }
-
-        inline uint32_t vrtxCount() const { return vrtxCount_; }
-        inline uint32_t indxCount() const { return indxCount_; }
-        inline VkIndexType indxType() const { return indxType_; }
-        
-        inline uint32_t mrphCount() const { return mrphCount_; }
-        inline uint32_t mrphOffset() const { return mrphOffset_; }
-        void setMrphOffset(uint32_t offset) { mrphOffset_ = offset; }
-
-        VkBuffer vstaticBuffer() const { return vstaticBuffer_; }
-        VkBuffer vriggedBuffer() const { return vriggedBuffer_; }
-        VkBuffer vcolorBuffer() const  { return vcolorBuffer_;  }
-        VkBuffer indxBuffer() const    { return indxBuffer_;    }
-
-        const glm::vec3& ABmin() const { return ABmin_; }
-        const glm::vec3& ABmax() const { return ABmax_; }
-        
-        void setABmin(const glm::vec3& abMin) { ABmin_ = abMin; }
-        void setABmax(const glm::vec3& abMax) { ABmax_ = abMax; }
-        void setAABB(const glm::vec3& abMin, const glm::vec3& abMax) {
-            ABmin_ = abMin;
-            ABmax_ = abMax;
-        }
-
-        void expandABmin(const glm::vec3& point) { ABmin_ = glm::min(ABmin_, point); }
-        void expandABmax(const glm::vec3& point) { ABmax_ = glm::max(ABmax_, point); }
+        void expandABmin(const glm::vec3& point) { ABmin = glm::min(ABmin, point); }
+        void expandABmax(const glm::vec3& point) { ABmax = glm::max(ABmax, point); }
         void expandAABB(const glm::vec3& point) {
             expandABmin(point);
             expandABmax(point);
         }
-    private:
+
         friend class tinyMesh; // Not needed but good to have
 
-        std::vector<tinyVertex::Static> vstaticData_; // Required
-        std::vector<tinyVertex::Rigged> vriggedData_; // Optional
-        std::vector<tinyVertex::Color>  vcolorData_;  // Optional
-        std::vector<uint8_t>            indxRaw_; // Will be casted to proper type
+        tinyVertex::Type vrtxTypes = tinyVertex::Type::Static;
+        uint32_t vrtxFlags() const { return static_cast<uint32_t>(vrtxTypes); }
 
-        // Will be introduced later, too much hassle I am tired
-        std::vector<MorphTarget> mrphTargets_; // Optional
+        std::vector<tinyVertex::Static> vstaticData; // Required
+        std::vector<uint32_t>           indxData;    // Required
 
-        tinyHandle material_;
+        std::vector<tinyVertex::Rigged> vriggedData; // Optional
+        std::vector<tinyVertex::Color>  vcolorData;  // Optional
+        std::vector<MorphTarget> mrphTargets; // Optional
 
-        uint32_t vrtxCount_ = 0;
-        uint32_t indxCount_ = 0;
+        tinyHandle material;
 
-        uint32_t    indxStride_ = 0;
-        VkIndexType indxType_ = VK_INDEX_TYPE_UINT8;
+        uint32_t vrtxCount = 0;
+        uint32_t indxCount = 0;
 
-        uint32_t mrphCount_ = 0;
-        uint32_t mrphOffset_ = 0; // Offset in the big morph deltas buffer
+        Range vstaticRange;
+        Range vriggedRange;
+        Range vcolorRange;
+        Range indxRange;
 
-        tinyVertex::Type vrtxTypes_ = tinyVertex::Type::Static;
+        // A bit special, since the total size of morph is vertex count * morph count
+        Range vmrphsRange;
 
-        // Basic vertex data
-        tinyVk::DataBuffer vstaticBuffer_;
-        tinyVk::DataBuffer vriggedBuffer_;
-        tinyVk::DataBuffer vcolorBuffer_;
-        tinyVk::DataBuffer indxBuffer_;
-
-        glm::vec3 ABmin_ = glm::vec3( std::numeric_limits<float>::max());
-        glm::vec3 ABmax_ = glm::vec3(-std::numeric_limits<float>::max());
+        glm::vec3 ABmin = glm::vec3( std::numeric_limits<float>::max());
+        glm::vec3 ABmax = glm::vec3(-std::numeric_limits<float>::max());
 
         static VkIndexType strideToType(size_t stride) noexcept {
             switch (stride) {
@@ -249,17 +212,11 @@ struct tinyMesh {
     };
 
     size_t append(Submesh&& submesh) {
-        ABmin_ = glm::min(ABmin_, submesh.ABmin());
-        ABmax_ = glm::max(ABmax_, submesh.ABmax());
+        ABmin_ = glm::min(ABmin_, submesh.ABmin);
+        ABmax_ = glm::max(ABmax_, submesh.ABmax);
 
         submeshes_.push_back(std::move(submesh));
         return submeshes_.size() - 1;
-    }
-
-    void vkCreate(const tinyVk::Device* dvk_, VkDescriptorSetLayout mrphDltsLayout = VK_NULL_HANDLE, VkDescriptorPool mrphDltsPool = VK_NULL_HANDLE) {
-        for (auto& submesh : submeshes_) {
-            submesh.vkCreate(dvk_);
-        }
     }
 
     std::vector<tinyMesh::Submesh>&       submeshes()       { return submeshes_; }
@@ -273,6 +230,164 @@ struct tinyMesh {
     void setABmin(const glm::vec3& abMin) { ABmin_ = abMin; }
     void setABmax(const glm::vec3& abMax) { ABmax_ = abMax; }
 
+    static constexpr uint32_t MAX_VERTEX_EXTENSIONS = 1000000; // No chance in hell we reach this lmao
+
+    static void createVertexExtensionDescriptors(
+        const tinyVk::Device* dvk,
+        tinyVk::DescSLayout* layout,
+        tinyVk::DescPool*    pool
+    ) {
+        using namespace tinyVk;
+
+        if (!dvk || !layout || !pool) return;
+
+        layout->create(dvk->device, {
+            // Rig vertex buffer
+            VkDescriptorSetLayoutBinding{ 0, DescType::StorageBuffer, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr },
+            // Color vertex buffer
+            VkDescriptorSetLayoutBinding{ 1, DescType::StorageBuffer, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr },
+            // Morph vertex buffer
+            VkDescriptorSetLayoutBinding{ 2, DescType::StorageBuffer, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr }
+        });
+
+        pool->create(dvk->device, {
+            VkDescriptorPoolSize{ DescType::StorageBuffer, 3 }
+        }, MAX_VERTEX_EXTENSIONS * 3);
+    }
+
+    void vkCreate(const tinyVk::Device* dvk_, VkDescriptorSetLayout vrtxExtLayout = VK_NULL_HANDLE, VkDescriptorPool vrtxExtPool = VK_NULL_HANDLE) {
+        using namespace tinyVk;
+        
+        uint32_t    totalStaticCount = 0,
+                    totalRiggedCount = 0,
+                    totalColorCount  = 0,
+                    totalDeltaCount  = 0,
+                    totalIndexCount  = 0;
+
+        // Iterate through submeshes to calculate total sizes and setup ranges
+        for (auto& submesh : submeshes_) {
+            // Setup ranges
+            submesh.vstaticRange = { totalStaticCount, submesh.vrtxCount };
+            totalStaticCount    += submesh.vrtxCount;
+
+            if (submesh.vrtxTypes & tinyVertex::Type::Rig) {
+                submesh.vriggedRange = { totalRiggedCount, submesh.vrtxCount };
+                totalRiggedCount    += submesh.vrtxCount;
+            }
+
+            if (submesh.vrtxTypes & tinyVertex::Type::Color) {
+                submesh.vcolorRange = { totalColorCount, submesh.vrtxCount };
+                totalColorCount    += submesh.vrtxCount;
+            }
+
+            if (submesh.vrtxTypes & tinyVertex::Type::Morph) {
+                uint32_t targetCount = submesh.mrphTargets.size();
+                submesh.vmrphsRange = { totalDeltaCount, targetCount * submesh.vrtxCount };
+                totalDeltaCount    += targetCount * submesh.vrtxCount;
+            }
+
+            submesh.indxRange = { totalIndexCount, submesh.indxCount };
+            totalIndexCount  += submesh.indxCount;
+        }
+
+        // Setup buffers
+
+        // Create helper function to create buffers
+        auto createBuffer = [&](DataBuffer& buffer, size_t dataSize, VkBufferUsageFlags usage, const void* data) {
+            buffer
+                .setDataSize(dataSize)
+                .setUsageFlags(usage)
+                .createDeviceLocalBuffer(dvk_, data);
+        };
+
+        // Avoid zero-sized buffer creation
+        totalRiggedCount = totalRiggedCount > 0 ? totalRiggedCount : 1;
+        totalColorCount  = totalColorCount  > 0 ? totalColorCount  : 1;
+        totalDeltaCount  = totalDeltaCount  > 0 ? totalDeltaCount  : 1;
+
+        std::vector<tinyVertex::Static> vstaticRaw(totalStaticCount);
+        std::vector<uint32_t>           indxRaw   (totalIndexCount);
+        std::vector<tinyVertex::Rigged> vriggedRaw(totalRiggedCount);
+        std::vector<tinyVertex::Color>  vcolorRaw (totalColorCount);
+        std::vector<tinyVertex::Morph>  vmrphsRaw (totalDeltaCount);
+
+        for (auto& submesh : submeshes_) {
+            // Copy static vertices
+            std::memcpy(
+                vstaticRaw.data() + submesh.vstaticRange.offset,
+                submesh.vstaticData.data(),
+                submesh.vrtxCount * sizeof(tinyVertex::Static)
+            );
+
+            // Copy rigged vertices
+            if (submesh.vrtxTypes & tinyVertex::Type::Rig) {
+                std::memcpy(
+                    vriggedRaw.data() + submesh.vriggedRange.offset,
+                    submesh.vriggedData.data(),
+                    submesh.vrtxCount * sizeof(tinyVertex::Rigged)
+                );
+            }
+
+            // Copy color vertices
+            if (submesh.vrtxTypes & tinyVertex::Type::Color) {
+                std::memcpy(
+                    vcolorRaw.data() + submesh.vcolorRange.offset,
+                    submesh.vcolorData.data(),
+                    submesh.vrtxCount * sizeof(tinyVertex::Color)
+                );
+            }
+
+            // Copy morph targets
+            if (submesh.vrtxTypes & tinyVertex::Type::Morph) {
+                for (uint32_t i = 0; i < submesh.mrphTargets.size(); ++i) {
+                    const auto& target = submesh.mrphTargets[i];
+                    std::memcpy(
+                        vmrphsRaw.data() + submesh.vmrphsRange.offset + i * submesh.vrtxCount,
+                        target.morphs.data(),
+                        submesh.vrtxCount * sizeof(tinyVertex::Morph)
+                    );
+                }
+            }
+
+            // Copy indices
+            std::memcpy(
+                indxRaw.data() + submesh.indxRange.offset,
+                submesh.indxData.data(),
+                submesh.indxCount * sizeof(uint32_t)
+            );
+        }
+
+        createBuffer(vstaticBuffer_, vstaticRaw.size() * sizeof(tinyVertex::Static), BufferUsage::Vertex,  vstaticRaw.data());
+        createBuffer(indxBuffer_,    indxRaw.size()    * sizeof(uint32_t),           BufferUsage::Index,   indxRaw.data());
+        createBuffer(vriggedBuffer_, totalRiggedCount  * sizeof(tinyVertex::Rigged), BufferUsage::Storage, vriggedRaw.data());
+        createBuffer(vcolorBuffer_,  totalColorCount   * sizeof(tinyVertex::Color),  BufferUsage::Storage, vcolorRaw.data());
+        createBuffer(vmrphsBuffer_,  totalDeltaCount   * sizeof(tinyVertex::Morph),  BufferUsage::Storage, vmrphsRaw.data());
+
+        if (vrtxExtLayout == VK_NULL_HANDLE || vrtxExtPool == VK_NULL_HANDLE) return; // Can't create descriptor set
+
+        vrtxExt_.allocate(dvk_->device, vrtxExtPool, vrtxExtLayout);
+
+        // Write descriptor set
+        DescWrite()
+            .addWrite()
+                .setDstSet(vrtxExt_).setType(DescType::StorageBuffer)
+                .setDstBinding(0).setBufferInfo({ VkDescriptorBufferInfo{
+                    vriggedBuffer_, 0, VK_WHOLE_SIZE
+                } })
+            .addWrite()
+                .setDstSet(vrtxExt_).setType(DescType::StorageBuffer)
+                .setDstBinding(1).setBufferInfo({ VkDescriptorBufferInfo{
+                    vcolorBuffer_, 0, VK_WHOLE_SIZE
+                } })
+            .addWrite()
+                .setDstSet(vrtxExt_).setType(DescType::StorageBuffer)
+                .setDstBinding(2).setBufferInfo({ VkDescriptorBufferInfo{
+                    vmrphsBuffer_, 0, VK_WHOLE_SIZE
+                } })
+            .updateDescSets(dvk_->device);
+
+    }
+
 private:
 
     std::vector<Submesh> submeshes_;
@@ -283,12 +398,20 @@ private:
     tinyVk::DescSet mrphDltsDescSet_;
     tinyVk::DataBuffer mrphDltsBuffer_;
 
+    tinyVk::DataBuffer vstaticBuffer_; // Bind vertex buffers
+    tinyVk::DataBuffer indxBuffer_;    // Bind index buffer
+
+    tinyVk::DescSet    vrtxExt_;       // Bind descriptor set for vertex extensions
+    tinyVk::DataBuffer vriggedBuffer_;
+    tinyVk::DataBuffer vcolorBuffer_;
+    tinyVk::DataBuffer vmrphsBuffer_;
+
     // void vkCreate(const tinyVk::Device* device, VkDescriptorSetLayout mrphLayout = VK_NULL_HANDLE, VkDescriptorPool mrphPool = VK_NULL_HANDLE) {
 
 
     // // Morph deltas
 
-    //     if (mrphTargets__.empty() ||
+    //     if (mrphTargets_.empty() ||
     //         mrphLayout == VK_NULL_HANDLE ||
     //         mrphPool == VK_NULL_HANDLE) {
     //         clearData(); // Optional
@@ -297,15 +420,15 @@ private:
 
     //     hasMorphs_ = true;
 
-    //     mrphDeltas_.resize(mrphCount_ * vrtxCount__);
+    //     mrphDeltas_.resize(mrphCount_ * vrtxCount_);
     //     for (size_t i = 0; i < mrphCount_; ++i) {
     //         // Should not happen, hopefully
-    //         assert(mrphTargets__[i].deltas.size() == vrtxCount__ && "Morph target delta count must match vertex count");
+    //         assert(mrphTargets_[i].deltas.size() == vrtxCount_ && "Morph target delta count must match vertex count");
 
     //         std::memcpy(
-    //             mrphDeltas_.data() + i * vrtxCount__,
-    //             mrphTargets__[i].deltas.data(),
-    //             vrtxCount__ * sizeof(tinyMorph::Delta)
+    //             mrphDeltas_.data() + i * vrtxCount_,
+    //             mrphTargets_[i].deltas.data(),
+    //             vrtxCount_ * sizeof(tinyMorph::Delta)
     //         );
     //     }
 

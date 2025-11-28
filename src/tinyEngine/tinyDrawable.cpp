@@ -8,46 +8,28 @@ std::vector<VkVertexInputBindingDescription> tinyDrawable::bindingDesc() noexcep
     vstaticBinding.stride = sizeof(tinyVertex::Static);
     vstaticBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-    VkVertexInputBindingDescription vriggedBinding{};
-    vriggedBinding.binding = 1;
-    vriggedBinding.stride = sizeof(tinyVertex::Rigged);
-    vriggedBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-    VkVertexInputBindingDescription vcolorBinding{};
-    vcolorBinding.binding = 2;
-    vcolorBinding.stride = sizeof(tinyVertex::Color);
-    vcolorBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
     VkVertexInputBindingDescription instaBinding{};
-    instaBinding.binding = 3;
+    instaBinding.binding = 1;
     instaBinding.stride = sizeof(InstaData);
     instaBinding.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
 
-    return { vstaticBinding, vriggedBinding, vcolorBinding, instaBinding };
+    return { vstaticBinding, instaBinding };
 }
 
 std::vector<VkVertexInputAttributeDescription> tinyDrawable::attributeDescs() noexcept {
-    std::vector<VkVertexInputAttributeDescription> descs(11);
+    std::vector<VkVertexInputAttributeDescription> descs(8);
 
     // Data buffer (binding = 0)
     descs[0] = { 0, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(tinyVertex::Static, pos_tu)  };
     descs[1] = { 1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(tinyVertex::Static, nrml_tv) };
     descs[2] = { 2, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(tinyVertex::Static, tang) };
 
-    // Rigging buffer (binding = 1)
-    descs[3] = { 3, 1, VK_FORMAT_R32G32B32A32_UINT,   offsetof(tinyVertex::Rigged, boneIDs) };
-    descs[4] = { 4, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(tinyVertex::Rigged, boneWs)  };
-
-    // Color buffer (binding = 2)
-    descs[5] = { 5, 2, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(tinyVertex::Color, color) };
-
-    // Insta buffer (binding = 3)
-    descs[6] = { 6, 3, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(InstaData, model) + sizeof(glm::vec4) * 0 };
-    descs[7] = { 7, 3, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(InstaData, model) + sizeof(glm::vec4) * 1 };
-    descs[8] = { 8, 3, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(InstaData, model) + sizeof(glm::vec4) * 2 };
-    descs[9] = { 9, 3, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(InstaData, model) + sizeof(glm::vec4) * 3 };
-    descs[10] = { 10, 3, VK_FORMAT_R32G32B32A32_UINT,   offsetof(InstaData, other) };
-
+    // Insta buffer (binding = 1)
+    descs[3] = { 3, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(InstaData, model) + sizeof(glm::vec4) * 0 };
+    descs[4] = { 4, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(InstaData, model) + sizeof(glm::vec4) * 1 };
+    descs[5] = { 5, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(InstaData, model) + sizeof(glm::vec4) * 2 };
+    descs[6] = { 6, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(InstaData, model) + sizeof(glm::vec4) * 3 };
+    descs[7] = { 7, 1, VK_FORMAT_R32G32B32A32_UINT,   offsetof(InstaData, other) };
     return descs;
 }
 
@@ -122,10 +104,6 @@ void tinyDrawable::init(const CreateInfo& info) {
     writeDescSetDynamicBuffer(skinDescSet_, skinBuffer_, skinSize_x1_.unaligned);
 
 // ------------------ Setup morph data ------------------
-    
-    // Create pool and layout for deltas
-    mrphDltsDescLayout_.create(device, { {0, DescType::StorageBuffer, 1, ShaderStage::Vertex, nullptr} });
-    mrphDltsDescPool_.create(device, { {DescType::StorageBuffer, MAX_MORPH_DLTS} }, MAX_MORPH_DLTS);
 
     // Create dynamic buffer for weights
     mrphWsSize_x1_.unaligned = MAX_MORPH_WS * sizeof(float);
@@ -144,26 +122,9 @@ void tinyDrawable::init(const CreateInfo& info) {
     writeDescSetDynamicBuffer(mrphWsDescSet_, mrphWsBuffer_, mrphWsSize_x1_.unaligned);
 
 
-// --------------------------- Dummy -----------------------------
+// -------------------------- Vertex Extension -------------------------
 
-    // Dummy morph delta buffer
-
-    dummy_.mrphDltsBuffer
-        .setDataSize(sizeof(VkBuffer))
-        .setUsageFlags(BufferUsage::Storage)
-        .setMemPropFlags(MemProp::HostVisibleAndCoherent)
-        .createBuffer(dvk_)
-        .mapMemory();
-
-    dummy_.mrphDltsDescSet.allocate(device, mrphDltsDescPool_, mrphDltsDescLayout_);
-    DescWrite()
-        .setDstSet(dummy_.mrphDltsDescSet)
-        .setType(DescType::StorageBuffer)
-        .setDescCount(1)
-        .setBufferInfo({ VkDescriptorBufferInfo{
-            dummy_.mrphDltsBuffer, 0, VK_WHOLE_SIZE
-        } })
-        .updateDescSets(device);
+    tinyMesh::createVertexExtensionDescriptors(dvk_, &vrtxExtLayout_, &vrtxExtPool_);
 }
 
 static tinyHandle defaultMatHandle = tinyHandle::make<tinyMaterial>(0, 0);
@@ -173,18 +134,20 @@ static tinyHandle defaultMatHandle = tinyHandle::make<tinyMaterial>(0, 0);
 /* Batch:
 
 Shader 0
-    - Submesh 0
-        - Instance 0
-        - Instance 1
-    - Submesh 1
+    - Mesh 0
+        - Submesh 0
+            - Instance 0
+            - Instance 1
+        - Submesh 1
 
 Shader 1
-    - Submesh 0
-        - Instance 0
-    - Submesh 1
-        - Instance 0
-        - Instance 1
-        - Instance 2
+    - Mesh 0
+        - Submesh 0
+            - Instance 0
+        - Submesh 1
+            - Instance 0
+            - Instance 1
+            - Instance 2
 
 You get the idea
 
@@ -228,10 +191,10 @@ void tinyDrawable::submit(const Entry& entry) noexcept {
 
         tinyHandle shaderHandle;
 
-        if (const tinyMaterial* rMat = fsr_->get<tinyMaterial>(submesh->material())) {
+        if (const tinyMaterial* rMat = fsr_->get<tinyMaterial>(submesh->material)) {
             // If material not in buffer, add it
-            if (handleMap_.find(submesh->material()) == handleMap_.end()) {
-                handleMap_[submesh->material()] = matData_.size();
+            if (handleMap_.find(submesh->material) == handleMap_.end()) {
+                handleMap_[submesh->material] = matData_.size();
                 matData_.push_back(rMat->data);
             }
 

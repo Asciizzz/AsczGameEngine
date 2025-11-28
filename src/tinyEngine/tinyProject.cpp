@@ -83,11 +83,11 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
         tinyHandle fnMeshFolder = fs_->createFolder("Meshes", fnModelFolder);
 
         for (auto& mMesh : model.meshes) {
-            mMesh.mesh.vkCreate(dvk_, drawable_->mrphDltsDescLayout(), drawable_->mrphDltsDescPool());
+            mMesh.mesh.vkCreate(dvk_, drawable_->vrtxExtLayout(), drawable_->vrtxExtPool());
 
             for (auto& submesh : mMesh.mesh.submeshes()) {
-                if (validIndex(submesh.material().index, glmMatRHandle)) {
-                    submesh.setMaterial(glmMatRHandle[submesh.material().index]);
+                if (validIndex(submesh.material.index, glmMatRHandle)) {
+                    submesh.material = glmMatRHandle[submesh.material.index];
                 }
             }
 

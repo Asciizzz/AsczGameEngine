@@ -1,10 +1,13 @@
 #version 450
 
 layout(push_constant) uniform PushConstant {
-    uvec4 data;
+    uvec4 data0;
+    uvec4 data1;
 } pConst;
 
-/* pConst.data explanation:
+/* pConst explanation:
+
+data0 {
     .x = vertexFlag: {
         VERTEX_FLAG_NONE    = 0, (also means static mesh)
         VERTEX_FLAG_RIG     = 1 << 0,
@@ -14,31 +17,34 @@ layout(push_constant) uniform PushConstant {
     .y = vertexCount
     .z = morphWeightsCount
     .w = material index
+}
+
+data1 {
+    .x = rigOffset
+    .y = colorOffset
+    .z = mrphDltsOffset
+    .w = reserved
+}
 
 */
 
-bool vHasSkin() {
-    return (pConst.data.x & 1) != 0;
-}
-bool vHasMorph() {
-    return (pConst.data.x & 2) != 0;
-}
-bool vHasColor() {
-    return (pConst.data.x & 4) != 0;
-}
+bool vHasSkin() { return (pConst.data0.x & 1) != 0; }
+bool vHasMorph() { return (pConst.data0.x & 2) != 0; }
+bool vHasColor() { return (pConst.data0.x & 4) != 0; }
+
+uint rigOffset() { return pConst.data1.x; }
+uint colorOffset() { return pConst.data1.y; }
+uint mrphDltsOffset() { return pConst.data1.z; }
 
 layout(location = 0) in vec4  inPos_Tu;
 layout(location = 1) in vec4  inNrml_Tv;
 layout(location = 2) in vec4  inTangent;
-layout(location = 3) in uvec4 inBoneIDs;
-layout(location = 4) in vec4  inBoneWs;
-layout(location = 5) in vec4  inColor; // Vertex color
 
-layout(location = 6) in vec4  model4_0;
-layout(location = 7) in vec4  model4_1;
-layout(location = 8) in vec4  model4_2;
-layout(location = 9) in vec4  model4_3;
-layout(location = 10)in uvec4 other; // .x = boneOffset, .y = mrphWsOffset, .z = matOverride, .w = reserved
+layout(location = 3) in vec4  model4_0;
+layout(location = 4) in vec4  model4_1;
+layout(location = 5) in vec4  model4_2;
+layout(location = 6) in vec4  model4_3;
+layout(location = 7) in uvec4 other; // .x = boneOffset, .y = mrphWsOffset, .z = matOverride, .w = reserved
 
 layout(location = 0) out vec3 fragWorld;
 layout(location = 1) out vec3 fragNrml;
@@ -51,12 +57,13 @@ layout(set = 0, binding = 0) uniform GlobalUBO {
     mat4 view;
 } glb;
 
-layout (std430, set = 2, binding = 0) readonly buffer SkinBuffer {
-    mat4 skinData[];
+struct Rig {
+    uvec4 boneIDs;
+    vec4  boneWs;
 };
 
-layout(std430, set = 3, binding = 0) readonly buffer MrphWeightsBuffer {
-    float mrphWeights[];
+struct Color {
+    vec4 color;
 };
 
 struct Mrph {
@@ -64,34 +71,39 @@ struct Mrph {
     vec3 dNrml;
     vec3 dTang;
 };
-layout(std430, set = 4, binding = 0) readonly buffer MrphDeltaBuffer {
-    Mrph mrphDeltas[];
-};
+
+// Vertex extension buffers
+layout (std430, set = 1, binding = 0) readonly buffer RigBuffer { Rig rigs[]; };
+layout (std430, set = 1, binding = 1) readonly buffer ColorBuffer { Color colors[]; };
+layout (std430, set = 1, binding = 2) readonly buffer MrphDltsBuffer { Mrph mrphDlts[]; };
+
+// Runtime data buffers
+layout (std430, set = 3, binding = 0) readonly buffer SkinBuffer { mat4 skinData[];};
+layout(std430, set = 4, binding = 0) readonly buffer MrphWsBuffer { float mrphWs[]; };
 
 void main() {
     mat4 model = mat4(model4_0, model4_1, model4_2, model4_3);
 
-    vec3 basePos    = inPos_Tu.xyz;
-    vec3 baseNormal = inNrml_Tv.xyz;
+    vec3 basePos     = inPos_Tu.xyz;
+    vec3 baseNormal  = inNrml_Tv.xyz;
     vec3 baseTangent = inTangent.xyz;
 
 // ----------------------------------
 
-
-    uint vertexCount = pConst.data.y;
-    uint mrphWsCount = pConst.data.z;
+    uint vertexCount = pConst.data0.y;
+    uint mrphWsCount = pConst.data0.z;
 
     if (mrphWsCount > 0 && vertexCount > 0 && false) {
         uint mrphWsOffset = other.y;
         uint vertexId = gl_VertexIndex;
 
         for (uint m = 0; m < mrphWsCount; ++m) {
-            float weight = mrphWeights[mrphWsOffset + m];
+            float weight = mrphWs[mrphWsOffset + m];
 
             if (abs(weight) < 0.0001) continue; // negligible
 
             uint morphIndex = m * vertexCount + vertexId;
-            Mrph delta = mrphDeltas[morphIndex];
+            Mrph delta = mrphDlts[morphIndex + mrphDltsOffset()];
 
             basePos    += weight * delta.dPos;
             baseNormal += weight * delta.dNrml;
@@ -109,9 +121,10 @@ void main() {
 
     if (vHasSkin()) {
         for (uint i = 0; i < 4; ++i) {
-            uint id = inBoneIDs[i] + boneOffset;
+            Rig rig = rigs[gl_VertexIndex + rigOffset()];
 
-            float w = inBoneWs[i];
+            uint id = rig.boneIDs[i] + boneOffset;
+            float w = rig.boneWs[i];
             mat4 skinMat = skinData[id];
 
             skinnedPos     += w * (skinMat * vec4(basePos, 1.0));
@@ -134,7 +147,7 @@ void main() {
     fragUV = inPos_Tu.zw;
     fragTangent = skinnedTangent;
 
-    fragColor = vHasColor() ? inColor : vec4(1.0);
+    fragColor = vHasColor() ? colors[gl_VertexIndex + colorOffset()].color : vec4(1.0);
 
     gl_Position = glb.proj * glb.view * worldPos4;
 }
