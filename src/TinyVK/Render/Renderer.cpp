@@ -299,7 +299,7 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
                 );
                 testPipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, sizeof(glm::uvec4),
                     glm::uvec4(
-                        submesh->vriggedOffset, submesh->vcolorOffset,
+                        0, submesh->vcolorOffset,
                         submesh->vmrphsOffset, static_cast<uint32_t>(submesh->mrphTargets.size())
                     )
                 );
