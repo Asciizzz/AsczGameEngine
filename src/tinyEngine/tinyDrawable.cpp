@@ -302,12 +302,16 @@ void tinyDrawable::submit(const Entry& entry) noexcept {
     }
 
     // If mesh has morph targets
-    if (entry.mrphWeights && !entry.mrphWeights->empty()) {
-        uint32_t thisCount = entry.mrphWeights->size();
+    const Entry::MorphData& morphData = entry.morphData;
+    if (morphData.weights && !morphData.weights->empty() && morphData.count > 0) {
+        uint32_t thisCount = morphData.count;
+        uint32_t thisOffset = morphData.offset;
 
         size_t mrphWsDataSize = thisCount * sizeof(float);
         size_t mrphWsDataOffset = mrphWsCount_ * sizeof(float) + mrphWsOffset(frameIndex_);
-        mrphWsBuffer_.copyData(entry.mrphWeights->data(), mrphWsDataSize, mrphWsDataOffset);
+        
+        // Only copy slice of the weights vector
+        mrphWsBuffer_.copyData(morphData.weights->data() + thisOffset, mrphWsDataSize, mrphWsDataOffset);
 
         instaData.other.z = mrphWsCount_;
         instaData.other.w = thisCount;

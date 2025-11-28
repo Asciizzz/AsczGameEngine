@@ -67,12 +67,16 @@ public:
 
         glm::mat4 model = glm::mat4(1.0f);
 
-        struct SkeleData {
-            tinyHandle skeleNode;
+        struct SkeleData { // Can be shared among multiple entries
+            tinyHandle skeleNode; // Cache this handle
             const std::vector<glm::mat4>* skinData = nullptr;
         } skeleData;
 
-        const std::vector<float>* mrphWeights = nullptr;
+        struct MorphData { // Unique per entry
+            const std::vector<float>* weights = nullptr;
+            uint32_t offset = 0;
+            uint32_t count  = 0;
+        } morphData;
     };
 
     struct SubmeshGroup {

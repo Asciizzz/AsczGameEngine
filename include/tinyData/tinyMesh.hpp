@@ -127,7 +127,11 @@ struct tinyMesh {
             indxData.clear();
             vriggedData.clear();
             vcolorData.clear();
-            mrphTargets.clear();
+
+            // Only clear CPU data, keep name
+            for (auto& mt : mrphTargets) {
+                mt.morphs.clear();
+            }
         }
 
         void expandABmin(const glm::vec3& point) { ABmin = glm::min(ABmin, point); }
@@ -149,7 +153,6 @@ struct tinyMesh {
         std::vector<tinyVertex::Color>  vcolorData;  // Optional
 
         std::vector<MorphTarget> mrphTargets; // Optional
-        std::vector<float> mrphWsCache; // For faster copy
 
         tinyHandle material;
 
@@ -249,10 +252,6 @@ struct tinyMesh {
             if (submesh.vrtxTypes & tinyVertex::Type::Morph) {
                 uint32_t targetCount = submesh.mrphTargets.size();
                 submesh.vmrphsOffset = totalDeltaCount;
-
-                submesh.mrphWsCache.resize(targetCount, 0.0f); // Prepare morph weight cache
-                subWithMrphs_.push_back(static_cast<uint32_t>(subIdx));
-
                 totalDeltaCount    += targetCount * submesh.vrtxCount;
             }
 
@@ -327,9 +326,6 @@ struct tinyMesh {
                         submesh.vrtxCount * sizeof(tinyVertex::Morph)
                     );
                 }
-
-                // Cache mesh's morph weights
-                subMrphWsCache_.push_back(submesh.mrphWsCache);
             }
 
             // Copy indices
@@ -353,7 +349,7 @@ struct tinyMesh {
 
         if (vrtxExtLayout == VK_NULL_HANDLE || vrtxExtPool == VK_NULL_HANDLE) return; // Can't create descriptor set
 
-        if (!vhasExt) return; // No need to create descriptor set
+        // if (!vhasExt) return; // No need to create descriptor set
 
         vrtxExt_.allocate(dvk_->device, vrtxExtPool, vrtxExtLayout);
 
@@ -381,13 +377,7 @@ struct tinyMesh {
     VkBuffer indxBuffer()        const { return indxBuffer_; }
     VkDescriptorSet vrtxExtSet() const { return vrtxExt_; }
 
-    const std::vector<uint32_t>& subWithMrphs() const { return subWithMrphs_; }
-    const std::vector<std::vector<float>>& subMrphWsCache() const { return subMrphWsCache_; }
-
 private:
-    std::vector<uint32_t> subWithMrphs_; // Indices of submeshes with morph targets
-    std::vector<std::vector<float>> subMrphWsCache_; // Morph weights cache per submesh
-
     std::vector<Submesh> submeshes_;
 
     glm::vec3 ABmin_ = glm::vec3(std::numeric_limits<float>::max());

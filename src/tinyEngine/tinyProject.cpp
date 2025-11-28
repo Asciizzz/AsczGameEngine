@@ -142,12 +142,13 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
 
             tinyHandle meshHandle = linkHandle(ogNode.MESHRD_meshIndx, glbMeshRHandle);
             if (const tinyMesh* meshPtr = fs().r().get<tinyMesh>(meshHandle)) {
+                tinyHandle skeleNodeHandle =
+                    nodeMap.count(ogNode.MESHRD_skeleNodeIndx) ?
+                    nodeMap[ogNode.MESHRD_skeleNodeIndx] : tinyHandle();
+
                 meshrd->
-                    assignMesh(meshHandle, meshPtr->subMrphWsCache()).
-                    assignSkeleNode(
-                        nodeMap.count(ogNode.MESHRD_skeleNodeIndx) ?
-                        nodeMap[ogNode.MESHRD_skeleNodeIndx] : tinyHandle()
-                    );
+                    assignMesh(meshHandle, meshPtr).
+                    assignSkeleNode(skeleNodeHandle);
             }
         }
 

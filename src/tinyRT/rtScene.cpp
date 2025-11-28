@@ -203,16 +203,28 @@ void Scene::update(FrameStart frameStart) noexcept {
 
                     // Submesh culling
                     if (!cam.collideAABB(submesh->ABmin, submesh->ABmax, currentWorld)) continue;
-                    draw.submit({
-                        meshRD3D->meshHandle(),
-                        subIdx,
-                        currentWorld,
-                        { // skin data
-                            meshRD3D->skeleNodeHandle(),
-                            skele3D ? &skele3D->skinData() : nullptr
-                        },
-                        meshRD3D->subMrphWeights(subIdx)
-                    });
+                    
+                    const std::vector<glm::mat4>* skinData = skele3D ? &skele3D->skinData() : nullptr;
+
+                    const rtMESHRD3D::SubMorph* subMorph = meshRD3D->subMrph(subIdx);
+
+                    tinyDrawable::Entry entry;
+                    entry.mesh = meshRD3D->meshHandle();
+                    entry.submesh = subIdx;
+                    entry.model = currentWorld;
+
+                    if (skinData) {
+                        entry.skeleData.skeleNode = meshRD3D->skeleNodeHandle();
+                        entry.skeleData.skinData = skinData;
+                    }
+
+                    if (subMorph && subMorph->count > 0) {
+                        entry.morphData.weights = &meshRD3D->mrphWeights();
+                        entry.morphData.offset = subMorph->offset;
+                        entry.morphData.count  = subMorph->count;
+                    }
+
+                    draw.submit(entry);
                 }
             }
 
@@ -270,8 +282,7 @@ tinyHandle Scene::instantiate(tinyHandle sceneHandle, tinyHandle parent) noexcep
 
         if (const rtMESHRD3D* fromMeshRD = fromScene->nGetComp<rtMESHRD3D>(fromHandle)) {
             rtMESHRD3D* toMeshRD = nWriteComp<rtMESHRD3D>(toHandle);
-            toMeshRD->
-                assignMesh(fromMeshRD->meshHandle(), fromMeshRD->morphs()).
+            toMeshRD->copy(fromMeshRD).
                 assignSkeleNode(getToHandle(fromMeshRD->skeleNodeHandle()));
         }
 
