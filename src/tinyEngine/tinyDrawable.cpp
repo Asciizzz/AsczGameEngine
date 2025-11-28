@@ -53,29 +53,26 @@ void tinyDrawable::init(const CreateInfo& info) {
             .updateDescSets(device);
     };
 
+    auto createBuffer = [&](DataBuffer& buffer, VkDeviceSize dataSize, VkBufferUsageFlags usage, VkMemoryPropertyFlags memProps) {
+        buffer
+            .setDataSize(dataSize)
+            .setUsageFlags(usage)
+            .setMemPropFlags(memProps)
+            .createBuffer(dvk_)
+            .mapMemory();
+    };
+
 // ------------------ Setup instance buffer ------------------
 
     instaSize_x1_.unaligned = MAX_INSTANCES * sizeof(InstaData);
     instaSize_x1_.aligned = instaSize_x1_.unaligned; // Vertex attributes doesnt need minAlignment
-
-    instaBuffer_
-        .setDataSize(instaSize_x1_.aligned * maxFramesInFlight_)
-        .setUsageFlags(BufferUsage::Vertex)
-        .setMemPropFlags(MemProp::HostVisibleAndCoherent)
-        .createBuffer(dvk_)
-        .mapMemory();
-
-    matSize_x1_.unaligned = MAX_MATERIALS * sizeof(tinyMaterial::Data);
-    matSize_x1_.aligned = dvk_->alignSizeSSBO(matSize_x1_.unaligned); // SSBO DO need alignment
+    createBuffer(instaBuffer_, instaSize_x1_.aligned * maxFramesInFlight_, BufferUsage::Vertex, MemProp::HostVisibleAndCoherent);
 
 // ------------------ Setup material data ------------------
 
-    matBuffer_
-        .setDataSize(matSize_x1_.aligned * maxFramesInFlight_)
-        .setUsageFlags(BufferUsage::Storage)
-        .setMemPropFlags(MemProp::HostVisibleAndCoherent)
-        .createBuffer(dvk_)
-        .mapMemory();
+    matSize_x1_.unaligned = MAX_MATERIALS * sizeof(tinyMaterial::Data);
+    matSize_x1_.aligned = dvk_->alignSizeSSBO(matSize_x1_.unaligned); // SSBO DO need alignment
+    createBuffer(matBuffer_, matSize_x1_.aligned * maxFramesInFlight_, BufferUsage::Storage, MemProp::HostVisibleAndCoherent);
 
     matDescLayout_.create(device, { {0, DescType::StorageBufferDynamic, 1, ShaderStage::Fragment, nullptr} });
     matDescPool_.create(device, { {DescType::StorageBufferDynamic, 1} }, 1);
@@ -90,13 +87,7 @@ void tinyDrawable::init(const CreateInfo& info) {
 
     skinSize_x1_.unaligned = MAX_BONES * sizeof(glm::mat4);
     skinSize_x1_.aligned = dvk_->alignSizeSSBO(skinSize_x1_.unaligned);
-
-    skinBuffer_
-        .setDataSize(skinSize_x1_.aligned * maxFramesInFlight_)
-        .setUsageFlags(BufferUsage::Storage)
-        .setMemPropFlags(MemProp::HostVisibleAndCoherent)
-        .createBuffer(dvk_)
-        .mapMemory();
+    createBuffer(skinBuffer_, skinSize_x1_.aligned * maxFramesInFlight_, BufferUsage::Storage, MemProp::HostVisibleAndCoherent);
 
     skinDescLayout_.create(device, { {0, DescType::StorageBufferDynamic, 1, ShaderStage::Vertex, nullptr} });
     skinDescPool_.create(device, { {DescType::StorageBufferDynamic, 1} }, 1);
@@ -105,22 +96,14 @@ void tinyDrawable::init(const CreateInfo& info) {
 
 // ------------------ Setup morph data ------------------
 
-    // Create dynamic buffer for weights
     mrphWsSize_x1_.unaligned = MAX_MORPH_WS * sizeof(float);
     mrphWsSize_x1_.aligned = dvk_->alignSizeSSBO(mrphWsSize_x1_.unaligned);
-
-    mrphWsBuffer_
-        .setDataSize(mrphWsSize_x1_.aligned * maxFramesInFlight_)
-        .setUsageFlags(BufferUsage::Storage)
-        .setMemPropFlags(MemProp::HostVisibleAndCoherent)
-        .createBuffer(dvk_)
-        .mapMemory();
+    createBuffer(mrphWsBuffer_, mrphWsSize_x1_.aligned * maxFramesInFlight_, BufferUsage::Storage, MemProp::HostVisibleAndCoherent);
 
     mrphWsDescLayout_.create(device, { {0, DescType::StorageBufferDynamic, 1, ShaderStage::Vertex, nullptr} });
     mrphWsDescPool_.create(device, { {DescType::StorageBufferDynamic, 1} }, 1);
     mrphWsDescSet_.allocate(device, mrphWsDescPool_, mrphWsDescLayout_);
     writeDescSetDynamicBuffer(mrphWsDescSet_, mrphWsBuffer_, mrphWsSize_x1_.unaligned);
-
 
 // -------------------------- Vertex Extension -------------------------
 

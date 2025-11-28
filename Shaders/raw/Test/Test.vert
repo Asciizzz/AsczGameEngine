@@ -78,9 +78,9 @@ struct Color {
 };
 
 struct Mrph {
-    vec3 dPos;
-    vec3 dNrml;
-    vec3 dTang;
+    vec4 dPos;
+    vec4 dNrml;
+    vec4 dTang;
 };
 
 // Vertex extension buffers
@@ -92,8 +92,21 @@ layout (std430, set = 1, binding = 2) readonly buffer MrphDltsBuffer { Mrph mrph
 layout (std430, set = 3, binding = 0) readonly buffer SkinBuffer { mat4 skinData[];};
 layout (std430, set = 4, binding = 0) readonly buffer MrphWsBuffer { float mrphWs[]; };
 
+uint relVrtxIndex() { // Relative vertex index within submesh
+    return gl_VertexIndex - staticOffset();
+}
+
 Rig getRig() {
-    return rigs[rigOffset() - staticOffset() + gl_VertexIndex];
+    return rigs[rigOffset() + relVrtxIndex()];
+}
+
+Mrph getMrphDlt(uint targetIndex) {
+    uint bufferOffset = mrphDltsOffset();
+    uint targetOffset = targetIndex * pConst.data0.y; // vertexCount
+
+    uint trueIndex = bufferOffset + targetOffset + relVrtxIndex();
+
+    return mrphDlts[trueIndex];
 }
 
 void main() {
@@ -119,12 +132,11 @@ void main() {
 
             if (abs(weight) < 0.0001) continue; // negligible
 
-            uint morphIndex = m * vertexCount + vertexIdx;
-            Mrph delta = mrphDlts[morphIndex + mrphDltsOffset()];
+            Mrph delta = getMrphDlt(m);
 
-            basePos    += weight * delta.dPos;
-            baseNormal += weight * delta.dNrml;
-            baseTangent += weight * delta.dTang;
+            basePos     += weight * delta.dPos.xyz;
+            baseNormal  += weight * delta.dNrml.xyz;
+            baseTangent += weight * delta.dTang.xyz;
         }
     }
 

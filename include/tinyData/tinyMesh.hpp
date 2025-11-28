@@ -33,9 +33,9 @@ namespace tinyVertex {
     };
 
     struct Morph {
-        glm::vec3 dPos;
-        glm::vec3 dNrml;
-        glm::vec3 dTang;
+        glm::vec4 dPos;
+        glm::vec4 dNrml;
+        glm::vec4 dTang;
     };
 
     struct Color {

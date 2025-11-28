@@ -630,9 +630,9 @@ void loadMesh(tinyMesh& mesh, const tinygltf::Model& gltfModel, const tinygltf::
             tinyMesh::Submesh::MorphTarget mt;
             mt.morphs.resize(vrtxCount);
             for (size_t v = 0; v < vrtxCount; ++v) {
-                mt.morphs[v].dPos  = dPos[v];
-                mt.morphs[v].dNrml = dNrm[v];
-                mt.morphs[v].dTang = dTan[v];
+                mt.morphs[v].dPos  = glm::vec4(dPos[v], 0.0f);
+                mt.morphs[v].dNrml = glm::vec4(dNrm[v], 0.0f);
+                mt.morphs[v].dTang = glm::vec4(dTan[v], 0.0f);
             }
 
             // optional name from mesh.extras.targetNames (mesh-level)
