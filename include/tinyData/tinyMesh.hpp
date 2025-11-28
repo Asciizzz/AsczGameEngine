@@ -318,6 +318,9 @@ struct tinyMesh {
                 submesh.indxData.data(),
                 submesh.indxCount * sizeof(uint32_t)
             );
+
+            // Clear CPU data to save memory
+            submesh.clearCPU();
         }
 
         createBuffer(vstaticBuffer_, vstaticRaw.size() * sizeof(tinyVertex::Static), BufferUsage::Vertex,  vstaticRaw.data());
@@ -349,10 +352,21 @@ struct tinyMesh {
                 } })
             .updateDescSets(dvk_->device);
 
+        for (size_t i = 0; i < submeshes_.size(); ++i) {
+            const auto& sub = submeshes_[i];
+            printf("| %-3zu | Sta{%6u,%6u} | Rig{%6u,%6u} | Col{%6u,%6u} | Idx{%6u,%6u} |\n",
+                i,
+                sub.vstaticOffset, sub.vrtxCount,
+                sub.vriggedOffset, sub.vrtxTypes & tinyVertex::Type::Rig ? sub.vrtxCount : 0,
+                sub.vcolorOffset,  sub.vrtxTypes & tinyVertex::Type::Color ? sub.vrtxCount : 0,
+                sub.indxOffset,    sub.indxCount
+            );
+        }
+
     }
 
-    VkBuffer vstaticBuffer() const { return vstaticBuffer_; }
-    VkBuffer indxBuffer()    const { return indxBuffer_;    }
+    VkBuffer vstaticBuffer()     const { return vstaticBuffer_; }
+    VkBuffer indxBuffer()        const { return indxBuffer_;    }
     VkDescriptorSet vrtxExtSet() const { return vrtxExt_;   }
 
 private:

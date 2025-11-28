@@ -1,7 +1,8 @@
 #version 450
 
 layout(push_constant) uniform PushConstant {
-    uvec4 data;
+    uvec4 data0;
+    uvec4 data1;
 } pConst;
 
 layout(location = 0) in vec3 fragWorld;
@@ -43,7 +44,7 @@ void main() {
 
     lDot = mix(0.6, 1.0, lDot);
 
-    Material mat = materials[pConst.data.w];
+    Material mat = materials[pConst.data0.w];
 
     outColor = mat.base * fragColor * lDot;
 }

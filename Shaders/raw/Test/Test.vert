@@ -15,15 +15,15 @@ data0 {
         VERTEX_FLAG_COLOR   = 1 << 2
     }
     .y = vertexCount
-    .z = morphWeightsCount
+    .z = morphTargetCount - number of morph targets
     .w = material index
 }
 
 data1 {
     .x = rigOffset
     .y = colorOffset
-    .z = mrphDltsOffset
-    .w = reserved
+    .z = mrphDltsOffset // Delta offsets
+    .w = mrphWsCount    // Weights count
 }
 
 */
@@ -91,7 +91,7 @@ void main() {
 // ----------------------------------
 
     uint vertexCount = pConst.data0.y;
-    uint mrphWsCount = pConst.data0.z;
+    uint mrphTargetCount = pConst.data0.z;
 
     if (mrphWsCount > 0 && vertexCount > 0 && false) {
         uint mrphWsOffset = other.y;
@@ -123,7 +123,6 @@ void main() {
         Rig rig = rigs[rigOffset() + gl_VertexIndex];
 
         for (uint i = 0; i < 4; ++i) {
-
             uint id = rig.boneIDs[i] + boneOffset;
             float w = rig.boneWs[i];
             mat4 skinMat = skinData[id];
