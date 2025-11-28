@@ -4,10 +4,14 @@
 
 namespace tinyRT {
 
+using MorphWeights = std::vector<std::vector<float>>;
+
 struct MeshRender3D {
-    MeshRender3D& assignMesh(tinyHandle meshHandle, const std::vector<float>& mrphWeights = {}) noexcept {
+
+    MeshRender3D& assignMesh(tinyHandle meshHandle, const MorphWeights& morphs = {}) noexcept {
         meshHandle_ = meshHandle;
-        mrphWeights_ = mrphWeights;
+        morphs_ = morphs;
+
         return *this;
     }
     MeshRender3D& assignSkeleNode(tinyHandle skeleNodeHandle) noexcept {
@@ -18,14 +22,20 @@ struct MeshRender3D {
     tinyHandle meshHandle() const noexcept { return meshHandle_; }
     tinyHandle skeleNodeHandle() const noexcept { return skeleNodeHandle_; }
 
-    std::vector<float>& mrphWeights() noexcept { return mrphWeights_; }
-    const std::vector<float>& mrphWeights() const noexcept { return mrphWeights_; }
+    std::vector<float>* subMrphWeights(uint32_t submeshIndex) noexcept {
+        if (submeshIndex >= morphs_.size()) return nullptr;
+        return &morphs_[submeshIndex];
+    }
+
+    MorphWeights& morphs() noexcept { return morphs_; }
+    const MorphWeights& morphs() const noexcept { return morphs_; }
 
 private:
     tinyHandle meshHandle_;
     tinyHandle skeleNodeHandle_;
 
-    std::vector<float> mrphWeights_;
+    // [Submesh's [Weights]]
+    MorphWeights morphs_;
 };
 
 }

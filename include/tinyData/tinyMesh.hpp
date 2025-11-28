@@ -147,7 +147,9 @@ struct tinyMesh {
 
         std::vector<tinyVertex::Rigged> vriggedData; // Optional
         std::vector<tinyVertex::Color>  vcolorData;  // Optional
+
         std::vector<MorphTarget> mrphTargets; // Optional
+        std::vector<float> mrphWsCache; // For faster copy
 
         tinyHandle material;
 
@@ -228,7 +230,8 @@ struct tinyMesh {
                     totalIndexCount  = 0;
 
         // Iterate through submeshes to calculate total sizes and setup ranges
-        for (auto& submesh : submeshes_) {
+        for (size_t subIdx = 0; subIdx < submeshes_.size(); ++subIdx) {
+            auto& submesh = submeshes_[subIdx];
             // Setup ranges
             submesh.vstaticOffset = totalStaticCount;
             totalStaticCount    += submesh.vrtxCount;
@@ -246,6 +249,10 @@ struct tinyMesh {
             if (submesh.vrtxTypes & tinyVertex::Type::Morph) {
                 uint32_t targetCount = submesh.mrphTargets.size();
                 submesh.vmrphsOffset = totalDeltaCount;
+
+                submesh.mrphWsCache.resize(targetCount, 0.0f); // Prepare morph weight cache
+                subWithMrphs_.push_back(static_cast<uint32_t>(subIdx));
+
                 totalDeltaCount    += targetCount * submesh.vrtxCount;
             }
 
@@ -280,7 +287,11 @@ struct tinyMesh {
         std::vector<tinyVertex::Color>  vcolorRaw (totalColorCount);
         std::vector<tinyVertex::Morph>  vmrphsRaw (totalDeltaCount);
 
-        for (auto& submesh : submeshes_) {
+        // for (auto& submesh : submeshes_) {
+        for (size_t subIdx = 0; subIdx < submeshes_.size(); ++subIdx) {
+            auto& submesh = submeshes_[subIdx];
+
+        // Data copy
             // Copy static vertices
             std::memcpy(
                 vstaticRaw.data() + submesh.vstaticOffset,
@@ -316,6 +327,9 @@ struct tinyMesh {
                         submesh.vrtxCount * sizeof(tinyVertex::Morph)
                     );
                 }
+
+                // Cache mesh's morph weights
+                subMrphWsCache_.push_back(submesh.mrphWsCache);
             }
 
             // Copy indices
@@ -324,6 +338,8 @@ struct tinyMesh {
                 submesh.indxData.data(),
                 submesh.indxCount * sizeof(uint32_t)
             );
+
+        // Other
 
             // Clear CPU data to save memory
             submesh.clearCPU();
@@ -359,25 +375,18 @@ struct tinyMesh {
                     vmrphsBuffer_, 0, VK_WHOLE_SIZE
                 } })
             .updateDescSets(dvk_->device);
-
-        // for (size_t i = 0; i < submeshes_.size(); ++i) {
-        //     const auto& sub = submeshes_[i];
-        //     printf("| %-3zu | Sta{%6u,%6u} | Rig{%6u,%6u} | Col{%6u,%6u} | Idx{%6u,%6u} |\n",
-        //         i,
-        //         sub.vstaticOffset, sub.vrtxCount,
-        //         sub.vriggedOffset, sub.vrtxTypes & tinyVertex::Type::Rig ? sub.vrtxCount : 0,
-        //         sub.vcolorOffset,  sub.vrtxTypes & tinyVertex::Type::Color ? sub.vrtxCount : 0,
-        //         sub.indxOffset,    sub.indxCount
-        //     );
-        // }
-
     }
 
     VkBuffer vstaticBuffer()     const { return vstaticBuffer_; }
     VkBuffer indxBuffer()        const { return indxBuffer_; }
     VkDescriptorSet vrtxExtSet() const { return vrtxExt_; }
 
+    const std::vector<uint32_t>& subWithMrphs() const { return subWithMrphs_; }
+    const std::vector<std::vector<float>>& subMrphWsCache() const { return subMrphWsCache_; }
+
 private:
+    std::vector<uint32_t> subWithMrphs_; // Indices of submeshes with morph targets
+    std::vector<std::vector<float>> subMrphWsCache_; // Morph weights cache per submesh
 
     std::vector<Submesh> submeshes_;
 

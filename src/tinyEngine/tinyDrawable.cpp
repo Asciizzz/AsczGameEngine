@@ -297,7 +297,8 @@ void tinyDrawable::submit(const Entry& entry) noexcept {
         }
 
         SkinRange& skinRange = skinRanges_[skinRangeIt->second];
-        instaData.other.x = skinRange.skinOffset; // Only offset needed
+        instaData.other.x = skinRange.skinOffset;
+        instaData.other.y = skinRange.skinCount;
     }
 
     // If mesh has morph targets
@@ -308,7 +309,8 @@ void tinyDrawable::submit(const Entry& entry) noexcept {
         size_t mrphWsDataOffset = mrphWsCount_ * sizeof(float) + mrphWsOffset(frameIndex_);
         mrphWsBuffer_.copyData(entry.mrphWeights->data(), mrphWsDataSize, mrphWsDataOffset);
 
-        instaData.other.y = mrphWsCount_; // Only offset needed
+        instaData.other.z = mrphWsCount_;
+        instaData.other.w = thisCount;
         mrphWsCount_ += thisCount;
     }
 

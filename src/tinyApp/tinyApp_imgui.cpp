@@ -899,21 +899,38 @@ static void RenderMESHRD3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle)
     );
 
     // Render the morph weights
-    // if (!mesh || mesh->mrphCount() == 0) return;
+    if (!mesh) return;
 
-    return;
+    const std::vector<uint32_t>& subWithMrphs = mesh->subWithMrphs();
+    for (size_t i = 0; i < subWithMrphs.size(); ++i) {
+        uint32_t subIdx = static_cast<uint32_t>(subWithMrphs[i]);
 
-    std::vector<float>& weights = meshRD->mrphWeights();
+        std::vector<float>* subWeights = meshRD->subMrphWeights(i);
+        if (!subWeights) continue;
 
-    for (size_t i = 0; i < 0; ++i) {
-        std::string label = "Morph " + std::to_string(i) + "##" + std::to_string(nHandle.value) + std::to_string(i);
-        ImGui::SliderFloat(
-            label.c_str(),
-            &weights[i],
-            0.0f,
-            1.0f
-        );
+        const tinyMesh::Submesh* submesh = mesh->submesh(i);
+        if (!submesh) continue;
+
+        for (size_t j = 0; j < subWeights->size(); ++j) {
+            std::string label = "Morph " + std::to_string(j) + "##" + std::to_string(nHandle.value) + std::to_string(i) + std::to_string(j);
+            ImGui::SliderFloat(
+                label.c_str(),
+                &(*subWeights)[j],
+                0.0f,
+                1.0f
+            );
+        }
     }
+
+    // for (size_t i = 0; i < 0; ++i) {
+    //     std::string label = "Morph " + std::to_string(i) + "##" + std::to_string(nHandle.value) + std::to_string(i);
+    //     ImGui::SliderFloat(
+    //         label.c_str(),
+    //         &weights[i],
+    //         0.0f,
+    //         1.0f
+    //     );
+    // }
 }
 
 /*

@@ -38,13 +38,13 @@ data2 {
 
 */
 
-bool vHasSkin() { return (pConst.data0.x & 1) != 0; }
+bool vHasSkin()  { return (pConst.data0.x & 1) != 0; }
 bool vHasMorph() { return (pConst.data0.x & 2) != 0; }
 bool vHasColor() { return (pConst.data0.x & 4) != 0; }
 
-uint staticOffset() { return pConst.data1.x; }
-uint rigOffset() { return pConst.data1.y; }
-uint colorOffset() { return pConst.data1.z; }
+uint staticOffset()   { return pConst.data1.x; }
+uint rigOffset()      { return pConst.data1.y; }
+uint colorOffset()    { return pConst.data1.z; }
 uint mrphDltsOffset() { return pConst.data1.w; }
 
 layout(location = 0) in vec4  inPos_Tu;
@@ -55,7 +55,7 @@ layout(location = 3) in vec4  model4_0;
 layout(location = 4) in vec4  model4_1;
 layout(location = 5) in vec4  model4_2;
 layout(location = 6) in vec4  model4_3;
-layout(location = 7) in uvec4 other; // .x = boneOffset, .y = mrphWsOffset, .z = matOverride, .w = reserved
+layout(location = 7) in uvec4 rtData; // .x = skinOffset, .y = skinCount, .z = mrphWsOffset, .w = mrphWsCount
 
 layout(location = 0) out vec3 fragWorld;
 layout(location = 1) out vec3 fragNrml;
@@ -106,19 +106,20 @@ void main() {
 // ----------------------------------
 
     uint vertexCount = pConst.data0.y;
+    uint vertexIdx   = gl_VertexIndex;
+
     uint mrphTargetCount = pConst.data0.z;
 
-    uint mrphWsCount = pConst.data2.x;
-    if (mrphWsCount > 0 && vertexCount > 0 && false) {
-        uint mrphWsOffset = other.y;
-        uint vertexId = gl_VertexIndex;
+    uint mrphWsCount = rtData.w;
+    if (mrphWsCount > 0 && vertexCount > 0) {
+        uint mrphWsOffset = rtData.z;
 
         for (uint m = 0; m < mrphWsCount; ++m) {
             float weight = mrphWs[mrphWsOffset + m];
 
             if (abs(weight) < 0.0001) continue; // negligible
 
-            uint morphIndex = m * vertexCount + vertexId;
+            uint morphIndex = m * vertexCount + vertexIdx;
             Mrph delta = mrphDlts[morphIndex + mrphDltsOffset()];
 
             basePos    += weight * delta.dPos;
@@ -133,13 +134,13 @@ void main() {
     vec3 skinnedNormal = vec3(0.0);
     vec3 skinnedTangent = vec3(0.0);
 
-
-    if (vHasSkin()) {
-        uint boneOffset = other.x;
+    uint skinCount = rtData.y;
+    if (skinCount > 0 && vertexCount > 0) {
+        uint skinOffset = rtData.x;
         Rig rig = getRig();
 
         for (uint i = 0; i < 4; ++i) {
-            uint id = rig.boneIDs[i] + boneOffset;
+            uint id = rig.boneIDs[i] + skinOffset;
             float w = rig.boneWs[i];
             mat4 skinMat = skinData[id];
 
