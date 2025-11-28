@@ -79,7 +79,7 @@ layout (std430, set = 1, binding = 2) readonly buffer MrphDltsBuffer { Mrph mrph
 
 // Runtime data buffers
 layout (std430, set = 3, binding = 0) readonly buffer SkinBuffer { mat4 skinData[];};
-layout(std430, set = 4, binding = 0) readonly buffer MrphWsBuffer { float mrphWs[]; };
+layout (std430, set = 4, binding = 0) readonly buffer MrphWsBuffer { float mrphWs[]; };
 
 void main() {
     mat4 model = mat4(model4_0, model4_1, model4_2, model4_3);
@@ -117,11 +117,12 @@ void main() {
     vec3 skinnedNormal = vec3(0.0);
     vec3 skinnedTangent = vec3(0.0);
 
-    uint boneOffset = other.x;
 
     if (vHasSkin()) {
+        uint boneOffset = other.x;
+        Rig rig = rigs[rigOffset() + gl_VertexIndex];
+
         for (uint i = 0; i < 4; ++i) {
-            Rig rig = rigs[gl_VertexIndex + rigOffset()];
 
             uint id = rig.boneIDs[i] + boneOffset;
             float w = rig.boneWs[i];

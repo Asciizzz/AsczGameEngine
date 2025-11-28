@@ -644,8 +644,6 @@ void loadMesh(tinyMesh& mesh, const tinygltf::Model& gltfModel, const tinygltf::
             }
             mt.name = checkString(mt.name, "morph", tgtIdx);
 
-            printf("  %zu name: %s\n", tgtIdx, mt.name.c_str());
-
             submesh.addMrphTarget(mt);
         }
 

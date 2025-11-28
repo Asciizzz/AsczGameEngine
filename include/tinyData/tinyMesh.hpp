@@ -82,11 +82,6 @@ struct tinyMesh {
             std::string name;
         };
 
-        struct Range {
-            uint32_t offset = 0;
-            uint32_t count  = 0;
-        };
-
         // Methods
 
         Submesh& setVrtxStatic(const std::vector<tinyVertex::Static>& stas) {
@@ -127,37 +122,6 @@ struct tinyMesh {
             return *this;
         }
 
-        // void vkCreate(const tinyVk::Device* dvk_) {
-        //     using namespace tinyVk;
-
-        // Vertex and Index Buffers
-
-            // vstaticBuffer_
-            //     .setDataSize(vstaticData_.size() * sizeof(tinyVertex::Static))
-            //     .setUsageFlags(BufferUsage::Vertex)
-            //     .createDeviceLocalBuffer(dvk_, vstaticData_.data());
-
-            // if (!vrtxHas(tinyVertex::Type::Rig)) vriggedData_.push_back(tinyVertex::Rigged()); // Dummy entry to avoid errors
-            // vriggedBuffer_
-            //     .setDataSize(vriggedData_.size() * sizeof(tinyVertex::Rigged))
-            //     .setUsageFlags(BufferUsage::Vertex)
-            //     .createDeviceLocalBuffer(dvk_, vriggedData_.data());
-
-            // if (!vrtxHas(tinyVertex::Type::Color)) vcolorData.push_back(tinyVertex::Color()); // Dummy white color
-
-            // vcolorBuffer_
-            //     .setDataSize(vcolorData.size() * sizeof(tinyVertex::Color))
-            //     .setUsageFlags(BufferUsage::Vertex)
-            //     .createDeviceLocalBuffer(dvk_, vcolorData.data());
-
-            // indxBuffer_
-            //     .setDataSize(indxRaw.size())
-            //     .setUsageFlags(BufferUsage::Index)
-            //     .createDeviceLocalBuffer(dvk_, indxRaw.data());
-
-            // Will implement morphs later
-        // }
-
         void clearCPU() {
             vstaticData.clear();
             indxData.clear();
@@ -190,13 +154,12 @@ struct tinyMesh {
         uint32_t vrtxCount = 0;
         uint32_t indxCount = 0;
 
-        Range vstaticRange;
-        Range vriggedRange;
-        Range vcolorRange;
-        Range indxRange;
+        uint32_t vstaticOffset;
+        uint32_t vriggedOffset;
+        uint32_t vcolorOffset;
+        uint32_t indxOffset;
 
-        // A bit special, since the total size of morph is vertex count * morph count
-        Range vmrphsRange;
+        uint32_t vmrphsOffset;
 
         glm::vec3 ABmin = glm::vec3( std::numeric_limits<float>::max());
         glm::vec3 ABmax = glm::vec3(-std::numeric_limits<float>::max());
@@ -267,26 +230,26 @@ struct tinyMesh {
         // Iterate through submeshes to calculate total sizes and setup ranges
         for (auto& submesh : submeshes_) {
             // Setup ranges
-            submesh.vstaticRange = { totalStaticCount, submesh.vrtxCount };
+            submesh.vstaticOffset = totalStaticCount;
             totalStaticCount    += submesh.vrtxCount;
 
             if (submesh.vrtxTypes & tinyVertex::Type::Rig) {
-                submesh.vriggedRange = { totalRiggedCount, submesh.vrtxCount };
+                submesh.vriggedOffset = totalRiggedCount;
                 totalRiggedCount    += submesh.vrtxCount;
             }
 
             if (submesh.vrtxTypes & tinyVertex::Type::Color) {
-                submesh.vcolorRange = { totalColorCount, submesh.vrtxCount };
+                submesh.vcolorOffset = totalColorCount;
                 totalColorCount    += submesh.vrtxCount;
             }
 
             if (submesh.vrtxTypes & tinyVertex::Type::Morph) {
                 uint32_t targetCount = submesh.mrphTargets.size();
-                submesh.vmrphsRange = { totalDeltaCount, targetCount * submesh.vrtxCount };
+                submesh.vmrphsOffset = totalDeltaCount;
                 totalDeltaCount    += targetCount * submesh.vrtxCount;
             }
 
-            submesh.indxRange = { totalIndexCount, submesh.indxCount };
+            submesh.indxOffset = totalIndexCount;
             totalIndexCount  += submesh.indxCount;
         }
 
@@ -314,7 +277,7 @@ struct tinyMesh {
         for (auto& submesh : submeshes_) {
             // Copy static vertices
             std::memcpy(
-                vstaticRaw.data() + submesh.vstaticRange.offset,
+                vstaticRaw.data() + submesh.vstaticOffset,
                 submesh.vstaticData.data(),
                 submesh.vrtxCount * sizeof(tinyVertex::Static)
             );
@@ -322,7 +285,7 @@ struct tinyMesh {
             // Copy rigged vertices
             if (submesh.vrtxTypes & tinyVertex::Type::Rig) {
                 std::memcpy(
-                    vriggedRaw.data() + submesh.vriggedRange.offset,
+                    vriggedRaw.data() + submesh.vriggedOffset,
                     submesh.vriggedData.data(),
                     submesh.vrtxCount * sizeof(tinyVertex::Rigged)
                 );
@@ -331,7 +294,7 @@ struct tinyMesh {
             // Copy color vertices
             if (submesh.vrtxTypes & tinyVertex::Type::Color) {
                 std::memcpy(
-                    vcolorRaw.data() + submesh.vcolorRange.offset,
+                    vcolorRaw.data() + submesh.vcolorOffset,
                     submesh.vcolorData.data(),
                     submesh.vrtxCount * sizeof(tinyVertex::Color)
                 );
@@ -342,7 +305,7 @@ struct tinyMesh {
                 for (uint32_t i = 0; i < submesh.mrphTargets.size(); ++i) {
                     const auto& target = submesh.mrphTargets[i];
                     std::memcpy(
-                        vmrphsRaw.data() + submesh.vmrphsRange.offset + i * submesh.vrtxCount,
+                        vmrphsRaw.data() + submesh.vmrphsOffset + i * submesh.vrtxCount,
                         target.morphs.data(),
                         submesh.vrtxCount * sizeof(tinyVertex::Morph)
                     );
@@ -351,7 +314,7 @@ struct tinyMesh {
 
             // Copy indices
             std::memcpy(
-                indxRaw.data() + submesh.indxRange.offset,
+                indxRaw.data() + submesh.indxOffset,
                 submesh.indxData.data(),
                 submesh.indxCount * sizeof(uint32_t)
             );
@@ -387,6 +350,10 @@ struct tinyMesh {
             .updateDescSets(dvk_->device);
 
     }
+
+    VkBuffer vstaticBuffer() const { return vstaticBuffer_; }
+    VkBuffer indxBuffer()    const { return indxBuffer_;    }
+    VkDescriptorSet vrtxExtSet() const { return vrtxExt_;   }
 
 private:
 

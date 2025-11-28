@@ -20,16 +20,6 @@ Instance Data: {
     }
 }
 
-Push Constant: {
-    uvec4 props {
-        x: vertex count
-        y: skins count
-        z: morph weights count
-        w: material index
-    }
-}
-
-
 */
 
 class tinyDrawable {
@@ -62,7 +52,7 @@ public:
 
     struct Entry {
         tinyHandle mesh;
-        uint32_t submesh;
+        size_t submesh;
 
         inline tinyHandle hash() const {
             tinyHandle h{};
@@ -75,7 +65,6 @@ public:
             return h;
         }
 
-
         glm::mat4 model = glm::mat4(1.0f);
 
         struct SkeleData {
@@ -86,25 +75,34 @@ public:
         const std::vector<float>* mrphWeights = nullptr;
     };
 
-    struct DrawGroup {
-        tinyHandle mesh;
-        uint32_t submesh; // Single submesh instead of whole mesh
+    struct SubmeshGroup {
+        uint32_t submesh = 0;
+        std::vector<InstaData> instaData;
 
-        size_t instaIndex = 0;
+        inline size_t push(const InstaData& data) {
+            instaData.push_back(data);
+            return instaData.size() - 1;
+        }
 
-        // Determine later
+        inline void clear() { instaData.clear(); }
+        inline size_t size() const { return instaData.size(); }
+        inline size_t sizeBytes() const { return instaData.size() * sizeof(InstaData); }
+
+        // Calculated during finalize
         uint32_t instaOffset = 0;
-        uint32_t instaCount = 0;
+        uint32_t instaCount  = 0;
+    };
+
+    struct MeshGroup {
+        tinyHandle mesh;
+        std::vector<size_t> submeshGroupIndices;
+        std::unordered_map<size_t, size_t> submeshGroupMap; // Submesh index -> SubmeshGroup index
     };
 
     struct ShaderGroup {
         tinyHandle shader;
-
-        std::vector<DrawGroup> drawGroups;
-        size_t add(const DrawGroup& group) {
-            drawGroups.push_back(group);
-            return drawGroups.size() - 1;
-        }
+        std::vector<size_t> meshGroupIndices;
+        std::unordered_map<tinyHandle, size_t> meshGroupMap; // Mesh handle -> MeshGroup index
     };
 
     struct SkinRange {
@@ -145,8 +143,8 @@ public:
     VkDescriptorSetLayout mrphWsDescLayout() const noexcept { return mrphWsDescLayout_; }
 
     uint32_t matIndex(tinyHandle matHandle) const noexcept {
-        auto it = handleMap_.find(matHandle);
-        return (it != handleMap_.end()) ? it->second : 0;
+        auto it = dataMap_.find(matHandle);
+        return (it != dataMap_.end()) ? it->second : 0;
     }
 
     Size_x1 instaSize_x1() const noexcept { return instaSize_x1_; }
@@ -170,6 +168,8 @@ public:
     void finalize();
 
     const std::vector<ShaderGroup>& shaderGroups() const noexcept { return shaderGroups_; }
+    const std::vector<MeshGroup>& meshGroups() const noexcept { return meshGroups_; }
+    const std::vector<SubmeshGroup>& submeshGroups() const noexcept { return submeshGroups_; }
 
 private:
 // Basic info
@@ -180,14 +180,24 @@ private:
     const tinyVk::Device* dvk_ = nullptr;
 
     // Batching data (reset each frame)
-    std::vector<std::vector<InstaData>> instaGroups_;
-    std::vector<ShaderGroup> shaderGroups_;
-    std::vector<tinyMaterial::Data> matData_;
-    std::vector<SkinRange> skinRanges_; // Need this since many instances can share same skin data
+    std::vector<ShaderGroup>  shaderGroups_;
+    std::vector<MeshGroup>    meshGroups_;
+    std::vector<SubmeshGroup> submeshGroups_;
 
-    uint32_t            skinCount_ = 0;
-    uint32_t            mrphWsCount_ = 0;
-    std::unordered_map<tinyHandle, size_t> handleMap_;
+    // Runtime data
+    uint32_t skinCount_ = 0;
+    uint32_t mrphWsCount_ = 0;
+
+    std::vector<tinyMaterial::Data> matData_;
+    std::vector<SkinRange> skinRanges_;
+    
+    /* batchMap_:
+
+    Material handle -> ShaderGroup index
+    Entry hash -> SubmeshGroup index
+    */
+    std::unordered_map<tinyHandle, size_t> batchMap_;
+    std::unordered_map<tinyHandle, size_t> dataMap_;
 
     // Instances (runtime)
     tinyVk::DataBuffer instaBuffer_;

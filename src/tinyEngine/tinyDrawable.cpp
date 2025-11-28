@@ -131,7 +131,9 @@ static tinyHandle defaultMatHandle = tinyHandle::make<tinyMaterial>(0, 0);
 
 // --------------------------- Batching process --------------------------
 
-/* Batch:
+/* Idea:
+
+Batch by shader -> mesh -> submesh
 
 Shader 0
     - Mesh 0
@@ -156,72 +158,111 @@ You get the idea
 void tinyDrawable::startFrame(uint32_t frameIndex) noexcept {
     frameIndex_ = frameIndex % maxFramesInFlight_;
 
-    instaGroups_.clear();
     shaderGroups_.clear();
+    meshGroups_.clear();
+    submeshGroups_.clear();
+
     matData_.clear();
     skinRanges_.clear();
 
     skinCount_ = 0;
     mrphWsCount_ = 0;
 
-    handleMap_.clear();
+    batchMap_.clear();
+    dataMap_.clear();
 
 // Initialize
     matData_.push_back(tinyMaterial::Data());
 }
 
 void tinyDrawable::submit(const Entry& entry) noexcept {
-    const tinyMesh* rMesh = fsr_->get<tinyMesh>(entry.mesh);
-    if (!rMesh) return;
+    tinyHandle meshHandle = entry.mesh;
+    size_t submeshIndex = entry.submesh;
 
-    // Get or create sub group
-
+    // Get or create SubmeshGroup
     tinyHandle hash = entry.hash();
-    auto subIt = handleMap_.find(hash);
-    if (subIt == handleMap_.end()) {
-        size_t instaGroupIdx = instaGroups_.size();
-        handleMap_[hash] = instaGroupIdx;
+    auto subIt = batchMap_.find(hash); // Entry hash -> SubmeshGroup index
 
-        instaGroups_.emplace_back();
+    if (subIt == batchMap_.end()) {
+        const tinyMesh* rMesh = fsr_->get<tinyMesh>(meshHandle);
+        if (!rMesh) return;
 
-        // This new design uses submesh directly, no need to group
-
-        const tinyMesh::Submesh* submesh = rMesh->submesh(entry.submesh);
+        const tinyMesh::Submesh* submesh = rMesh->submesh(submeshIndex);
         if (!submesh) return;
 
-        tinyHandle shaderHandle;
+        tinyHandle materialHandle = submesh->material;
 
-        if (const tinyMaterial* rMat = fsr_->get<tinyMaterial>(submesh->material)) {
-            // If material not in buffer, add it
-            if (handleMap_.find(submesh->material) == handleMap_.end()) {
-                handleMap_[submesh->material] = matData_.size();
-                matData_.push_back(rMat->data);
+        // Check for material existence as well as getting/creating ShaderGroup
+        auto shaderIt = batchMap_.find(materialHandle); // Material handle -> ShaderGroup index
+        if (shaderIt == batchMap_.end()) {
+            tinyHandle shaderHandle;
+
+            // Retrieve submesh's material's shader
+            if (const tinyMaterial* rMat = fsr_->get<tinyMaterial>(materialHandle)) {
+
+                // If material not in buffer, add it
+                if (dataMap_.find(materialHandle) == dataMap_.end()) { //
+                    dataMap_[materialHandle] = matData_.size();
+                    matData_.push_back(rMat->data);
+                }
+
+                shaderHandle = rMat->shader;
             }
 
-            shaderHandle = rMat->shader;
+            // Get or create ShaderGroup
+            shaderIt = batchMap_.find(shaderHandle);
+            if (shaderIt == batchMap_.end()) {
+                size_t shaderGroupIdx = shaderGroups_.size();
+                batchMap_[shaderHandle] = shaderGroupIdx;
+
+                shaderGroups_.emplace_back();
+                shaderGroups_.back().shader = shaderHandle;
+
+                shaderIt = batchMap_.find(shaderHandle);
+            }
+
+            // Update Material handle -> ShaderGroup index map
+            batchMap_[materialHandle] = shaderIt->second;
         }
 
-        // If shader group not exists, create it
-        auto shaderIt = handleMap_.find(shaderHandle);
-        if (shaderIt == handleMap_.end()) {
-            handleMap_[shaderHandle] = shaderGroups_.size();
+        ShaderGroup& shaderGroup = shaderGroups_[shaderIt->second];
 
-            shaderGroups_.emplace_back();
-            shaderGroups_.back().shader = shaderHandle;
+        // Get or create MeshGroup
+        auto meshIt = shaderGroup.meshGroupMap.find(meshHandle);
+        if (meshIt == shaderGroup.meshGroupMap.end()) {
+            size_t meshGroupIdx = meshGroups_.size();
+            shaderGroup.meshGroupMap[meshHandle] = meshGroupIdx;
+            shaderGroup.meshGroupIndices.push_back(meshGroupIdx);
 
-            shaderIt = handleMap_.find(shaderHandle);
+            meshGroups_.emplace_back();
+            meshGroups_.back().mesh = meshHandle;
+
+            meshIt = shaderGroup.meshGroupMap.find(meshHandle);
         }
 
-        DrawGroup drawGroup;
-        drawGroup.mesh = entry.mesh;
-        drawGroup.submesh = entry.submesh;
-        drawGroup.instaIndex = instaGroupIdx;
+        MeshGroup& meshGroup = meshGroups_[meshIt->second];
 
-        size_t shaderIdx = shaderIt->second;
-        shaderGroups_[shaderIdx].add(drawGroup);
+        // Get or create SubmeshGroup (likely creating)
+        auto submeshIt = meshGroup.submeshGroupMap.find(submeshIndex);
+        if (submeshIt == meshGroup.submeshGroupMap.end()) {
+            size_t submeshGroupIdx = submeshGroups_.size();
+            meshGroup.submeshGroupMap[submeshIndex] = submeshGroupIdx;
+            meshGroup.submeshGroupIndices.push_back(submeshGroupIdx);
 
-        subIt = handleMap_.find(hash);
+            submeshGroups_.emplace_back();
+
+            submeshIt = meshGroup.submeshGroupMap.find(submeshIndex);
+        }
+
+        SubmeshGroup& submeshGroup = submeshGroups_[submeshIt->second];
+        submeshGroup.submesh = submeshIndex;
+
+        // Add hash entry to batch map
+        batchMap_[hash] = submeshIt->second;
+        subIt = batchMap_.find(hash);
     }
+
+    SubmeshGroup& submeshGroup = submeshGroups_[subIt->second];
 
     // Add instance data
     InstaData instaData;
@@ -233,24 +274,24 @@ void tinyDrawable::submit(const Entry& entry) noexcept {
         tinyHandle skeleNode = skeleData.skeleNode;
 
         // If this skeleton node already registered, use existing range
-        auto skinRangeIt = handleMap_.find(skeleNode);
-        if (skinRangeIt == handleMap_.end()) {
-            uint32_t thisCount = static_cast<uint32_t>(skeleData.skinData->size());
+        auto skinRangeIt = dataMap_.find(skeleNode);
+        if (skinRangeIt == dataMap_.end()) {
+            uint32_t thisCount = skeleData.skinData->size();
 
             SkinRange newRange;
             newRange.skinOffset = skinCount_;
             newRange.skinCount = thisCount;
-            
+
             // Append range
-            handleMap_[skeleNode] = skinRanges_.size();
+            dataMap_[skeleNode] = skinRanges_.size();
             skinRanges_.push_back(newRange);
 
             // Copy skin data
-            size_t skinDataSize = thisCount * sizeof(glm::mat4);
+            size_t skinDataSize   = thisCount  * sizeof(glm::mat4);
             size_t skinDataOffset = skinCount_ * sizeof(glm::mat4) + skinOffset(frameIndex_);
             skinBuffer_.copyData(skeleData.skinData->data(), skinDataSize, skinDataOffset);
 
-            skinRangeIt = handleMap_.find(skeleNode);
+            skinRangeIt = dataMap_.find(skeleNode);
 
             skinCount_ += thisCount;
         }
@@ -261,7 +302,7 @@ void tinyDrawable::submit(const Entry& entry) noexcept {
 
     // If mesh has morph targets
     if (entry.mrphWeights && !entry.mrphWeights->empty()) {
-        uint32_t thisCount = static_cast<uint32_t>(entry.mrphWeights->size());
+        uint32_t thisCount = entry.mrphWeights->size();
 
         size_t mrphWsDataSize = thisCount * sizeof(float);
         size_t mrphWsDataOffset = mrphWsCount_ * sizeof(float) + mrphWsOffset(frameIndex_);
@@ -271,48 +312,28 @@ void tinyDrawable::submit(const Entry& entry) noexcept {
         mrphWsCount_ += thisCount;
     }
 
-    instaGroups_[subIt->second].push_back(instaData);
+    submeshGroup.push(instaData);
 }
 
 void tinyDrawable::finalize() {
     uint32_t curInstances = 0;
 
-    struct InstaRange {
-        uint32_t offset = 0;
-        uint32_t count = 0;
-    };
-
-    std::unordered_map<size_t, InstaRange> instaCache;
-
     for (auto& shaderGroup : shaderGroups_) {
-        for (DrawGroup& drawGroup : shaderGroup.drawGroups) {
-            if (instaCache.find(drawGroup.instaIndex) != instaCache.end()) {
-                // Already processed
-                const InstaRange& range = instaCache[drawGroup.instaIndex];
-                drawGroup.instaOffset = range.offset;
-                drawGroup.instaCount = range.count;
+        for (auto& meshGroupIdx : shaderGroup.meshGroupIndices) {
+            MeshGroup& mGroup = meshGroups_[meshGroupIdx];
 
-                continue;
+            for (auto& submeshGroupIdx : mGroup.submeshGroupIndices) {
+                SubmeshGroup& smGroup = submeshGroups_[submeshGroupIdx];
+
+                smGroup.instaOffset = curInstances;
+                smGroup.instaCount = smGroup.size();
+
+                // Copy instance data to buffer
+                size_t dataOffset = curInstances * sizeof(InstaData) + instaOffset(frameIndex_);
+                instaBuffer_.copyData(smGroup.instaData.data(), smGroup.sizeBytes(), dataOffset);
+
+                curInstances += smGroup.size();
             }
-
-            const std::vector<InstaData>& instaVec = instaGroups_[drawGroup.instaIndex];
-
-            // Update draw group range
-            drawGroup.instaOffset = curInstances;
-            drawGroup.instaCount = static_cast<uint32_t>(instaVec.size());
-
-            // Copy instance data
-            size_t dataOffset = curInstances * sizeof(InstaData) + instaOffset(frameIndex_);
-            size_t dataSize = instaVec.size() * sizeof(InstaData);
-            instaBuffer_.copyData(instaVec.data(), dataSize, dataOffset);
-
-            curInstances += drawGroup.instaCount;
-
-            // Update cache
-            instaCache[drawGroup.instaIndex] = InstaRange{
-                drawGroup.instaOffset,
-                drawGroup.instaCount
-            };
         }
     }
 
