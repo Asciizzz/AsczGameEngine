@@ -66,10 +66,7 @@ void PipelineRaster::create() {
     // 2. Vertex input
     VkPipelineVertexInputStateCreateInfo vin{ VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
     std::vector<VkVertexInputBindingDescription> bindings = cfg.bindings;
-    std::vector<VkVertexInputAttributeDescription> attrs;
-    for (const auto& attrList : cfg.attributes) {
-        attrs.insert(attrs.end(), attrList.begin(), attrList.end());
-    }
+    std::vector<VkVertexInputAttributeDescription> attrs  = cfg.attributes;
 
     if (bindings.empty() || attrs.empty()) {
         // No vertex input

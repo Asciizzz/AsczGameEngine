@@ -86,7 +86,7 @@ void tinyApp::initComponents() {
         .withShaders("Shaders/bin/Test/Test.vert.spv", "Shaders/bin/Test/Test.frag.spv")
         .withVertexInput(
             tinyDrawable::bindingDesc(),
-            { tinyDrawable::attributeDescs() }
+            tinyDrawable::attributeDescs()
         );
 
     pipelineTest = MakeUnique<PipelineRaster>(device, testCfg);

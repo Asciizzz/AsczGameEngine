@@ -27,7 +27,7 @@ struct RasterCfg {
 
     // Vertex input configuration
     std::vector<VkVertexInputBindingDescription> bindings;
-    std::vector<std::vector<VkVertexInputAttributeDescription>> attributes;
+    std::vector<VkVertexInputAttributeDescription> attributes;
 
     // Pipeline state - with sensible defaults
     VkCullModeFlags cullMode            = VK_CULL_MODE_BACK_BIT;
@@ -64,7 +64,7 @@ struct RasterCfg {
 
     // Direct vertex input configuration from named inputs
     RasterCfg& withVertexInput(const std::vector<VkVertexInputBindingDescription>& inputBindings,
-                               const std::vector<std::vector<VkVertexInputAttributeDescription>>& inputAttributes) {
+                               const std::vector<VkVertexInputAttributeDescription>& inputAttributes) {
         bindings = inputBindings;
         attributes = inputAttributes;
         return *this;
