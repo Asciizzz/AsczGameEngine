@@ -249,17 +249,20 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
     const auto& meshGroups    = draw.meshGroups();
     const auto& submeshGroups = draw.submeshGroups();
 
+    const auto& dummy = draw.dummy();
+
     for (const auto& shaderGroup : shaderGroups) { // For each shader groups:
         // In the future you will change this to a r.get<tinyShader>(shaderHandle)
         tinyHandle shaderHandle = shaderGroup.shader;
+        const PipelineRaster* pipeline = testPipeline;
 
-        testPipeline->bindCmd(currentCmd);
+        pipeline->bindCmd(currentCmd);
 
         // Bind runtime descriptor sets once
-        testPipeline->bindSets(currentCmd, 0, &glbSet, 1, &glbOffset, 1);
-        testPipeline->bindSets(currentCmd, 2, &matSet, 1, &matOffset, 1);
-        testPipeline->bindSets(currentCmd, 3, &skinSet, 1, &skinOffset, 1);
-        testPipeline->bindSets(currentCmd, 4, &mrphWsSet, 1, &mrphWsOffset, 1);
+        pipeline->bindSets(currentCmd, 0, &glbSet, 1, &glbOffset, 1);
+        pipeline->bindSets(currentCmd, 2, &matSet, 1, &matOffset, 1);
+        pipeline->bindSets(currentCmd, 3, &skinSet, 1, &skinOffset, 1);
+        pipeline->bindSets(currentCmd, 4, &mrphWsSet, 1, &mrphWsOffset, 1);
 
         // Bind instances once
         VkBuffer instaBuffers[] = { draw.instaBuffer() };
@@ -272,38 +275,39 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
             const auto* rMesh = sharedRes.fsGet<tinyMesh>(meshGroup.mesh);
             if (!rMesh) continue; // Should not happen
 
+            // Bind vertex/index buffer once
             VkBuffer staticBuffer = rMesh->vstaticBuffer();
             VkBuffer indxBuffer   = rMesh->indxBuffer();
 
-            VkDescriptorSet vrtxExtSet = rMesh->vrtxExtSet(); // Set 1
-
-            // Bind vertex/index buffer and extension descriptor set once
             VkBuffer vBuffers[] = { staticBuffer };
             VkDeviceSize vOffsets[] = { 0 };
             vkCmdBindVertexBuffers(currentCmd, 0, 1, vBuffers, vOffsets); // Binding 0
-
             vkCmdBindIndexBuffer(currentCmd, indxBuffer, 0, VK_INDEX_TYPE_UINT32);
-            testPipeline->bindSets(currentCmd, 1, &vrtxExtSet, 1, nullptr, 0);
+
+            // Bind vertex extension descriptor set (if any) once
+            VkDescriptorSet vrtxExtSet = rMesh->vrtxExtSet(); // Set 1
+            vrtxExtSet = (vrtxExtSet != VK_NULL_HANDLE) ? vrtxExtSet : dummy.mesh.vrtxExtSet();
+            pipeline->bindSets(currentCmd, 1, &vrtxExtSet, 1, nullptr, 0);
 
             for (const auto& submeshGroupIdx : meshGroup.submeshGroupIndices) {
                 const auto& submeshGroup = submeshGroups[submeshGroupIdx];
 
                 const auto* submesh = rMesh->submesh(submeshGroup.submesh);
-                if (!submesh) continue; // Should not happen
+                if (!submesh) continue; // Should not happen hopefully
 
-                testPipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, 0,
+                pipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, 0,
                     glm::uvec4(
                         submesh->vrtxFlags(), submesh->vrtxCount,
                         submesh->mrphTargets.size(), draw.matIndex(submesh->material)
                     )
                 );
-                testPipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, sizeof(glm::uvec4),
+                pipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, sizeof(glm::uvec4),
                     glm::uvec4(
                         submesh->vstaticOffset, submesh->vriggedOffset,
                         submesh->vcolorOffset,  submesh->vmrphsOffset
                     )
                 );
-                testPipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, 2 * sizeof(glm::uvec4),
+                pipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, 2 * sizeof(glm::uvec4),
                     glm::uvec4(submesh->mrphTargets.size(), 0, 0, 0)
                 );
 

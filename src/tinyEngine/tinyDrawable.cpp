@@ -107,7 +107,17 @@ void tinyDrawable::init(const CreateInfo& info) {
 
 // -------------------------- Vertex Extension -------------------------
 
-    tinyMesh::createVertexExtensionDescriptors(dvk_, &vrtxExtLayout_, &vrtxExtPool_);
+    tinyMesh::createVrtxExtDescriptors(dvk_, &vrtxExtLayout_, &vrtxExtPool_);
+
+    // Create a dummy mesh
+    tinyMesh::Submesh dummySubmesh;
+    // Fill with minimal data
+    dummySubmesh.setVrtxStatic({ tinyVertex::Static{} });
+    dummySubmesh.setVrtxRigged({ tinyVertex::Rigged{} });
+    dummySubmesh.setVrtxColor({ tinyVertex::Color{} });
+    dummySubmesh.addMrphTarget({ "DummyMorph", { tinyVertex::Morph{} } });
+    dummy_.mesh.append(std::move(dummySubmesh));
+    dummy_.mesh.vkCreate(dvk_, vrtxExtLayout_, vrtxExtPool_);
 }
 
 static tinyHandle defaultMatHandle = tinyHandle::make<tinyMaterial>(0, 0);

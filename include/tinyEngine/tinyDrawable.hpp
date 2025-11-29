@@ -29,7 +29,6 @@ public:
     static constexpr size_t MAX_TEXTURES  = 65536;  // Hopefully not needing this many
     static constexpr size_t MAX_BONES     = 102400; // 6.5mb ~ 400 model x 256 bones x 64 bytes (mat4) - plenty
     static constexpr size_t MAX_MORPH_WS  = 65536;  // Morph WEIGHTS, not Delta, 65536 x 4 bytes = 256kb, literally invisible
-    static constexpr size_t MAX_MORPH_DLTS = 102400; // Max descriptor sets count for morph deltas
 
     static std::vector<VkVertexInputBindingDescription> bindingDesc() noexcept;
     static std::vector<VkVertexInputAttributeDescription> attributeDescs() noexcept;
@@ -175,6 +174,12 @@ public:
     const std::vector<MeshGroup>& meshGroups() const noexcept { return meshGroups_; }
     const std::vector<SubmeshGroup>& submeshGroups() const noexcept { return submeshGroups_; }
 
+    struct Dummy {
+        tinyMesh mesh;
+    };
+
+    const Dummy& dummy() const noexcept { return dummy_; }
+
 private:
 // Basic info
     uint32_t maxFramesInFlight_ = 2;
@@ -239,4 +244,6 @@ private:
     // Vertex extension
     tinyVk::DescSLayout vrtxExtLayout_;
     tinyVk::DescPool    vrtxExtPool_;
+
+    Dummy dummy_;
 };

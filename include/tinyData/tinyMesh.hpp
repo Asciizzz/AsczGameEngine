@@ -78,8 +78,8 @@ struct tinyMesh {
         Submesh& operator=(Submesh&&) noexcept = default;
 
         struct MorphTarget {
-            std::vector<tinyVertex::Morph> morphs;
             std::string name;
+            std::vector<tinyVertex::Morph> morphs;
         };
 
         // Methods
@@ -187,41 +187,7 @@ struct tinyMesh {
         return submeshes_.size() - 1;
     }
 
-    std::vector<tinyMesh::Submesh>&       submeshes()       { return submeshes_; }
-    const std::vector<tinyMesh::Submesh>& submeshes() const { return submeshes_; }
-
-    Submesh* submesh(size_t index) { return index < submeshes_.size() ? &submeshes_[index] : nullptr; }
-    const Submesh* submesh(size_t index) const { return const_cast<tinyMesh*>(this)->submesh(index); }
-
-    const glm::vec3& ABmin() const { return ABmin_; }
-    const glm::vec3& ABmax() const { return ABmax_; }
-    void setABmin(const glm::vec3& abMin) { ABmin_ = abMin; }
-    void setABmax(const glm::vec3& abMax) { ABmax_ = abMax; }
-
     static constexpr uint32_t MAX_VERTEX_EXTENSIONS = 32768; // No chance in hell we reach this lmao
-
-    static void createVertexExtensionDescriptors(
-        const tinyVk::Device* dvk,
-        tinyVk::DescSLayout* layout,
-        tinyVk::DescPool*    pool
-    ) {
-        using namespace tinyVk;
-
-        if (!dvk || !layout || !pool) return;
-
-        layout->create(dvk->device, {
-            // Rig vertex buffer
-            VkDescriptorSetLayoutBinding{ 0, DescType::StorageBuffer, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr },
-            // Color vertex buffer
-            VkDescriptorSetLayoutBinding{ 1, DescType::StorageBuffer, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr },
-            // Morph vertex buffer
-            VkDescriptorSetLayoutBinding{ 2, DescType::StorageBuffer, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr }
-        });
-
-        pool->create(dvk->device, {
-            VkDescriptorPoolSize{ DescType::StorageBuffer, 3 }
-        }, MAX_VERTEX_EXTENSIONS * 3);
-    }
 
     void vkCreate(const tinyVk::Device* dvk_, VkDescriptorSetLayout vrtxExtLayout = VK_NULL_HANDLE, VkDescriptorPool vrtxExtPool = VK_NULL_HANDLE) {
         using namespace tinyVk;
@@ -343,39 +309,72 @@ struct tinyMesh {
 
         createBuffer(vstaticBuffer_, vstaticRaw.size() * sizeof(tinyVertex::Static), BufferUsage::Vertex,  vstaticRaw.data());
         createBuffer(indxBuffer_,    indxRaw.size()    * sizeof(uint32_t),           BufferUsage::Index,   indxRaw.data());
+
+        if (!vhasExt) return; // No need to create extension buffers and descriptor set
+        if (vrtxExtLayout == VK_NULL_HANDLE || vrtxExtPool == VK_NULL_HANDLE) return; // Can't create descriptor set
+
         createBuffer(vriggedBuffer_, totalRiggedCount  * sizeof(tinyVertex::Rigged), BufferUsage::Storage, vriggedRaw.data());
         createBuffer(vcolorBuffer_,  totalColorCount   * sizeof(tinyVertex::Color),  BufferUsage::Storage, vcolorRaw.data());
         createBuffer(vmrphsBuffer_,  totalDeltaCount   * sizeof(tinyVertex::Morph),  BufferUsage::Storage, vmrphsRaw.data());
 
-        if (vrtxExtLayout == VK_NULL_HANDLE || vrtxExtPool == VK_NULL_HANDLE) return; // Can't create descriptor set
-
-        // if (!vhasExt) return; // No need to create descriptor set
-
-        vrtxExt_.allocate(dvk_->device, vrtxExtPool, vrtxExtLayout);
+        vrtxExtSet_.allocate(dvk_->device, vrtxExtPool, vrtxExtLayout);
 
         // Write descriptor set
         DescWrite()
             .addWrite()
-                .setDstSet(vrtxExt_).setType(DescType::StorageBuffer)
+                .setDstSet(vrtxExtSet_).setType(DescType::StorageBuffer)
                 .setDstBinding(0).setBufferInfo({ VkDescriptorBufferInfo{
                     vriggedBuffer_, 0, VK_WHOLE_SIZE
                 } })
             .addWrite()
-                .setDstSet(vrtxExt_).setType(DescType::StorageBuffer)
+                .setDstSet(vrtxExtSet_).setType(DescType::StorageBuffer)
                 .setDstBinding(1).setBufferInfo({ VkDescriptorBufferInfo{
                     vcolorBuffer_, 0, VK_WHOLE_SIZE
                 } })
             .addWrite()
-                .setDstSet(vrtxExt_).setType(DescType::StorageBuffer)
+                .setDstSet(vrtxExtSet_).setType(DescType::StorageBuffer)
                 .setDstBinding(2).setBufferInfo({ VkDescriptorBufferInfo{
                     vmrphsBuffer_, 0, VK_WHOLE_SIZE
                 } })
             .updateDescSets(dvk_->device);
     }
 
+    static void createVrtxExtDescriptors(const tinyVk::Device* dvk, tinyVk::DescSLayout* layout, tinyVk::DescPool* pool) {
+        using namespace tinyVk;
+
+        if (!dvk || !layout || !pool) return;
+
+        layout->create(dvk->device, {
+            // Rig vertex buffer
+            VkDescriptorSetLayoutBinding{ 0, DescType::StorageBuffer, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr },
+            // Color vertex buffer
+            VkDescriptorSetLayoutBinding{ 1, DescType::StorageBuffer, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr },
+            // Morph vertex buffer
+            VkDescriptorSetLayoutBinding{ 2, DescType::StorageBuffer, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr }
+        });
+
+        pool->create(dvk->device, {
+            VkDescriptorPoolSize{ DescType::StorageBuffer, 3 }
+        }, MAX_VERTEX_EXTENSIONS * 3);
+    }
+
+// Getters
+
+    uint32_t submeshCount() const { return static_cast<uint32_t>(submeshes_.size()); }
+    std::vector<tinyMesh::Submesh>&       submeshes()       { return submeshes_; }
+    const std::vector<tinyMesh::Submesh>& submeshes() const { return submeshes_; }
+
+    Submesh* submesh(size_t index) { return index < submeshes_.size() ? &submeshes_[index] : nullptr; }
+    const Submesh* submesh(size_t index) const { return const_cast<tinyMesh*>(this)->submesh(index); }
+
+    const glm::vec3& ABmin() const { return ABmin_; }
+    const glm::vec3& ABmax() const { return ABmax_; }
+    void setABmin(const glm::vec3& abMin) { ABmin_ = abMin; }
+    void setABmax(const glm::vec3& abMax) { ABmax_ = abMax; }
+
     VkBuffer vstaticBuffer()     const { return vstaticBuffer_; }
     VkBuffer indxBuffer()        const { return indxBuffer_; }
-    VkDescriptorSet vrtxExtSet() const { return vrtxExt_; }
+    VkDescriptorSet vrtxExtSet() const { return vrtxExtSet_; }
 
 private:
     std::vector<Submesh> submeshes_;
@@ -389,7 +388,7 @@ private:
     tinyVk::DataBuffer vstaticBuffer_; // Bind vertex buffers
     tinyVk::DataBuffer indxBuffer_;    // Bind index buffer
 
-    tinyVk::DescSet    vrtxExt_;       // Bind descriptor set for vertex extensions
+    tinyVk::DescSet    vrtxExtSet_;       // Bind descriptor set for vertex extensions
     tinyVk::DataBuffer vriggedBuffer_;
     tinyVk::DataBuffer vcolorBuffer_;
     tinyVk::DataBuffer vmrphsBuffer_;
