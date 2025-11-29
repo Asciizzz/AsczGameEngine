@@ -27,9 +27,7 @@ tinyProject::tinyProject(const tinyVk::Device* dvk) : dvk_(dvk) {
     global_ = MakeUnique<tinyGlobal>(2);
     global_->vkCreate(dvk_);
 
-    setupFS();
-    vkCreateResources();
-    vkCreateDefault();
+    setupResources();
 }
 
 tinyProject::~tinyProject() {
@@ -142,7 +140,7 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
             rtMESHRD3D* meshrd = scene.nWriteComp<rtMESHRD3D>(nodeHandle);
 
             tinyHandle meshHandle = linkHandle(ogNode.MESHRD_meshIndx, glbMeshRHandle);
-            if (const tinyMesh* meshPtr = fs().r().get<tinyMesh>(meshHandle)) {
+            if (const tinyMesh* meshPtr = fs().rGet<tinyMesh>(meshHandle)) {
                 tinyHandle skeleNodeHandle =
                     nodeMap.count(ogNode.MESHRD_skeleNodeIndx) ?
                     nodeMap[ogNode.MESHRD_skeleNodeIndx] : tinyHandle();
@@ -182,8 +180,23 @@ void tinyProject::addSceneInstance(tinyHandle fromHandle, tinyHandle toHandle, t
 
 // ------------------- Filesystem Setup -------------------
 
-void tinyProject::setupFS() {
+void tinyProject::setupResources() {
     fs_ = MakeUnique<tinyFS>();
+    drawable_ = MakeUnique<tinyDrawable>();
+    drawable_->init({
+        2, // max frames in flight 
+        &fs_->r(),
+        dvk_,
+    });
+
+    // Setup shared scene requirements
+    sharedRes_.maxFramesInFlight = drawable_->maxFramesInFlight();
+    sharedRes_.fsr = &fs_->r();
+    sharedRes_.dvk = dvk_;
+    sharedRes_.camera = camera_.get();
+    sharedRes_.drawable = drawable_.get();
+
+// -------------------- Setup FS extensions --------------------
 
     // ------------------ Standard files ------------------
 
@@ -198,6 +211,17 @@ void tinyProject::setupFS() {
     tinyFS::TypeInfo* atex = fs_->typeInfo<tinyTexture>();
     atex->ext = "atex"; atex->rmOrder = 1;
     atex->color[0] = 102; atex->color[1] = 102; atex->color[2] = 255;
+
+    atex->onCreate = [&](tinyHandle fileHandle, tinyFS& fs) {
+        tinyHandle dataHandle = fs.dataHandle(fileHandle);
+        const tinyTexture* texture = fs.rGet<tinyTexture>(dataHandle);
+        if (!texture) return;
+
+        // Add to tinyDrawable
+        if (tinyDrawable* drawable = drawable_.get()) {
+            drawable->addTexture(dataHandle);
+        }
+    };
 
     tinyFS::TypeInfo* amsh = fs_->typeInfo<tinyMesh>();
     amsh->ext = "amsh";
@@ -228,10 +252,19 @@ void tinyProject::setupFS() {
     tinyFS::TypeInfo* dataBuffer = fs_->typeInfo<tinyVk::DataBuffer>();
     dataBuffer->rmOrder = UINT8_MAX - 2; // Delete before desc sets
 
-    // // ------------------ Other useful files ------------------
+    // ------------------ Other useful files ------------------
     tinyFS::TypeInfo* atxt = fs_->typeInfo<tinyText>();
     atxt->ext = "txt";
     atxt->color[0] = 153; atxt->color[1] = 153; atxt->color[2] = 153;
+
+// ------------------------ Default resources ------------------------
+
+    rtScene mainScene;
+    mainScene.init(sharedRes_);
+
+    tinyHandle mainSceneFileHandle = fs_->createFile("Main Scene", std::move(mainScene));
+
+    mainSceneHandle = fs_->dataHandle(mainSceneFileHandle);
 }
 
 // ------------------ Pending Removals ------------------
@@ -277,39 +310,4 @@ void tinyProject::execDeferredRms(DeferRmType type) {
 bool tinyProject::hasDeferredRms(DeferRmType type) const {
     auto it = deferredRms_.find(type);
     return it != deferredRms_.end() && !it->second.empty();
-}
-
-// ------------------ Vulkan Resource Creation ------------------
-
-void tinyProject::vkCreateResources() {
-    VkDevice device = dvk_->device;
-
-    // Setup shared scene requirements
-    sharedRes_.maxFramesInFlight = 2;
-    sharedRes_.fsr = &fs().r();
-    sharedRes_.dvk = dvk_;
-    sharedRes_.camera = camera_.get();
-
-    // Create Drawable
-    drawable_ = MakeUnique<tinyDrawable>();
-    drawable_->init({
-        sharedRes_.maxFramesInFlight,
-        &fs().r(), dvk_,
-    });
-
-    sharedRes_.drawable = drawable_.get();
-}
-
-void tinyProject::vkCreateDefault() {
-
-// ------------------ Create Main Scene ------------------
-
-// CRITICAL: Main Scene must be created last after all resources are ready
-
-    rtScene mainScene;
-    mainScene.init(sharedRes_);
-
-    tinyHandle mainSceneFileHandle = fs_->createFile("Main Scene", std::move(mainScene));
-
-    mainSceneHandle = fs_->dataHandle(mainSceneFileHandle);
 }

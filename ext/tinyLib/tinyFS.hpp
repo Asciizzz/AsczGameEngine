@@ -51,6 +51,9 @@ public:
         uint8_t     color[3] = {255, 255, 255};
         uint8_t     rmOrder = 0;    // Lower = erased first
 
+        std::function<void(tinyHandle fileHandle, tinyFS& fs)> onCreate;
+        std::function<void(tinyHandle fileHandle, tinyFS& fs)> onDelete;
+
         [[nodiscard]] const char* c_str() const noexcept { return ext.c_str(); }
     };
 
@@ -112,7 +115,6 @@ public:
         name = resolveUniqueName(parent, std::move(name));
 
         tinyHandle dataHandle = registry_.emplace<T>(std::forward<T>(data));
-        typeInfo(dataHandle.tID()); // Ensure TypeInfo exists
 
         Node file;
         file.name = std::move(name);
@@ -120,6 +122,10 @@ public:
         file.data = dataHandle;
 
         tinyHandle h = fnodes_.emplace(std::move(file));
+        TypeInfo* tInfo = typeInfo(dataHandle.tID()); // Ensure TypeInfo exists
+        if (tInfo && tInfo->onCreate) {
+            tInfo->onCreate(h, *this);
+        }
 
         p = node(parent);
         p->children.push_back(h);
@@ -212,7 +218,13 @@ public:
         // since all nodes are being erased anyway
         for (tinyHandle h : rmQueue) { 
             Node* node = fnodes_.get(h); // Queue ensures validity
-            if (node->isFile()) r().erase(node->data);
+
+            TypeInfo* tInfo = typeInfo(node->data.tID());
+            if (tInfo && tInfo->onDelete) {
+                tInfo->onDelete(h, *this);
+            }
+            
+            r().erase(node->data);
 
             fnodes_.erase(h);
         }
@@ -335,6 +347,9 @@ public:
 
     [[nodiscard]] TINY_FORCE_INLINE tinyRegistry& r() noexcept { return registry_; }
     [[nodiscard]] TINY_FORCE_INLINE const tinyRegistry& r() const noexcept { return registry_; }
+    
+    template<typename T> [[nodiscard]] TINY_FORCE_INLINE T* rGet(tinyHandle h) noexcept { return registry_.get<T>(h); }
+    template<typename T> [[nodiscard]] TINY_FORCE_INLINE const T* rGet(tinyHandle h) const noexcept { return registry_.get<T>(h); }
 
     // Backward
     tinyHandle rDataToFile(tinyHandle rh) const noexcept {

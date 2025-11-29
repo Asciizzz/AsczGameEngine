@@ -701,7 +701,7 @@ static void RenderFileNodeHierarchy() {
 
             tinyHandle dHandle = fs.dataHandle(h);
             if (dHandle.is<rtScene>()) {
-                rtScene* scene = fs.r().get<rtScene>(dHandle);
+                rtScene* scene = fs.rGet<rtScene>(dHandle);
                 if (RenderMenuItemToggle("Make Active", "Active", State::isActiveScene(dHandle))) {
                     State::sceneHandle = dHandle;
                 }
@@ -710,7 +710,7 @@ static void RenderFileNodeHierarchy() {
                 // }
             }
             if (dHandle.is<tinyScript>()) {
-                tinyScript* script = fs.r().get<tinyScript>(dHandle);
+                tinyScript* script = fs.rGet<tinyScript>(dHandle);
                 if (ImGui::MenuItem("Compile")) {
                     script->compile();
                 }
@@ -853,7 +853,7 @@ static void RenderMESHRD3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle)
     if (!meshRD) return;
 
     tinyHandle meshHandle = meshRD->meshHandle();
-    const tinyMesh* mesh = fs.r().get<tinyMesh>(meshHandle);
+    const tinyMesh* mesh = fs.rGet<tinyMesh>(meshHandle);
 
     tinyHandle meshFHandle = fs.rDataToFile(meshHandle);
 
@@ -875,7 +875,7 @@ static void RenderMESHRD3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle)
                     tinyHandle fHandle = data->handle;
                     tinyHandle dHandle = fs.dataHandle(fHandle);
 
-                    const tinyMesh* rMesh = fs.r().get<tinyMesh>(dHandle);
+                    const tinyMesh* rMesh = fs.rGet<tinyMesh>(dHandle);
                     if (!rMesh) { ImGui::EndDragDropTarget(); return; }
 
                     // meshRD->assignMesh(dHandle, rMesh->mrphWeights());
@@ -1016,7 +1016,7 @@ static void RenderSCRIPT(const tinyFS& fs, rtScene* scene, rtScene::NWrap& wrap)
     tinyHandle scriptHandle = script->scriptHandle();
     tinyHandle scriptFHandle = fs.rDataToFile(scriptHandle);
 
-    const tinyScript* scriptPtr = fs.r().get<tinyScript>(scriptHandle);
+    const tinyScript* scriptPtr = fs.rGet<tinyScript>(scriptHandle);
 
     // Render the drag field for the script file
     RenderDragField(
@@ -1339,7 +1339,7 @@ static void RenderFileInspector(tinyProject* project) {
     }
 
     if (dHandle.is<tinyScript>()) {
-        tinyScript* script = fs.r().get<tinyScript>(dHandle);
+        tinyScript* script = fs.rGet<tinyScript>(dHandle);
 
         // Log the version, and compilation status
         if (script->valid())
@@ -1355,7 +1355,7 @@ static void RenderFileInspector(tinyProject* project) {
             Editor::selected = handle;
         }
     } else if (dHandle.is<tinyTexture>()) {
-        tinyTexture* texture = fs.r().get<tinyTexture>(dHandle);
+        tinyTexture* texture = fs.rGet<tinyTexture>(dHandle);
 
         Texture::Render(texture, *imguiSampler);
     }
@@ -1381,7 +1381,7 @@ static void RenderScriptEditor() {
     tinyHandle dHandle = fs.dataHandle(fHandle);
     if (!dHandle.is<tinyScript>()) return;
 
-    tinyScript* script = fs.r().get<tinyScript>(dHandle);
+    tinyScript* script = fs.rGet<tinyScript>(dHandle);
 
     if (script && !script->code.empty() && dHandle != CodeEditor::currentScriptHandle) {
         CodeEditor::currentScriptHandle = dHandle;

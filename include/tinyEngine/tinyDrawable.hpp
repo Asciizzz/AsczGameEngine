@@ -168,7 +168,7 @@ public:
 
     void startFrame(uint32_t frameIndex) noexcept;
     void submit(const Entry& entry) noexcept;
-    void finalize();
+    void finalize() noexcept;
 
     const std::vector<ShaderGroup>& shaderGroups() const noexcept { return shaderGroups_; }
     const std::vector<MeshGroup>& meshGroups() const noexcept { return meshGroups_; }
@@ -176,7 +176,7 @@ public:
 
 // --------------------------- Other --------------------------
 
-    uint32_t addTexture(tinyHandle texHandle);
+    uint32_t addTexture(tinyHandle texHandle) noexcept;
 
     struct Dummy {
         tinyMesh mesh;

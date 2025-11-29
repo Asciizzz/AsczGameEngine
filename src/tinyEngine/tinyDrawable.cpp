@@ -98,6 +98,22 @@ void tinyDrawable::init(const CreateInfo& info) {
     createSampler(texSamplers_[2], VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER);
 
     // Create dynamic descriptor set layout and pool for textures
+    VkDescriptorSetLayoutBinding binding{};
+    binding.binding = 0;
+    binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    binding.descriptorCount = 1;
+    binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    binding.pImmutableSamplers = nullptr;
+
+    VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlags{};
+    bindingFlags.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
+    bindingFlags.bindingCount = 1;
+    VkDescriptorBindingFlags arrayFlags[] = {
+        VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT
+    };
+    bindingFlags.pBindingFlags = arrayFlags;
+
+    texDescLayout_.create(device, { binding }, 0, &bindingFlags);
 
 
 // ------------------ Setup skin data ------------------
@@ -137,33 +153,16 @@ void tinyDrawable::init(const CreateInfo& info) {
     dummy_.mesh.vkCreate(dvk_, vrtxExtLayout_, vrtxExtPool_);
 }
 
-static tinyHandle defaultMatHandle = tinyHandle::make<tinyMaterial>(0, 0);
+uint32_t tinyDrawable::addTexture(tinyHandle texHandle) noexcept {
+    // textures_.push_back(texture);
+    return 0;
+}
+
+
+
+
 
 // --------------------------- Batching process --------------------------
-
-/* Idea:
-
-Batch by shader -> mesh -> submesh
-
-Shader 0
-    - Mesh 0
-        - Submesh 0
-            - Instance 0
-            - Instance 1
-        - Submesh 1
-
-Shader 1
-    - Mesh 0
-        - Submesh 0
-            - Instance 0
-        - Submesh 1
-            - Instance 0
-            - Instance 1
-            - Instance 2
-
-You get the idea
-
-*/
 
 void tinyDrawable::startFrame(uint32_t frameIndex) noexcept {
     frameIndex_ = frameIndex % maxFramesInFlight_;
@@ -331,7 +330,7 @@ void tinyDrawable::submit(const Entry& entry) noexcept {
     submeshGroup.push(instaData);
 }
 
-void tinyDrawable::finalize() {
+void tinyDrawable::finalize() noexcept {
     uint32_t curInstances = 0;
 
     for (auto& shaderGroup : shaderGroups_) {

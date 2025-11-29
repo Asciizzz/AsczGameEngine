@@ -79,19 +79,15 @@ private:
 
     UniquePtr<tinyFS> fs_;
     UniquePtr<tinyDrawable> drawable_;
+    SceneRes sharedRes_;
 
-    // UniquePtr<tinyMachine> machine_;
-    void setupFS();
+    // void setupFS();
+    // void vkCreateResources();
+    // void vkCreateDefault();
+    void setupResources();
 
     template<typename T>
     tinyHandle rAdd(T&& resource) {
         return r().emplace<T>(std::forward<T>(resource));
     }
-
-// -------------- Shared resources --------------
-
-    SceneRes sharedRes_;
-    void vkCreateResources();
-
-    void vkCreateDefault();
 };
