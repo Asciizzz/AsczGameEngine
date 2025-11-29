@@ -60,7 +60,6 @@ private:
     tinyUI::Backend_Vulkan* UIBackend = nullptr;
     tinyVk::SamplerVk uiSampler; // Helpful
 
-
     // Window metadata
     const char* appTitle;
     uint32_t appWidth;

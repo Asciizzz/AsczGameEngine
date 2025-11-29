@@ -41,6 +41,7 @@ void tinyDrawable::init(const CreateInfo& info) {
     dvk_ = info.dvk;
 
     VkDevice device = dvk_->device;
+    VkPhysicalDevice pDevice = dvk_->pDevice;
 
     auto writeDescSetDynamicBuffer = [&](VkDescriptorSet dstSet, VkBuffer buffer, VkDeviceSize size) {
         DescWrite()
@@ -81,7 +82,23 @@ void tinyDrawable::init(const CreateInfo& info) {
 
 // ------------------ Setup textures data ------------------
     
-    // Later
+    // Create 3 Sampler for the 3 Wrap Modes: Repeat, ClampEdge, ClampBorder
+
+    auto createSampler = [&](SamplerVk& sampler, VkSamplerAddressMode addressMode) {
+            SamplerConfig sampConfig;
+            sampConfig.device = device;
+            sampConfig.pDevice = pDevice;
+            sampConfig.addressModes(addressMode);
+            sampler.create(sampConfig);
+    };
+
+    texSamplers_.resize(3);
+    createSampler(texSamplers_[0], VK_SAMPLER_ADDRESS_MODE_REPEAT);
+    createSampler(texSamplers_[1], VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+    createSampler(texSamplers_[2], VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER);
+
+    // Create dynamic descriptor set layout and pool for textures
+
 
 // ------------------ Setup skin data ------------------
 

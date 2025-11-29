@@ -174,6 +174,10 @@ public:
     const std::vector<MeshGroup>& meshGroups() const noexcept { return meshGroups_; }
     const std::vector<SubmeshGroup>& submeshGroups() const noexcept { return submeshGroups_; }
 
+// --------------------------- Other --------------------------
+
+    uint32_t addTexture(tinyHandle texHandle);
+
     struct Dummy {
         tinyMesh mesh;
     };
@@ -224,6 +228,7 @@ private:
     tinyVk::DescPool    texDescPool_;
     tinyVk::DescSet     texDescSet_; // Dynamic descriptor set for textures
     std::unordered_map<tinyHandle, uint32_t> texIdxMap_;
+    std::vector<tinyVk::SamplerVk> texSamplers_;
 
     // Skinning (runtime)
     tinyVk::DescSLayout skinDescLayout_;
