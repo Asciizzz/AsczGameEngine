@@ -81,7 +81,7 @@ void tinyDrawable::init(const CreateInfo& info) {
     writeDescSetDynamicBuffer(matDescSet_, matBuffer_, matSize_x1_.unaligned);
 
 // ------------------ Setup textures data ------------------
-    
+
     // Create 3 Sampler for the 3 Wrap Modes: Repeat, ClampEdge, ClampBorder
 
     auto createSampler = [&](SamplerVk& sampler, VkSamplerAddressMode addressMode) {
