@@ -142,12 +142,11 @@ void tinyDrawable::init(const CreateInfo& info) {
     texDescSet_.allocate(device, texDescPool_, texDescLayout_, &varDescriptorCount);
 
     // Create empty texture
-    texDefault_.create({255, 255, 255, 255}, 1, 1, 4, tinyTexture::WrapMode::Repeat);
-    texDefault_.vkCreate(dvk_);
+    dummy_.texture.create({255, 255, 255, 255}, 1, 1, 4, tinyTexture::WrapMode::Repeat);
+    dummy_.texture.vkCreate(dvk_);
 
     // Add default empty texture at index 0
-    writeImg(dvk_->device, texDescSet_, 0, 0, texSamplers_[0].sampler(), texDefault_.view(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
+    writeImg(dvk_->device, texDescSet_, 0, 0, texSamplers_[0].sampler(), dummy_.texture.view(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     texIdxMap_[tinyHandle()] = 0; // Map empty handle to index 0
 
 // ------------------ Setup skin data ------------------
@@ -216,6 +215,8 @@ uint32_t tinyDrawable::addTexture(tinyHandle texHandle) noexcept {
 }
 
 bool tinyDrawable::removeTexture(tinyHandle texHandle) noexcept {
+    if (texHandle == tinyHandle()) return false; // Cannot remove default empty texture
+
     auto it = texIdxMap_.find(texHandle);
     if (it == texIdxMap_.end()) return false;
 
@@ -232,17 +233,12 @@ bool tinyDrawable::removeTexture(tinyHandle texHandle) noexcept {
         .setDescCount(1)
         .setImageInfo({ VkDescriptorImageInfo{
             texSamplers_[0].sampler(),
-            texDefault_.view(),
+            dummy_.texture.view(),
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
         } })
         .updateDescSets(dvk_->device);
 
     return true;
-}
-
-uint32_t tinyDrawable::getTextureIndex(tinyHandle texHandle) const noexcept {
-    auto it = texIdxMap_.find(texHandle);
-    return it == texIdxMap_.end() ? 0 : it->second;
 }
 
 // --------------------------- Batching process --------------------------

@@ -181,7 +181,11 @@ public:
 
     uint32_t addTexture(tinyHandle texHandle) noexcept;
     bool removeTexture(tinyHandle texHandle) noexcept;
-    uint32_t getTextureIndex(tinyHandle texHandle) const noexcept;
+
+    inline uint32_t getTextureIndex(tinyHandle texHandle) const noexcept {
+        auto it = texIdxMap_.find(texHandle);
+        return it == texIdxMap_.end() ? 0 : it->second;
+    }
 
     struct Dummy {
         tinyMesh mesh;
@@ -209,12 +213,7 @@ private:
 
     std::vector<tinyMaterial::Data> matData_;
     std::vector<SkinRange> skinRanges_;
-    
-    /* batchMap_:
 
-    Material handle -> ShaderGroup index
-    Entry hash -> SubmeshGroup index
-    */
     std::unordered_map<tinyHandle, size_t> batchMap_;
     std::unordered_map<tinyHandle, size_t> dataMap_;
 
@@ -237,7 +236,6 @@ private:
     std::vector<uint32_t> texFreeIndices_; // For when removing textures
 
     std::vector<tinyVk::SamplerVk> texSamplers_; // Collection of pre-created samplers
-    tinyTexture texDefault_; // Default empty texture
 
     // Skinning (runtime)
     tinyVk::DescSLayout skinDescLayout_;
