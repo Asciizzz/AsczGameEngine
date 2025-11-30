@@ -115,6 +115,13 @@ void tinyDrawable::init(const CreateInfo& info) {
 
     texDescLayout_.create(device, { binding }, 0, &bindingFlags);
 
+    // Create empty texture
+    tinyTexture texture;
+    texture.create({255, 255, 255, 255}, 1, 1, 4, tinyTexture::WrapMode::Repeat);
+    texture.vkCreate(dvk_);
+
+    tinyHandle emptyTexHandle = fsr_->emplace<tinyTexture>(std::move(texture));
+    texIdxMap_[emptyTexHandle] = 0; // First index is reserved for empty texture
 
 // ------------------ Setup skin data ------------------
 
@@ -154,12 +161,40 @@ void tinyDrawable::init(const CreateInfo& info) {
 }
 
 uint32_t tinyDrawable::addTexture(tinyHandle texHandle) noexcept {
-    // textures_.push_back(texture);
+    auto it = texIdxMap_.find(texHandle);
+    if (it != texIdxMap_.end()) return it->second;
+
+    const tinyTexture* texture = fsr_->get<tinyTexture>(texHandle);
+    if (!texture || !(*texture)) return 0; // Return default empty texture
+
+    // Write to descriptor set
+    uint32_t texIndex = static_cast<uint32_t>(texIdxMap_.size());
+    texIdxMap_[texHandle] = texIndex;
+
+    VkSampler sampler;
+    using WrapMode = tinyTexture::WrapMode;
+    switch (texture->wrapMode()) {
+        case WrapMode::Repeat:        sampler = texSamplers_[0].sampler(); break;
+        case WrapMode::ClampToEdge:   sampler = texSamplers_[1].sampler(); break;
+        case WrapMode::ClampToBorder: sampler = texSamplers_[2].sampler(); break;
+        default:                      sampler = texSamplers_[0].sampler(); break;
+    }
+
+    DescWrite()
+        .setDstSet(texDescSet_)
+        .setDstBinding(0)
+        .setType(DescType::CombinedImageSampler)
+        .setDescCount(1)
+        .setImageInfo({ VkDescriptorImageInfo{
+            sampler,
+            texture->view(),
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+        } })
+        .updateDescSets(dvk_->device);
+
+
     return 0;
 }
-
-
-
 
 
 // --------------------------- Batching process --------------------------

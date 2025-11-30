@@ -1606,34 +1606,9 @@ void tinyApp::renderUI() {
 
     tinyFS& fs = project->fs();
 
-    // ===== DEBUG PANEL WINDOW =====
-    static bool showThemeEditor = false;
-    if (tinyUI::Begin("Debug Panel", nullptr, ImGuiWindowFlags_NoCollapse)) {
-        // FPS Info (once every printInterval)
-        frameTime += deltaTime;
-        if (frameTime >= printInterval) {
-            currentFps = fpsRef.currentFPS;
-            frameTime = 0.0f;
-        }
-
-        ImGui::Text("FPS: %.1f", currentFps);
-        ImGui::Separator();
-        
-        ImGui::Text("Camera");
-        ImGui::Text("Pos: (%.2f, %.2f, %.2f)", camRef.pos.x, camRef.pos.y, camRef.pos.z);
-        ImGui::Text("Fwd: (%.2f, %.2f, %.2f)", camRef.forward.x, camRef.forward.y, camRef.forward.z);
-        ImGui::Text("Rg:  (%.2f, %.2f, %.2f)", camRef.right.x, camRef.right.y, camRef.right.z);
-        ImGui::Text("Up:  (%.2f, %.2f, %.2f)", camRef.up.x, camRef.up.y, camRef.up.z);
-
-        ImGui::Separator();
-        if (ImGui::Button("Theme Editor")) {
-            showThemeEditor = !showThemeEditor;
-        }
-
-        tinyUI::End();
-    }
 
     // ===== THEME EDITOR WINDOW =====
+    static bool showThemeEditor = false;
     if (showThemeEditor) {
         if (tinyUI::Begin("Theme Editor", &showThemeEditor)) {
             tinyUI::ThemeStruct& theme = tinyUI::Theme();
@@ -1690,13 +1665,45 @@ void tinyApp::renderUI() {
             ImGui::Text("No active scene");
         } else {
             static Splitter split;
-            split.init(1);
+            split.init(2);
             split.directionSize = ImGui::GetContentRegionAvail().y;
             split.calcRegionSizes();
 
-            // ===== TOP: SCENE HIERARCHY =====
+            // ===== Row 1: DEBUG WINDOW =====
+
             ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0)); // Transparent background
-            ImGui::BeginChild("SceneHierarchy", ImVec2(0, split.rSize(0)), true);
+            ImGui::BeginChild("DebugWindow", ImVec2(0, split.rSize(0)), true);
+
+            // FPS Info (once every printInterval)
+            frameTime += deltaTime;
+            if (frameTime >= printInterval) {
+                currentFps = fpsRef.currentFPS;
+                frameTime = 0.0f;
+            }
+
+            ImGui::Text("FPS: %.1f", currentFps);
+            ImGui::Separator();
+            
+            ImGui::Text("Camera");
+            ImGui::Text("Pos: (%.2f, %.2f, %.2f)", camRef.pos.x, camRef.pos.y, camRef.pos.z);
+            ImGui::Text("Fwd: (%.2f, %.2f, %.2f)", camRef.forward.x, camRef.forward.y, camRef.forward.z);
+            ImGui::Text("Rg:  (%.2f, %.2f, %.2f)", camRef.right.x, camRef.right.y, camRef.right.z);
+            ImGui::Text("Up:  (%.2f, %.2f, %.2f)", camRef.up.x, camRef.up.y, camRef.up.z);
+
+            ImGui::Separator();
+            if (ImGui::Button("Theme Editor")) {
+                showThemeEditor = !showThemeEditor;
+            }
+
+            ImGui::EndChild();
+            ImGui::PopStyleColor();
+            
+            // ===== HORIZONTAL SPLITTER =====
+            split.render(0);
+
+            // ===== Row 2: SCENE HIERARCHY =====
+            ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0)); // Transparent background
+            ImGui::BeginChild("SceneHierarchy", ImVec2(0, split.rSize(1)), true);
 
             ImGui::Text("[HDL %u.%u]", sceneHandle.index, sceneHandle.version);
             ImGui::Separator();
@@ -1707,11 +1714,11 @@ void tinyApp::renderUI() {
             ImGui::PopStyleColor();
             
             // ===== HORIZONTAL SPLITTER =====
-            split.render(0);
+            split.render(1);
             
-            // ===== BOTTOM: FILE SYSTEM HIERARCHY =====
+            // ===== Row 3: FILE SYSTEM HIERARCHY =====
             ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0)); // Transparent background
-            ImGui::BeginChild("FileHierarchy", ImVec2(0, split.rSize(1)), true);
+            ImGui::BeginChild("FileHierarchy", ImVec2(0, split.rSize(2)), true);
             
             ImGui::Text("File System");
             ImGui::Separator();
