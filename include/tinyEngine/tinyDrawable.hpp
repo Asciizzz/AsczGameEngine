@@ -136,13 +136,16 @@ public:
 
     VkBuffer instaBuffer() const noexcept { return instaBuffer_; }
 
-    VkDescriptorSet matDescSet() const noexcept { return matDescSet_; }
+    VkDescriptorSet matDescSet() const noexcept { return matDescSet_; } // Set 2
     VkDescriptorSetLayout matDescLayout() const noexcept { return matDescLayout_; }
 
-    VkDescriptorSet skinDescSet() const noexcept { return skinDescSet_; }
+    VkDescriptorSet texDescSet() const noexcept { return texDescSet_; } // Set 3
+    VkDescriptorSetLayout texDescLayout() const noexcept { return texDescLayout_; }
+
+    VkDescriptorSet skinDescSet() const noexcept { return skinDescSet_; } // Set 4
     VkDescriptorSetLayout skinDescLayout() const noexcept { return skinDescLayout_; }
 
-    VkDescriptorSet mrphWsDescSet() const noexcept { return mrphWsDescSet_; }
+    VkDescriptorSet mrphWsDescSet() const noexcept { return mrphWsDescSet_; } // Set 5
     VkDescriptorSetLayout mrphWsDescLayout() const noexcept { return mrphWsDescLayout_; }
 
     uint32_t matIndex(tinyHandle matHandle) const noexcept {
@@ -177,9 +180,12 @@ public:
 // --------------------------- Other --------------------------
 
     uint32_t addTexture(tinyHandle texHandle) noexcept;
+    bool removeTexture(tinyHandle texHandle) noexcept;
+    uint32_t getTextureIndex(tinyHandle texHandle) const noexcept;
 
     struct Dummy {
         tinyMesh mesh;
+        tinyTexture texture;
     };
 
     const Dummy& dummy() const noexcept { return dummy_; }
@@ -228,7 +234,10 @@ private:
     tinyVk::DescPool    texDescPool_;
     tinyVk::DescSet     texDescSet_; // Dynamic descriptor set for textures
     std::unordered_map<tinyHandle, uint32_t> texIdxMap_;
-    std::vector<tinyVk::SamplerVk> texSamplers_;
+    std::vector<uint32_t> texFreeIndices_; // For when removing textures
+
+    std::vector<tinyVk::SamplerVk> texSamplers_; // Collection of pre-created samplers
+    tinyTexture texDefault_; // Default empty texture
 
     // Skinning (runtime)
     tinyVk::DescSLayout skinDescLayout_;

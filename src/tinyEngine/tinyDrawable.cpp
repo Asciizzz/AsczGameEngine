@@ -33,7 +33,28 @@ std::vector<VkVertexInputAttributeDescription> tinyDrawable::attributeDescs() no
     return descs;
 }
 
-//---------------------------------------------------------------
+// ------------------------ Helpers -------------------------
+
+void writeImg(
+    VkDevice device, VkDescriptorSet dstSet,
+    uint32_t dstBinding, uint32_t dstArrayElement,
+    VkSampler sampler, VkImageView imageView, VkImageLayout imageLayout
+) {
+    DescWrite()
+        .setDstSet(dstSet)
+        .setDstBinding(dstBinding)
+        .setDstArrayElement(dstArrayElement)
+        .setType(DescType::CombinedImageSampler)
+        .setDescCount(1)
+        .setImageInfo({ VkDescriptorImageInfo{
+            sampler,
+            imageView,
+            imageLayout
+        } })
+        .updateDescSets(device);
+}
+
+// ---------------------------------------------------------------
 
 void tinyDrawable::init(const CreateInfo& info) {
     maxFramesInFlight_ = info.maxFramesInFlight;
@@ -101,7 +122,7 @@ void tinyDrawable::init(const CreateInfo& info) {
     VkDescriptorSetLayoutBinding binding{};
     binding.binding = 0;
     binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    binding.descriptorCount = 1;
+    binding.descriptorCount = MAX_TEXTURES;
     binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
     binding.pImmutableSamplers = nullptr;
 
@@ -115,13 +136,19 @@ void tinyDrawable::init(const CreateInfo& info) {
 
     texDescLayout_.create(device, { binding }, 0, &bindingFlags);
 
-    // Create empty texture
-    tinyTexture texture;
-    texture.create({255, 255, 255, 255}, 1, 1, 4, tinyTexture::WrapMode::Repeat);
-    texture.vkCreate(dvk_);
+    texDescPool_.create(device, { {DescType::CombinedImageSampler, MAX_TEXTURES} }, 1, true);
 
-    tinyHandle emptyTexHandle = fsr_->emplace<tinyTexture>(std::move(texture));
-    texIdxMap_[emptyTexHandle] = 0; // First index is reserved for empty texture
+    uint32_t varDescriptorCount = MAX_TEXTURES;
+    texDescSet_.allocate(device, texDescPool_, texDescLayout_, &varDescriptorCount);
+
+    // Create empty texture
+    texDefault_.create({255, 255, 255, 255}, 1, 1, 4, tinyTexture::WrapMode::Repeat);
+    texDefault_.vkCreate(dvk_);
+
+    // Add default empty texture at index 0
+    writeImg(dvk_->device, texDescSet_, 0, 0, texSamplers_[0].sampler(), texDefault_.view(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+    texIdxMap_[tinyHandle()] = 0; // Map empty handle to index 0
 
 // ------------------ Setup skin data ------------------
 
@@ -165,10 +192,12 @@ uint32_t tinyDrawable::addTexture(tinyHandle texHandle) noexcept {
     if (it != texIdxMap_.end()) return it->second;
 
     const tinyTexture* texture = fsr_->get<tinyTexture>(texHandle);
-    if (!texture || !(*texture)) return 0; // Return default empty texture
+    if (!texture) return 0; // Return default empty texture
 
-    // Write to descriptor set
-    uint32_t texIndex = static_cast<uint32_t>(texIdxMap_.size());
+    bool useFreeIndex = !texFreeIndices_.empty();
+    uint32_t texIndex = useFreeIndex ? texFreeIndices_.back() : static_cast<uint32_t>(texIdxMap_.size());
+    if (useFreeIndex) { texFreeIndices_.pop_back(); }
+
     texIdxMap_[texHandle] = texIndex;
 
     VkSampler sampler;
@@ -179,23 +208,42 @@ uint32_t tinyDrawable::addTexture(tinyHandle texHandle) noexcept {
         case WrapMode::ClampToBorder: sampler = texSamplers_[2].sampler(); break;
         default:                      sampler = texSamplers_[0].sampler(); break;
     }
+    
+    // Write to specific array index
+    writeImg(dvk_->device, texDescSet_, 0, texIndex, sampler, texture->view(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
+    return texIndex;
+}
+
+bool tinyDrawable::removeTexture(tinyHandle texHandle) noexcept {
+    auto it = texIdxMap_.find(texHandle);
+    if (it == texIdxMap_.end()) return false;
+
+    uint32_t texIndex = it->second;
+    texIdxMap_.erase(it);
+    texFreeIndices_.push_back(texIndex);
+
+    // Write empty descriptor to the freed index
     DescWrite()
         .setDstSet(texDescSet_)
         .setDstBinding(0)
+        .setDstArrayElement(texIndex)
         .setType(DescType::CombinedImageSampler)
         .setDescCount(1)
         .setImageInfo({ VkDescriptorImageInfo{
-            sampler,
-            texture->view(),
+            texSamplers_[0].sampler(),
+            texDefault_.view(),
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
         } })
         .updateDescSets(dvk_->device);
 
-
-    return 0;
+    return true;
 }
 
+uint32_t tinyDrawable::getTextureIndex(tinyHandle texHandle) const noexcept {
+    auto it = texIdxMap_.find(texHandle);
+    return it == texIdxMap_.end() ? 0 : it->second;
+}
 
 // --------------------------- Batching process --------------------------
 
@@ -247,7 +295,15 @@ void tinyDrawable::submit(const Entry& entry) noexcept {
                 // If material not in buffer, add it
                 if (dataMap_.find(materialHandle) == dataMap_.end()) { //
                     dataMap_[materialHandle] = matData_.size();
-                    matData_.push_back(rMat->data);
+                    
+                    tinyMaterial::Data matData;
+
+                    matData.float1 = rMat->baseColor;
+
+                    matData.uint1.x = getTextureIndex(rMat->albTexture);
+                    matData.uint1.y = getTextureIndex(rMat->nrmlTexture);
+
+                    matData_.push_back(matData);
                 }
 
                 shaderHandle = rMat->shader;

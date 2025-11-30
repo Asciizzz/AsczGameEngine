@@ -1,4 +1,6 @@
 #version 450
+#extension GL_EXT_nonuniform_qualifier : require      // for nonuniformEXT()
+#extension GL_EXT_samplerless_texture_functions : enable // sometimes required by toolchains; optional
 
 layout(push_constant) uniform PushConstant {
     uvec4 data0;
@@ -25,6 +27,11 @@ layout(std430, set = 2, binding = 0) readonly buffer MatBuffer {
     Material materials[];
 };
 
+layout(set = 3, binding = 0) uniform sampler2D textures[];
+vec4 getTexture(uint texIndex, vec2 uv) {
+    return texture(textures[nonuniformEXT(texIndex)], uv);
+}
+
 layout(location = 0) out vec4 outColor;
 
 // Array of rainbow colors for testing
@@ -47,12 +54,14 @@ void main() {
 
     Material mat = materials[pConst.data0.w];
 
-    float alpha = mat.base.a;
-    if (alpha < 0.01) discard;
+    vec4 albColor = getTexture(mat.tex1.x, fragUV);
+    vec4 baseColor = mat.base;
+    
+    float alpha = baseColor.a * albColor.a;
+    if (alpha < 0.7) discard;
 
-    // Ignore fragColor if alpha is 0
-    vec3 fColor = fragColor.a > 0.0 ? fragColor.rgb : vec3(1.0);
+    vec3 fColor = baseColor.rgb * albColor.rgb;
 
-    outColor = vec4(fColor * mat.base.rgb * lDot, alpha);
+    outColor = vec4(fColor * lDot, alpha);
 }
 

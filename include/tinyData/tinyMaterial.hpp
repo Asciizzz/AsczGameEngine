@@ -14,4 +14,9 @@ struct  tinyMaterial {
     } data; // Total size: 96 bytes
 
     tinyHandle shader;
+
+    // These all we need for now
+    glm::vec4 baseColor;
+    tinyHandle albTexture;
+    tinyHandle nrmlTexture;
 }; 

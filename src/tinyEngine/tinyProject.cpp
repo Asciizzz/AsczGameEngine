@@ -68,7 +68,13 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
             tinyMaterial material;
 
             // Set material base color from model
-            material.data.float1 = mMaterial.baseColor;
+            material.baseColor = mMaterial.baseColor;
+
+            tinyHandle albHandle = linkHandle(mMaterial.albIndx, glbTexRHandle);
+            material.albTexture = albHandle;
+
+            tinyHandle nrmlHandle = linkHandle(mMaterial.nrmlIndx, glbTexRHandle);
+            material.nrmlTexture = nrmlHandle;
 
             tinyHandle fnHandle = fs_->createFile(mMaterial.name, std::move(material), fnMatFolder);
             tinyHandle dataHandle = fs_->dataHandle(fnHandle);
@@ -220,6 +226,15 @@ void tinyProject::setupResources() {
         // Add to tinyDrawable
         if (tinyDrawable* drawable = drawable_.get()) {
             drawable->addTexture(dataHandle);
+        }
+    };
+
+    atex->onDelete = [&](tinyHandle fileHandle, tinyFS& fs) {
+        tinyHandle dataHandle = fs.dataHandle(fileHandle);
+
+        // Remove from tinyDrawable
+        if (tinyDrawable* drawable = drawable_.get()) {
+            drawable->removeTexture(dataHandle);
         }
     };
 

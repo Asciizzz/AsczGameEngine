@@ -219,12 +219,14 @@ public:
         for (tinyHandle h : rmQueue) { 
             Node* node = fnodes_.get(h); // Queue ensures validity
 
-            TypeInfo* tInfo = typeInfo(node->data.tID());
+            tinyHandle dataHandle = node->data;
+
+            TypeInfo* tInfo = typeInfo(dataHandle.tID());
             if (tInfo && tInfo->onDelete) {
                 tInfo->onDelete(h, *this);
             }
             
-            r().erase(node->data);
+            r().erase(dataHandle);
 
             fnodes_.erase(h);
         }
@@ -252,7 +254,12 @@ public:
         // erase the node
         parentNode->eraseChild(nodeHandle);
 
+        TypeInfo* tInfo = typeInfo(node->data.tID());
+        if (tInfo && tInfo->onDelete) {
+            tInfo->onDelete(nodeHandle, *this);
+        }
         r().erase(node->data);
+
         fnodes_.erase(nodeHandle);
     }
 

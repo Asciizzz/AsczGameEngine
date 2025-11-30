@@ -76,11 +76,12 @@ void tinyApp::initComponents() {
     testCfg.renderPass = renderPass;
     testCfg
         .withDescriptorLayouts({
-            project->descSLayout_Global(),
-            project->drawable().vrtxExtLayout(),
-            project->drawable().matDescLayout(),
-            project->drawable().skinDescLayout(),
-            project->drawable().mrphWsDescLayout(), // Dynamic, based on instance
+            project->descSLayout_Global(), // Set 0
+            project->drawable().vrtxExtLayout(), // Set 1
+            project->drawable().matDescLayout(), // Set 2
+            project->drawable().texDescLayout(), // Set 3
+            project->drawable().skinDescLayout(), // Set 4
+            project->drawable().mrphWsDescLayout(), // Set 5
         })
         .withPushConstants(ShaderStage::VertexAndFragment, 0, 48) // 3 x uvec4
         .withShaders("Shaders/bin/Test/Test.vert.spv", "Shaders/bin/Test/Test.frag.spv")

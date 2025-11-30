@@ -233,16 +233,19 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
     VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
 
     // Runtime data
-    VkDescriptorSet glbSet = global->getDescSet();
+    VkDescriptorSet glbSet = global->getDescSet(); // Set 0
     uint32_t glbOffset = currentFrame * global->alignedSize;
-    
-    VkDescriptorSet matSet = draw.matDescSet();
+
+    VkDescriptorSet matSet = draw.matDescSet();    // Set 2
     uint32_t matOffset = draw.matOffset(currentFrame);
 
-    VkDescriptorSet skinSet = draw.skinDescSet();
+    VkDescriptorSet texSet = draw.texDescSet();    // Set 3
+    // Texture Set No offset needed, not dynamic
+
+    VkDescriptorSet skinSet = draw.skinDescSet();  // Set 4
     uint32_t skinOffset = draw.skinOffset(currentFrame);
 
-    VkDescriptorSet mrphWsSet = draw.mrphWsDescSet();
+    VkDescriptorSet mrphWsSet = draw.mrphWsDescSet(); // Set 5
     uint32_t mrphWsOffset = draw.mrphWsOffset(currentFrame);
 
     const auto& shaderGroups  = draw.shaderGroups();
@@ -261,8 +264,9 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
         // Bind runtime descriptor sets once
         pipeline->bindSets(currentCmd, 0, &glbSet, 1, &glbOffset, 1);
         pipeline->bindSets(currentCmd, 2, &matSet, 1, &matOffset, 1);
-        pipeline->bindSets(currentCmd, 3, &skinSet, 1, &skinOffset, 1);
-        pipeline->bindSets(currentCmd, 4, &mrphWsSet, 1, &mrphWsOffset, 1);
+        pipeline->bindSets(currentCmd, 3, &texSet, 1, nullptr, 0);
+        pipeline->bindSets(currentCmd, 4, &skinSet, 1, &skinOffset, 1);
+        pipeline->bindSets(currentCmd, 5, &mrphWsSet, 1, &mrphWsOffset, 1);
 
         // Bind instances once
         VkBuffer instaBuffers[] = { draw.instaBuffer() };

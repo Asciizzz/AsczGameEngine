@@ -88,9 +88,11 @@ layout (std430, set = 1, binding = 0) readonly buffer RigBuffer { Rig rigs[]; };
 layout (std430, set = 1, binding = 1) readonly buffer ColorBuffer { Color colors[]; };
 layout (std430, set = 1, binding = 2) readonly buffer MrphDltsBuffer { Mrph mrphDlts[]; };
 
+// Set 2 and 3 are for material and texture data (not used in this shader)
+
 // Runtime data buffers
-layout (std430, set = 3, binding = 0) readonly buffer SkinBuffer { mat4 skinData[];};
-layout (std430, set = 4, binding = 0) readonly buffer MrphWsBuffer { float mrphWs[]; };
+layout (std430, set = 4, binding = 0) readonly buffer SkinBuffer { mat4 skinData[]; };
+layout (std430, set = 5, binding = 0) readonly buffer MrphWsBuffer { float mrphWs[]; };
 
 uint relVrtxIndex() { // Relative vertex index within submesh
     return gl_VertexIndex - staticOffset();
@@ -173,7 +175,7 @@ void main() {
 
     mat3 normalMat = transpose(inverse(mat3(model)));
     fragNrml = normalMat * skinnedNormal;
-    fragUV = inPos_Tu.zw;
+    fragUV = vec2(inPos_Tu.w, inNrml_Tv.w);
     fragTangent = skinnedTangent;
 
     fragColor = vHasColor() ? colors[gl_VertexIndex + colorOffset()].color : vec4(1.0);
