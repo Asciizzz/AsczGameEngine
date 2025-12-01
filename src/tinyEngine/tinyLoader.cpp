@@ -438,64 +438,14 @@ static bool readDeltaAccessor(const tinygltf::Model& model, int accessorIdx, std
     const auto& accessor = model.accessors[accessorIdx];
     if (accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT) return false;
     if (accessor.type != TINYGLTF_TYPE_VEC3) return false;
-    
-    out.resize(accessor.count, glm::vec3(0.0f)); // Initialize with zeros
-    
-    // Handle sparse accessors (common for morph targets with mostly zero deltas)
-    if (accessor.sparse.isSparse) {
-        // Read sparse indices
-        const auto& indicesAccessor = accessor.sparse.indices;
-        const auto& indicesBV = model.bufferViews[indicesAccessor.bufferView];
-        const auto& indicesBuffer = model.buffers[indicesBV.buffer];
-        const uint8_t* indicesData = indicesBuffer.data.data() + indicesBV.byteOffset + indicesAccessor.byteOffset;
-        
-        // Read sparse values
-        const auto& valuesAccessor = accessor.sparse.values;
-        const auto& valuesBV = model.bufferViews[valuesAccessor.bufferView];
-        const auto& valuesBuffer = model.buffers[valuesBV.buffer];
-        const uint8_t* valuesData = valuesBuffer.data.data() + valuesBV.byteOffset + valuesAccessor.byteOffset;
-        
-        size_t count = accessor.sparse.count;
-        size_t valueStride = sizeof(float) * 3; // vec3
-        
-        for (size_t i = 0; i < count; ++i) {
-            // Read index based on component type
-            uint32_t idx = 0;
-            switch (indicesAccessor.componentType) {
-                case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
-                    idx = indicesData[i];
-                    break;
-                case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-                    idx = *reinterpret_cast<const uint16_t*>(indicesData + i * sizeof(uint16_t));
-                    break;
-                case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-                    idx = *reinterpret_cast<const uint32_t*>(indicesData + i * sizeof(uint32_t));
-                    break;
-                default:
-                    return false;
-            }
-            
-            if (idx >= out.size()) continue; // Skip invalid indices
-            
-            // Read vec3 value
-            const float* value = reinterpret_cast<const float*>(valuesData + i * valueStride);
-            out[idx] = glm::vec3(value[0], value[1], value[2]);
-        }
-        return true;
-    }
-    
-    // Handle regular (non-sparse) accessors
-    if (accessor.bufferView < 0 || accessor.bufferView >= static_cast<int>(model.bufferViews.size())) {
-        // No buffer view and not sparse = all zeros (valid for morph targets)
-        return true;
-    }
-    
+    if (accessor.bufferView < 0 || accessor.bufferView >= static_cast<int>(model.bufferViews.size())) return false;
     const auto& bufferView = model.bufferViews[accessor.bufferView];
     if (bufferView.buffer < 0 || bufferView.buffer >= static_cast<int>(model.buffers.size())) return false;
     const auto& buffer = model.buffers[bufferView.buffer];
 
     size_t stride = bufferView.byteStride ? bufferView.byteStride : sizeof(float) * 3;
     const unsigned char* data = buffer.data.data() + bufferView.byteOffset + accessor.byteOffset;
+    out.resize(accessor.count);
 
     for (size_t i = 0; i < accessor.count; ++i) {
         const float* elem = reinterpret_cast<const float*>(data + i * stride);
@@ -647,6 +597,7 @@ void loadMesh(tinyMesh& mesh, const tinygltf::Model& gltfModel, const tinygltf::
 
         // --- 6) Morph targets: read per-primitive targets into submesh.mrphTargets ---
 
+        printf("Primitive has %zu morph targets\n", primitive.targets.size());
         for (size_t tgtIdx = 0; tgtIdx < primitive.targets.size(); ++tgtIdx) {
             const auto& target = primitive.targets[tgtIdx];
 
@@ -686,14 +637,11 @@ void loadMesh(tinyMesh& mesh, const tinygltf::Model& gltfModel, const tinygltf::
             }
 
             // optional name from mesh.extras.targetNames (mesh-level)
-            if (gltfMesh.extras.Has("targetNames")) {
-                const auto& targetNames = gltfMesh.extras.Get("targetNames");
-                if (targetNames.IsArray() && tgtIdx < static_cast<size_t>(targetNames.ArrayLen())) {
-                    const auto& nameValue = targetNames.Get(static_cast<int>(tgtIdx));
-                    if (nameValue.IsString()) {
-                        mt.name = nameValue.Get<std::string>();
-                    }
-                }
+            if (tgtIdx < gltfMesh.extras.Get("targetNames").ArrayLen()) {
+                mt.name = gltfMesh.extras
+                            .Get("targetNames")
+                            .Get(static_cast<int>(tgtIdx))
+                            .Get<std::string>();
             }
             mt.name = checkString(mt.name, "morph", tgtIdx);
 
