@@ -446,7 +446,7 @@ private:
 static Editor::Tab CreateScriptEditorTab(const std::string& title, tinyHandle fHandle) {
     Editor::Tab tab;
     tab.title = title;
-    tab.color = ImVec4(0.4f, 0.6f, 0.3f, 0.2f); // Green color for scripts
+    tab.color = ImVec4(0.4f, 0.6f, 0.3f, 0.4f); // Green color for scripts
 
     // Initialize tab-specific state
     tab.setState<tinyHandle>("handle", fHandle);
@@ -618,7 +618,7 @@ static Editor::Tab CreateScriptEditorTab(const std::string& title, tinyHandle fH
 static Editor::Tab CreateSkeletonEditorTab(const std::string& title, tinyHandle nHandle) {
     Editor::Tab tab;
     tab.title = title;
-    tab.color = ImVec4(0.6f, 0.3f, 0.7f, 0.2f); // Purple color for skeletons
+    tab.color = ImVec4(0.6f, 0.3f, 0.7f, 0.4f); // Purple color for skeletons
     
     // Initialize tab-specific state
     tab.setState<tinyHandle>("handle", nHandle);
@@ -842,7 +842,7 @@ static Editor::Tab CreateSkeletonEditorTab(const std::string& title, tinyHandle 
 static Editor::Tab CreateMorphTargetEditorTab(const std::string& title, tinyHandle nHandle) {
     Editor::Tab tab;
     tab.title = title;
-    tab.color = ImVec4(0.8f, 0.5f, 0.3f, 0.2f); // Orange color for morph editor
+    tab.color = ImVec4(0.8f, 0.5f, 0.3f, 0.4f); // Orange color for morph editor
     
     // Initialize tab-specific state
     tab.setState<tinyHandle>("handle", nHandle);
