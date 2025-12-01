@@ -11,6 +11,12 @@
 #include <TextEditor.h>
 #include <algorithm>
 #include <cstring>
+#include <any>
+#include <functional>
+
+#include "tinyRT/rtTransform.hpp"
+#include "tinyRT/rtMesh.hpp"
+#include "tinyRT/rtSkeleton.hpp"
 
 using namespace tinyVk;
 
@@ -43,6 +49,13 @@ namespace Editor {
         std::string title;
         tinyHandle handle;
         tinyType::ID type;
+        ImVec4 color = ImVec4(0.2f, 0.5f, 0.8f, 1.0f); // Default blue color
+        
+        // Dynamic state storage - each tab can store any type of data
+        std::unordered_map<std::string, std::any> state;
+        
+        // Custom render function - each tab defines its own rendering logic
+        std::function<void(Tab&)> renderFunc;
 
         bool operator==(const Tab& o) const {
             return handle == o.handle && title == o.title && type == o.type;
@@ -51,6 +64,29 @@ namespace Editor {
         template<typename T>
         bool isType() const { return type == tinyType::TypeID<T>(); }
         bool isType(tinyType::ID tID) const { return type == tID; }
+        
+        // Helper methods to access state with type safety
+        template<typename T>
+        T* getState(const std::string& key) {
+            auto it = state.find(key);
+            if (it == state.end()) return nullptr;
+            try {
+                return std::any_cast<T>(&it->second);
+            } catch (const std::bad_any_cast&) {
+                return nullptr;
+            }
+        }
+        
+        template<typename T>
+        void setState(const std::string& key, const T& value) {
+            state[key] = value;
+        }
+        
+        template<typename T>
+        T getStateOr(const std::string& key, const T& defaultValue) {
+            T* ptr = getState<T>(key);
+            return ptr ? *ptr : defaultValue;
+        }
     };
 
     static std::vector<Tab> tabs;
@@ -69,9 +105,26 @@ namespace Editor {
         return tabs.size() - 1;
     }
 
-    const Tab* currentTab() {
+    Tab* currentTab() {
         if (tabs.empty() || selectedTab >= tabs.size()) return nullptr;
         return &tabs[selectedTab];
+    }
+    
+    void closeTab(size_t index) {
+        if (index >= tabs.size()) return;
+        
+        tabs.erase(tabs.begin() + index);
+        
+        // Adjust selectedTab to adjacent tab
+        if (tabs.empty()) {
+            selectedTab = 0;
+        } else if (selectedTab >= tabs.size()) {
+            selectedTab = tabs.size() - 1;
+        }
+        // If we closed a tab before the selected one, adjust the index
+        else if (index < selectedTab) {
+            selectedTab--;
+        }
     }
 }
 
@@ -376,6 +429,251 @@ private:
 };
 
 // ============================================================================
+// TAB CREATION HELPERS
+// ============================================================================
+
+static Editor::Tab CreateScriptEditorTab(const std::string& title, tinyHandle fHandle) {
+    Editor::Tab tab;
+    tab.title = title;
+    tab.type = tinyType::TypeID<tinyScript>();
+    tab.handle = fHandle;
+    tab.color = ImVec4(0.4f, 0.6f, 0.3f, 1.0f); // Green color for scripts
+    
+    // Initialize tab-specific state
+    tab.setState<Splitter>("splitter", Splitter());
+    tab.setState<tinyHandle>("lastScriptHandle", tinyHandle());
+    
+    // Define the custom render function for script editing
+    tab.renderFunc = [](Editor::Tab& self) {
+        tinyHandle fHandle = self.handle;
+        
+        tinyFS& fs = projRef->fs();
+        const tinyFS::Node* node = fs.fNode(fHandle);
+        if (!node) return;
+        
+        tinyHandle dHandle = fs.dataHandle(fHandle);
+        if (!dHandle.is<tinyScript>()) return;
+        
+        tinyScript* script = fs.rGet<tinyScript>(dHandle);
+        
+        // Load script into code editor if it changed
+        tinyHandle lastHandle = self.getStateOr<tinyHandle>("lastScriptHandle", tinyHandle());
+        if (script && !script->code.empty() && dHandle != lastHandle) {
+            self.setState<tinyHandle>("lastScriptHandle", dHandle);
+            CodeEditor::SetText(script->code);
+        }
+        
+        Splitter* split = self.getState<Splitter>("splitter");
+        if (!split) return;
+        
+        split->init(1);
+        split->directionSize = ImGui::GetContentRegionAvail().y;
+        split->calcRegionSizes();
+        
+        // Code editor
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
+        ImGui::BeginChild("CodeEditor", ImVec2(0, split->rSize(0)), true);
+        
+        tinyDebug& debug = script->debug();
+        
+        if (CodeEditor::IsTextChanged() && script) {
+            script->code = CodeEditor::GetText();
+        }
+        CodeEditor::Render(node->cname());
+        
+        ImGui::EndChild();
+        ImGui::PopStyleColor();
+        
+        split->render(0);
+        
+        // Debug console
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
+        ImGui::BeginChild("DebugTerminal", ImVec2(0, split->rSize(1)), true);
+        
+        ImGui::TextColored(ImVec4(0.6f, 0.6f, 1.0f, 1.0f), "Debug Console");
+        ImGui::SameLine();
+        if (ImGui::Button("Clear")) debug.clear();
+        ImGui::Separator();
+        
+        for (const auto& line : debug.logs()) {
+            ImGui::TextColored(ImVec4(line.color[0], line.color[1], line.color[2], 1.0f), "%s", line.c_str());
+        }
+        
+        ImGui::EndChild();
+        ImGui::PopStyleColor();
+    };
+    
+    return tab;
+}
+
+static Editor::Tab CreateSkeletonEditorTab(const std::string& title, tinyHandle nHandle) {
+    Editor::Tab tab;
+    tab.title = title;
+    tab.type = tinyType::TypeID<rtSKELE3D>();
+    tab.handle = nHandle;
+    tab.color = ImVec4(0.6f, 0.3f, 0.7f, 1.0f); // Purple color for skeletons
+    
+    // Initialize tab-specific state
+    tab.setState<Splitter>("splitter", Splitter());
+    tab.setState<int>("selectedBoneIndex", -1);
+    tab.setState<tinyHandle>("lastSkeletonHandle", tinyHandle());
+    tab.setState<glm::quat>("initialRotation", glm::quat());
+    tab.setState<bool>("isDraggingRotation", false);
+    tab.setState<glm::vec3>("displayEuler", glm::vec3(0.0f));
+    
+    // Define the custom render function for skeleton editing
+    tab.renderFunc = [&](Editor::Tab& self) {
+        rtScene* scene = sceneRef;
+        
+        tinyHandle nHandle = self.handle;
+        rtSKELE3D* skel3D = scene->nGetComp<rtSKELE3D>(nHandle);
+        if (!skel3D) return;
+        
+        const tinyFS& fs = projRef->fs();
+        
+        const tinySkeleton* skeleton = skel3D->rSkeleton();
+        if (!skeleton) return;
+        
+        // Get state from tab
+        int* selectedBoneIndex = self.getState<int>("selectedBoneIndex");
+        tinyHandle* lastSkeletonHandle = self.getState<tinyHandle>("lastSkeletonHandle");
+        if (!selectedBoneIndex || !lastSkeletonHandle) return;
+        
+        // Reset selection if skeleton changed
+        if (*lastSkeletonHandle != nHandle) {
+            *selectedBoneIndex = -1;
+            *lastSkeletonHandle = nHandle;
+        }
+        
+        Splitter* split = self.getState<Splitter>("splitter");
+        if (!split) return;
+        
+        split->init(1);
+        split->horizontal = false;
+        split->directionSize = ImGui::GetContentRegionAvail().x;
+        split->calcRegionSizes();
+        
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
+        ImGui::BeginChild("BoneHierarchy", ImVec2(split->rSize(0), 0), true);
+        
+        std::function<void(int)> renderBoneTree = [&](int boneIndex) {
+            if (boneIndex < 0 || boneIndex >= static_cast<int>(skeleton->bones.size())) return;
+            
+            const tinyBone& bone = skeleton->bones[boneIndex];
+            
+            ImGui::PushID(boneIndex);
+            
+            bool hasChildren = !bone.children.empty();
+            bool isSelected = (*selectedBoneIndex == boneIndex);
+            
+            ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
+            if (!hasChildren) {
+                flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+            }
+            if (isSelected) {
+                flags |= ImGuiTreeNodeFlags_Selected;
+            }
+            
+            std::string boneLabel = std::to_string(boneIndex) + ": " + bone.name;
+            bool nodeOpen = ImGui::TreeNodeEx(boneLabel.c_str(), flags);
+            
+            // Handle selection
+            if (ImGui::IsItemClicked()) {
+                *selectedBoneIndex = boneIndex;
+            }
+            
+            if (nodeOpen && hasChildren) {
+                for (int childIndex : bone.children) {
+                    renderBoneTree(childIndex);
+                }
+                ImGui::TreePop();
+            }
+            
+            ImGui::PopID();
+        };
+        
+        for (int i = 0; i < static_cast<int>(skeleton->bones.size()); ++i) {
+            if (skeleton->bones[i].parent == -1) {
+                renderBoneTree(i);
+            }
+        }
+        
+        ImGui::EndChild();
+        ImGui::PopStyleColor();
+        
+        ImGui::SameLine();
+        
+        split->render(0);
+        
+        ImGui::SameLine();
+        
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
+        ImGui::BeginChild("BoneTransformEditor", ImVec2(split->rSize(1), 0), true);
+        
+        if (*selectedBoneIndex >= 0 && *selectedBoneIndex < static_cast<int>(skeleton->bones.size())) {
+            const tinyBone& selectedBone = skeleton->bones[*selectedBoneIndex];
+            ImGui::Text("Bone: %d - %s", *selectedBoneIndex, selectedBone.name.c_str());
+            ImGui::Separator();
+            
+            glm::mat4& boneLocal = skel3D->localPose(*selectedBoneIndex);
+            
+            glm::vec3 translation, scale, skew;
+            glm::quat rotation;
+            glm::vec4 perspective;
+            glm::decompose(boneLocal, scale, rotation, translation, skew, perspective);
+            
+            // Helper to recompose after editing
+            auto recompose = [&]() {
+                glm::mat4 t = glm::translate(glm::mat4(1.0f), translation);
+                glm::mat4 r = glm::mat4_cast(rotation);
+                glm::mat4 s = glm::scale(glm::mat4(1.0f), scale);
+                boneLocal = t * r * s;
+            };
+            
+            glm::quat* initialRotation = self.getState<glm::quat>("initialRotation");
+            bool* isDraggingRotation = self.getState<bool>("isDraggingRotation");
+            glm::vec3* displayEuler = self.getState<glm::vec3>("displayEuler");
+            
+            if (!initialRotation || !isDraggingRotation || !displayEuler) return;
+            
+            if (!*isDraggingRotation) {
+                *displayEuler = glm::eulerAngles(rotation) * (180.0f / 3.14159265f);
+            }
+            
+            if (ImGui::DragFloat3("Translation", &translation.x, 0.1f)) recompose();
+            
+            if (ImGui::DragFloat3("Rotation", &displayEuler->x, 0.5f)) {
+                // Euler angle is a b*tch
+                if (!*isDraggingRotation) {
+                    *initialRotation = rotation;
+                    *isDraggingRotation = true;
+                }
+                glm::vec3 initialEuler = glm::eulerAngles(*initialRotation) * (180.0f / 3.14159265f);
+                glm::vec3 delta = *displayEuler - initialEuler;
+                rotation = *initialRotation * glm::quat(glm::radians(delta));
+                recompose();
+            }
+            
+            if (!ImGui::IsItemActive()) {
+                *isDraggingRotation = false;
+            }
+            
+            if (ImGui::DragFloat3("Scale", &scale.x, 0.1f)) recompose();
+            
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
+            if (ImGui::Button("Refresh", ImVec2(-1, 0))) skel3D->refresh(*selectedBoneIndex);
+            if (ImGui::Button("Refresh All", ImVec2(-1, 0))) skel3D->refresh(*selectedBoneIndex, true);
+            ImGui::PopStyleColor();
+        }
+        
+        ImGui::EndChild();
+        ImGui::PopStyleColor();
+    };
+    
+    return tab;
+}
+
+// ============================================================================
 // Node Tree Rendering Abstraction
 // ============================================================================
 
@@ -463,11 +761,6 @@ static void RenderGenericNodeHierarchy(
 // ============================================================================
 // HIERARCHY WINDOW - Scene & File Trees
 // ============================================================================
-
-
-#include "tinyRT/rtTransform.hpp"
-#include "tinyRT/rtMesh.hpp"
-#include "tinyRT/rtSkeleton.hpp"
 
 static void RenderSceneNodeHierarchy() {
     rtScene* scene = sceneRef;
@@ -777,11 +1070,7 @@ static void RenderFileNodeHierarchy() {
                 State::sceneHandle = dHandle;
             // Script file -> open code editor
             } else if (dHandle.is<tinyScript>()) {
-                Editor::Tab tab;
-                tab.title = node->name;
-                tab.type = tinyType::TypeID<tinyScript>();
-                tab.handle = h;
-                Editor::addTab(tab);
+                Editor::addTab(CreateScriptEditorTab(node->name, h));
             }
         },
         // Hover
@@ -1041,15 +1330,9 @@ static void RenderSKEL3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle) {
 
     // For the time being just open the editor
     if (ImGui::Button("Open Runtime Skeleton Editor", ImVec2(-1, 0))) {
-        // Editor::selected = nHandle;
-        // Editor::what = "SKEL3D";
-
-        Editor::Tab tab;
-        tab.title = scene->nName(nHandle) + " - Skeleton";
-        tab.type = tinyType::TypeID<rtSKELE3D>();
-        tab.handle = nHandle;
-        Editor::addTab(tab);
-
+        std::string handle = "[" + std::to_string(nHandle.idx()) + ", " + std::to_string(nHandle.ver()) + "]";
+        std::string title = scene->nName(nHandle) + " " + handle + " - Skeleton";
+        Editor::addTab(CreateSkeletonEditorTab(title, nHandle));
     }
 }
 
@@ -1398,11 +1681,7 @@ static void RenderFileInspector(tinyProject* project) {
         // A button to open editor (overrides the editorSelection)
 
         if (ImGui::Button("Open in Editor", ImVec2(-1, 0))) {
-            Editor::addTab({
-                node->name,
-                tinyType::TypeID<tinyScript>(),
-                handle
-            });
+            Editor::addTab(CreateScriptEditorTab(node->name, handle));
         }
     } else if (dHandle.is<tinyTexture>()) {
         tinyTexture* texture = fs.rGet<tinyTexture>(dHandle);
@@ -1416,229 +1695,6 @@ static void RenderInspector(tinyProject* project) {
     RenderFileInspector(project);
 }
 
-
-// ============================================================================
-// EDITOR WINDOWS RENDERING
-// ============================================================================
-
-static void RenderScriptEditor() {
-    const Editor::Tab* tab = Editor::currentTab();
-    if (!tab || !tab->isType<tinyScript>()) return;
-
-    tinyHandle fHandle = tab->handle;
-
-    tinyFS& fs = projRef->fs();
-    const tinyFS::Node* node = fs.fNode(fHandle);
-    if (!node) return;
-
-    tinyHandle dHandle = fs.dataHandle(fHandle);
-    if (!dHandle.is<tinyScript>()) return;
-
-    tinyScript* script = fs.rGet<tinyScript>(dHandle);
-
-    if (script && !script->code.empty() && dHandle != CodeEditor::currentScriptHandle) {
-        CodeEditor::currentScriptHandle = dHandle;
-        CodeEditor::SetText(script->code);
-    }
-
-    static Splitter split;
-    split.init(1);
-    split.directionSize = ImGui::GetContentRegionAvail().y;
-    split.calcRegionSizes();
-
-    // Code editor
-    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
-    ImGui::BeginChild("CodeEditor", ImVec2(0, split.rSize(0)), true);
-    
-    tinyDebug& debug = script->debug();
-
-    ImGui::TextColored(ImVec4(0.6f, 0.6f, 1.0f, 1.0f), "Script: %s", node->cname());
-    ImGui::SameLine();
-    if (script->valid()) {
-        ImGui::TextColored(ImVec4(0.2f, 0.8f, 0.2f, 1.0f), "[Compiled v%u]", script->version());
-    } else if (debug.empty()) {
-        ImGui::TextColored(ImVec4(0.9f, 0.5f, 0.2f, 1.0f), "[Not Compiled]");
-    } else {
-        ImGui::TextColored(ImVec4(0.9f, 0.2f, 0.2f, 1.0f), "[Compilation Error]");
-    }
-    ImGui::SameLine();
-
-    if (ImGui::Button("Compile")) script->compile();
-
-    ImGui::Separator();
-
-    if (CodeEditor::IsTextChanged() && script) {
-        script->code = CodeEditor::GetText();
-    }
-    CodeEditor::Render(node->cname());
-
-    ImGui::EndChild();
-    ImGui::PopStyleColor();
-
-    split.render(0);
-
-    // Debug console
-    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
-    ImGui::BeginChild("DebugTerminal", ImVec2(0, split.rSize(1)), true);
-
-    ImGui::TextColored(ImVec4(0.6f, 0.6f, 1.0f, 1.0f), "Debug Console");
-    ImGui::SameLine();
-    if (ImGui::Button("Clear")) debug.clear();
-    ImGui::Separator();
-
-    for (const auto& line : debug.logs()) {
-        ImGui::TextColored(ImVec4(line.color[0], line.color[1], line.color[2], 1.0f), "%s", line.c_str());
-    }
-
-    ImGui::EndChild();
-    ImGui::PopStyleColor();
-}
-
-static void RenderSkeleNodeEditor() {
-    const Editor::Tab* tab = Editor::currentTab();
-    if (!tab || !tab->isType<rtSKELE3D>()) return;
-
-    rtScene* scene = sceneRef;
-
-    tinyHandle nHandle = tab->handle;
-    rtSKELE3D* skel3D = scene->nGetComp<rtSKELE3D>(nHandle);
-    if (!skel3D) return;
-
-    const tinyFS& fs = projRef->fs();
-
-    const tinySkeleton* skeleton = skel3D->rSkeleton();
-    if (!skeleton) return;
-
-    // Static variables for bone selection
-    static int selectedBoneIndex = -1;
-    static tinyHandle lastSkeletonHandle;
-
-    // Reset selection if skeleton changed
-    if (lastSkeletonHandle != nHandle) {
-        selectedBoneIndex = -1;
-        lastSkeletonHandle = nHandle;
-    }
-
-    static Splitter split; // Vertical splitter (trying out something new!)
-    split.init(1);
-    split.horizontal = false;
-    split.directionSize = ImGui::GetContentRegionAvail().x;
-    split.calcRegionSizes();
-
-    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
-    ImGui::BeginChild("BoneHierarchy", ImVec2(split.rSize(0), 0), true);
-
-    std::function<void(int)> renderBoneTree = [&](int boneIndex) {
-        if (boneIndex < 0 || boneIndex >= static_cast<int>(skeleton->bones.size())) return;
-
-        const tinyBone& bone = skeleton->bones[boneIndex];
-
-        ImGui::PushID(boneIndex);
-
-        bool hasChildren = !bone.children.empty();
-        bool isSelected = (selectedBoneIndex == boneIndex);
-
-        ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
-        if (!hasChildren) {
-            flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
-        }
-        if (isSelected) {
-            flags |= ImGuiTreeNodeFlags_Selected;
-        }
-
-        std::string boneLabel = std::to_string(boneIndex) + ": " + bone.name;
-        bool nodeOpen = ImGui::TreeNodeEx(boneLabel.c_str(), flags);
-
-        // Handle selection
-        if (ImGui::IsItemClicked()) {
-            selectedBoneIndex = boneIndex;
-        }
-
-        if (nodeOpen && hasChildren) {
-            for (int childIndex : bone.children) {
-                renderBoneTree(childIndex);
-            }
-            ImGui::TreePop();
-        }
-
-        ImGui::PopID();
-    };
-
-    for (int i = 0; i < static_cast<int>(skeleton->bones.size()); ++i) {
-        if (skeleton->bones[i].parent == -1) {
-            renderBoneTree(i);
-        }
-    }
-
-    ImGui::EndChild();
-    ImGui::PopStyleColor();
-
-    ImGui::SameLine();
-
-    split.render(0);
-
-    ImGui::SameLine();
-
-    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
-    ImGui::BeginChild("BoneTransformEditor", ImVec2(split.rSize(1), 0), true);
-
-    if (selectedBoneIndex >= 0 && selectedBoneIndex < static_cast<int>(skeleton->bones.size())) {
-        ImGui::Separator();
-        const tinyBone& selectedBone = skeleton->bones[selectedBoneIndex];
-        ImGui::Text("Selected Bone: %d - %s", selectedBoneIndex, selectedBone.name.c_str());
-
-        glm::mat4& boneLocal = skel3D->localPose(selectedBoneIndex);
-
-        glm::vec3 translation, scale, skew;
-        glm::quat rotation;
-        glm::vec4 perspective;
-        glm::decompose(boneLocal, scale, rotation, translation, skew, perspective);
-
-        // Helper to recompose after editing
-        auto recompose = [&]() {
-            glm::mat4 t = glm::translate(glm::mat4(1.0f), translation);
-            glm::mat4 r = glm::mat4_cast(rotation);
-            glm::mat4 s = glm::scale(glm::mat4(1.0f), scale);
-            boneLocal = t * r * s;
-        };
-
-        static glm::quat initialRotation;
-        static bool isDraggingRotation = false;
-        static glm::vec3 displayEuler;
-
-        if (!isDraggingRotation) {
-            displayEuler = glm::eulerAngles(rotation) * (180.0f / 3.14159265f);
-        }
-
-        if (ImGui::DragFloat3("Translation", &translation.x, 0.1f)) recompose();
-
-        if (ImGui::DragFloat3("Rotation", &displayEuler.x, 0.5f)) {
-            // Euler angle is a b*tch
-            if (!isDraggingRotation) {
-                initialRotation = rotation;
-                isDraggingRotation = true;
-            }
-            glm::vec3 initialEuler = glm::eulerAngles(initialRotation) * (180.0f / 3.14159265f);
-            glm::vec3 delta = displayEuler - initialEuler;
-            rotation = initialRotation * glm::quat(glm::radians(delta));
-            recompose();
-        }
-
-        if (!ImGui::IsItemActive()) {
-            isDraggingRotation = false;
-        }
-
-        if (ImGui::DragFloat3("Scale", &scale.x, 0.1f)) recompose();
-
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
-        if (ImGui::Button("Refresh", ImVec2(-1, 0))) skel3D->refresh(selectedBoneIndex);
-        if (ImGui::Button("Refresh All", ImVec2(-1, 0))) skel3D->refresh(selectedBoneIndex, true);
-        ImGui::PopStyleColor();
-    }
-
-    ImGui::EndChild();
-    ImGui::PopStyleColor();
-}
 
 // ============================================================================
 // MAIN UI RENDERING FUNCTION
@@ -1790,30 +1846,67 @@ void tinyApp::renderUI() {
         tinyUI::End();
     }
 
-    if (tinyUI::Begin("Editor", nullptr, ImGuiWindowFlags_NoCollapse)) {
-        // RenderScriptEditor();
-        // RenderSkeleNodeEditor();
-
+    if (tinyUI::Begin("Editor", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar)) {
         // Draw the tabs
 
         size_t currentTab = Editor::selectedTab;
 
-        // Draw a window (with x scroll) for the tabs (scroll bar always visible)
-
+        // Calculate tab bar height with proper spacing to avoid vertical scrollbar
+        float tabBarHeight = 32.0f;
+        
+        // Draw a child window for tabs with horizontal scroll only
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0)); // Transparent background
-        ImGui::BeginChild("Tabs", ImVec2(0, 30), false, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_NoMove);
+        ImGui::BeginChild("Tabs", ImVec2(0, tabBarHeight), false, ImGuiWindowFlags_HorizontalScrollbar);
 
+        // Handle mouse wheel scrolling for horizontal scroll
+        if (ImGui::IsWindowHovered() && ImGui::GetIO().MouseWheel != 0.0f) {
+            float scrollAmount = -ImGui::GetIO().MouseWheel * 20.0f;
+            ImGui::SetScrollX(ImGui::GetScrollX() + scrollAmount);
+        }
+
+        int tabToClose = -1;
         for (size_t i = 0; i < Editor::tabs.size(); ++i) {
-            // Draw the tabs button (blue if selected, gray if not)
             const Editor::Tab& tab = Editor::tabs[i];
             ImGui::PushID(static_cast<int>(i));
 
-            ImVec4 tabColor = (i == currentTab) ? ImVec4(0.2f, 0.5f, 0.8f, 1.0f) : ImVec4(0.3f, 0.3f, 0.3f, 1.0f);
+            // Use tab's custom color if selected, otherwise gray
+            ImVec4 tabColor = (i == currentTab) ? tab.color : ImVec4(0.3f, 0.3f, 0.3f, 1.0f);
             ImGui::PushStyleColor(ImGuiCol_Button, tabColor);
-            if (ImGui::Button(tab.title.c_str())) {
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(tabColor.x * 1.2f, tabColor.y * 1.2f, tabColor.z * 1.2f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(tabColor.x * 0.8f, tabColor.y * 0.8f, tabColor.z * 0.8f, 1.0f));
+            
+            // Create button label with integrated close button
+            std::string label = tab.title + "  x";
+            ImVec2 textSize = ImGui::CalcTextSize(label.c_str());
+            
+            if (ImGui::Button(label.c_str())) {
                 Editor::selectedTab = i;
             }
-            ImGui::PopStyleColor();
+            
+            // Check if close button (x) was clicked
+            if (ImGui::IsItemHovered()) {
+                ImVec2 buttonMin = ImGui::GetItemRectMin();
+                ImVec2 buttonMax = ImGui::GetItemRectMax();
+                ImVec2 mousePos = ImGui::GetMousePos();
+                
+                // Close button is in the right portion of the tab
+                float closeButtonWidth = ImGui::CalcTextSize(" x").x + 10.0f;
+                if (mousePos.x > buttonMax.x - closeButtonWidth && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+                    tabToClose = static_cast<int>(i);
+                }
+                
+                // Draw darker overlay on close button area when hovering
+                if (mousePos.x > buttonMax.x - closeButtonWidth) {
+                    ImDrawList* drawList = ImGui::GetWindowDrawList();
+                    drawList->AddRectFilled(
+                        ImVec2(buttonMax.x - closeButtonWidth, buttonMin.y),
+                        buttonMax,
+                        IM_COL32(0, 0, 0, 60)
+                    );
+                }
+            }
+            
+            ImGui::PopStyleColor(3);
             ImGui::PopID();
 
             if (i < Editor::tabs.size() - 1) ImGui::SameLine();
@@ -1821,9 +1914,19 @@ void tinyApp::renderUI() {
 
         ImGui::EndChild();
         ImGui::PopStyleColor();
+        
+        // Close tab after iteration to avoid iterator invalidation
+        if (tabToClose >= 0) {
+            Editor::closeTab(static_cast<size_t>(tabToClose));
+        }
 
-        RenderScriptEditor();
-        RenderSkeleNodeEditor();
+        // Render the current tab using its custom render function (no header)
+        Editor::Tab* tab = Editor::currentTab();
+        if (tab && tab->renderFunc) {
+            tab->renderFunc(*tab);
+        } else if (tab) {
+            ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.2f, 1.0f), "No render function defined for this tab.");
+        }
 
         tinyUI::End();
     }
