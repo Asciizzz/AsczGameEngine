@@ -399,21 +399,34 @@ void tinyDrawable::submit(const Entry& entry) noexcept {
         instaData.other.y = skinRange.skinCount;
     }
 
-    // If mesh has morph targets
+    // If mesh has morph targets (node-level, each node has its own morph weights)
     const Entry::MorphData& morphData = entry.morphData;
-    if (morphData.weights && !morphData.weights->empty() && morphData.count > 0) {
-        uint32_t thisCount = morphData.count;
-        uint32_t thisOffset = morphData.offset;
+    if (morphData.weights && !morphData.weights->empty()) {
+        tinyHandle nodeHandle = entry.morphData.node;
 
-        size_t mrphWsDataSize = thisCount * sizeof(float);
-        size_t mrphWsDataOffset = mrphWsCount_ * sizeof(float) + mrphWsOffset(frameIndex_);
+        // Check if we've already copied this node's morph weights
+        auto mrphIt = dataMap_.find(nodeHandle);
+        if (mrphIt == dataMap_.end()) {
+            uint32_t thisCount = static_cast<uint32_t>(morphData.weights->size());
+
+            // Copy this node's morph weight array
+            size_t mrphWsDataSize = thisCount * sizeof(float);
+            size_t mrphWsDataOffset = mrphWsCount_ * sizeof(float) + mrphWsOffset(frameIndex_);
+            mrphWsBuffer_.copyData(morphData.weights->data(), mrphWsDataSize, mrphWsDataOffset);
+            
+            // Store the offset for this node
+            dataMap_[nodeHandle] = mrphWsCount_;
+            mrphIt = dataMap_.find(nodeHandle);
+
+            mrphWsCount_ += thisCount;
+        }
         
-        // Only copy slice of the weights vector
-        mrphWsBuffer_.copyData(morphData.weights->data() + thisOffset, mrphWsDataSize, mrphWsDataOffset);
-
-        instaData.other.z = mrphWsCount_;
-        instaData.other.w = thisCount;
-        mrphWsCount_ += thisCount;
+        // All submeshes of this node reference the same morph weights
+        uint32_t mrphOffset = mrphIt->second;
+        uint32_t mrphCount = static_cast<uint32_t>(morphData.weights->size());
+        
+        instaData.other.z = mrphOffset;
+        instaData.other.w = mrphCount;
     }
 
     submeshGroup.push(instaData);

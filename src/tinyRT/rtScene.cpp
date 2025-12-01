@@ -217,6 +217,7 @@ void Scene::update(FrameStart frameStart) noexcept {
                     tinyDrawable::Entry entry;
                     entry.mesh = meshRD3D->meshHandle();
                     entry.submesh = subIdx;
+
                     entry.model = currentWorld;
 
                     if (skinData) {
@@ -224,10 +225,9 @@ void Scene::update(FrameStart frameStart) noexcept {
                         entry.skeleData.skinData = skinData;
                     }
 
-                    if (subMorph && subMorph->count > 0) {
+                    if (!meshRD3D->mrphWeights().empty()) {
+                        entry.morphData.node = nHandle;
                         entry.morphData.weights = &meshRD3D->mrphWeights();
-                        entry.morphData.offset = subMorph->offset;
-                        entry.morphData.count  = subMorph->count;
                     }
 
                     draw.submit(entry);

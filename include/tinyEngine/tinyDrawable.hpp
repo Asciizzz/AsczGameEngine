@@ -55,7 +55,7 @@ public:
 
         inline tinyHandle hash() const {
             tinyHandle h{};
-            uint64_t x = mesh.value;
+            uint64_t x = mesh.raw();
 
             // A simple 64-bit mixing function (very cheap, very good)
             x ^= uint64_t(submesh) + 0x9e3779b97f4a7c15ULL + (x << 6) + (x >> 2);
@@ -66,15 +66,16 @@ public:
 
         glm::mat4 model = glm::mat4(1.0f);
 
+        // Additional data
+
         struct SkeleData { // Can be shared among multiple entries
             tinyHandle skeleNode; // Cache this handle
             const std::vector<glm::mat4>* skinData = nullptr;
         } skeleData;
 
-        struct MorphData { // Unique per entry
+        struct MorphData { // Mesh-level morph weights
+            tinyHandle node; // For morph grouping
             const std::vector<float>* weights = nullptr;
-            uint32_t offset = 0;
-            uint32_t count  = 0;
         } morphData;
     };
 
