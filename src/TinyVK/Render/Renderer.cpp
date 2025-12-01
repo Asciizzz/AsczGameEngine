@@ -259,8 +259,6 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
         tinyHandle shaderHandle = shaderGroup.shader;
         const PipelineRaster* pipeline = testPipeline;
 
-        printf("Shader\n");
-
         pipeline->bindCmd(currentCmd);
 
         // Bind runtime descriptor sets once
@@ -277,8 +275,6 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
 
         for (const auto& meshGroupIdx : shaderGroup.meshGroupIndices) {
             const auto& meshGroup = meshGroups[meshGroupIdx];
-
-            printf("  Mesh\n");
 
             const auto* rMesh = sharedRes.fsGet<tinyMesh>(meshGroup.mesh);
             if (!rMesh) continue; // Should not happen
@@ -299,8 +295,6 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
 
             for (const auto& submeshGroupIdx : meshGroup.submeshGroupIndices) {
                 const auto& submeshGroup = submeshGroups[submeshGroupIdx];
-
-                printf("    Submesh\n");
 
                 const auto* submesh = rMesh->submesh(submeshGroup.submesh);
                 if (!submesh) continue; // Should not happen hopefully
