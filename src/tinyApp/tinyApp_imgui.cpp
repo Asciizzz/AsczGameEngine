@@ -47,8 +47,6 @@ namespace State {
 namespace Editor {
     struct Tab {
         std::string title;
-        tinyHandle handle;
-        tinyType::ID type;
         ImVec4 color = ImVec4(0.2f, 0.5f, 0.8f, 1.0f); // Default blue color
         
         // Dynamic state storage - each tab can store any type of data
@@ -57,6 +55,9 @@ namespace Editor {
         // Custom render function - each tab defines its own rendering logic
         std::function<void(Tab&)> renderFunc;
         
+        // Optional select callback - called when tab becomes active
+        std::function<void(Tab&)> selectFunc;
+        
         // Optional context menu callback - called when right-clicking on tab
         std::function<void(Tab&)> contextMenuFunc;
         
@@ -64,12 +65,8 @@ namespace Editor {
         std::function<void(Tab&)> hoverFunc;
 
         bool operator==(const Tab& o) const {
-            return handle == o.handle && title == o.title && type == o.type;
+            return title == o.title;
         }
-
-        template<typename T>
-        bool isType() const { return type == tinyType::TypeID<T>(); }
-        bool isType(tinyType::ID tID) const { return type == tID; }
         
         // Helper methods to access state with type safety
         template<typename T>
@@ -101,13 +98,21 @@ namespace Editor {
     size_t addTab(Tab tab, bool select = true) {
         for (size_t i = 0; i < tabs.size(); ++i) {
             if (tabs[i] == tab) {
-                if (select) selectedTab = i;
+                if (select) {
+                    selectedTab = i;
+                    if (tabs[i].selectFunc) {
+                        tabs[i].selectFunc(tabs[i]);
+                    }
+                }
                 return i;
             }
         }
 
         if (select) selectedTab = tabs.size();
         tabs.push_back(tab);
+        if (select && tabs.back().selectFunc) {
+            tabs.back().selectFunc(tabs.back());
+        }
         return tabs.size() - 1;
     }
 
@@ -441,17 +446,39 @@ private:
 static Editor::Tab CreateScriptEditorTab(const std::string& title, tinyHandle fHandle) {
     Editor::Tab tab;
     tab.title = title;
-    tab.type = tinyType::TypeID<tinyScript>();
-    tab.handle = fHandle;
-    tab.color = ImVec4(0.4f, 0.6f, 0.3f, 1.0f); // Green color for scripts
-    
+    tab.color = ImVec4(0.4f, 0.6f, 0.3f, 0.2f); // Green color for scripts
+
     // Initialize tab-specific state
+    tab.setState<tinyHandle>("handle", fHandle);
+    tab.setState<tinyType::ID>("type", tinyType::TypeID<tinyScript>());
     tab.setState<Splitter>("splitter", Splitter());
     tab.setState<tinyHandle>("lastScriptHandle", tinyHandle());
     tab.setState<bool>("horizontal", true);
     
+    // Define select function - called when tab becomes active
+    tab.selectFunc = [](Editor::Tab& self) {
+        tinyHandle* fHandlePtr = self.getState<tinyHandle>("handle");
+        if (!fHandlePtr) return;
+        tinyHandle fHandle = *fHandlePtr;
+        
+        tinyFS& fs = projRef->fs();
+        const tinyFS::Node* node = fs.fNode(fHandle);
+        if (!node) return;
+        
+        tinyHandle dHandle = fs.dataHandle(fHandle);
+        if (!dHandle.is<tinyScript>()) return;
+        
+        tinyScript* script = fs.rGet<tinyScript>(dHandle);
+        if (script && !script->code.empty()) {
+            CodeEditor::SetText(script->code);
+        }
+    };
+    
     // Define context menu for script tab
-    tab.contextMenuFunc = [fHandle](Editor::Tab& self) {
+    tab.contextMenuFunc = [](Editor::Tab& self) {
+        tinyHandle* fHandlePtr = self.getState<tinyHandle>("handle");
+        if (!fHandlePtr) return;
+        tinyHandle fHandle = *fHandlePtr;
         tinyFS& fs = projRef->fs();
         const tinyFS::Node* node = fs.fNode(fHandle);
         if (!node) return;
@@ -484,13 +511,27 @@ static Editor::Tab CreateScriptEditorTab(const std::string& title, tinyHandle fH
     };
     
     // Define hover tooltip for script tab
-    tab.hoverFunc = [fHandle](Editor::Tab& self) {
+    tab.hoverFunc = [](Editor::Tab& self) {
+        tinyHandle* fHandlePtr = self.getState<tinyHandle>("handle");
+        if (!fHandlePtr) return;
+        tinyHandle fHandle = *fHandlePtr;
+        
         tinyFS& fs = projRef->fs();
         const tinyFS::Node* node = fs.fNode(fHandle);
         if (!node) return;
         
         ImGui::BeginTooltip();
         ImGui::Text("Script: %s", node->cname());
+
+        ImGui::Separator();
+        
+        // Display file path
+        const char* fullPath = fs.path(fHandle);
+        if (fullPath) {
+            ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Path: %s", fullPath);
+        }
+        
+        ImGui::Separator();
         
         tinyHandle dHandle = fs.dataHandle(fHandle);
         tinyScript* script = fs.rGet<tinyScript>(dHandle);
@@ -508,7 +549,9 @@ static Editor::Tab CreateScriptEditorTab(const std::string& title, tinyHandle fH
     
     // Define the custom render function for script editing
     tab.renderFunc = [](Editor::Tab& self) {
-        tinyHandle fHandle = self.handle;
+        tinyHandle* fHandlePtr = self.getState<tinyHandle>("handle");
+        if (!fHandlePtr) return;
+        tinyHandle fHandle = *fHandlePtr;
         
         tinyFS& fs = projRef->fs();
         const tinyFS::Node* node = fs.fNode(fHandle);
@@ -518,13 +561,6 @@ static Editor::Tab CreateScriptEditorTab(const std::string& title, tinyHandle fH
         if (!dHandle.is<tinyScript>()) return;
         
         tinyScript* script = fs.rGet<tinyScript>(dHandle);
-        
-        // Load script into code editor if it changed
-        tinyHandle lastHandle = self.getStateOr<tinyHandle>("lastScriptHandle", tinyHandle());
-        if (script && !script->code.empty() && dHandle != lastHandle) {
-            self.setState<tinyHandle>("lastScriptHandle", dHandle);
-            CodeEditor::SetText(script->code);
-        }
         
         Splitter* split = self.getState<Splitter>("splitter");
         if (!split) return;
@@ -582,11 +618,11 @@ static Editor::Tab CreateScriptEditorTab(const std::string& title, tinyHandle fH
 static Editor::Tab CreateSkeletonEditorTab(const std::string& title, tinyHandle nHandle) {
     Editor::Tab tab;
     tab.title = title;
-    tab.type = tinyType::TypeID<rtSKELE3D>();
-    tab.handle = nHandle;
-    tab.color = ImVec4(0.6f, 0.3f, 0.7f, 1.0f); // Purple color for skeletons
+    tab.color = ImVec4(0.6f, 0.3f, 0.7f, 0.2f); // Purple color for skeletons
     
     // Initialize tab-specific state
+    tab.setState<tinyHandle>("handle", nHandle);
+    tab.setState<tinyType::ID>("type", tinyType::TypeID<rtSKELE3D>());
     tab.setState<Splitter>("splitter", Splitter());
     tab.setState<int>("selectedBoneIndex", -1);
     tab.setState<tinyHandle>("lastSkeletonHandle", tinyHandle());
@@ -595,7 +631,11 @@ static Editor::Tab CreateSkeletonEditorTab(const std::string& title, tinyHandle 
     tab.setState<glm::vec3>("displayEuler", glm::vec3(0.0f));
     
     // Define context menu for skeleton tab
-    tab.contextMenuFunc = [nHandle](Editor::Tab& self) {
+    tab.contextMenuFunc = [](Editor::Tab& self) {
+        tinyHandle* nHandlePtr = self.getState<tinyHandle>("handle");
+        if (!nHandlePtr) return;
+        tinyHandle nHandle = *nHandlePtr;
+        
         rtScene* scene = sceneRef;
         rtSKELE3D* skel3D = scene->nGetComp<rtSKELE3D>(nHandle);
         if (!skel3D) return;
@@ -620,7 +660,11 @@ static Editor::Tab CreateSkeletonEditorTab(const std::string& title, tinyHandle 
     };
     
     // Define hover tooltip for skeleton tab
-    tab.hoverFunc = [nHandle](Editor::Tab& self) {
+    tab.hoverFunc = [](Editor::Tab& self) {
+        tinyHandle* nHandlePtr = self.getState<tinyHandle>("handle");
+        if (!nHandlePtr) return;
+        tinyHandle nHandle = *nHandlePtr;
+        
         rtScene* scene = sceneRef;
         rtSKELE3D* skel3D = scene->nGetComp<rtSKELE3D>(nHandle);
         if (!skel3D) return;
@@ -632,6 +676,7 @@ static Editor::Tab CreateSkeletonEditorTab(const std::string& title, tinyHandle 
         
         ImGui::BeginTooltip();
         ImGui::Text("Skeleton Editor");
+        ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Node: [%u, %u]", nHandle.idx(), nHandle.ver());
         ImGui::Separator();
         ImGui::Text("Bones: %zu", skeleton->bones.size());
         if (selectedBoneIndex && *selectedBoneIndex >= 0) {
@@ -642,9 +687,11 @@ static Editor::Tab CreateSkeletonEditorTab(const std::string& title, tinyHandle 
     
     // Define the custom render function for skeleton editing
     tab.renderFunc = [&](Editor::Tab& self) {
-        rtScene* scene = sceneRef;
+        tinyHandle* nHandlePtr = self.getState<tinyHandle>("handle");
+        if (!nHandlePtr) return;
+        tinyHandle nHandle = *nHandlePtr;
         
-        tinyHandle nHandle = self.handle;
+        rtScene* scene = sceneRef;
         rtSKELE3D* skel3D = scene->nGetComp<rtSKELE3D>(nHandle);
         if (!skel3D) return;
         
@@ -783,6 +830,252 @@ static Editor::Tab CreateSkeletonEditorTab(const std::string& title, tinyHandle 
             if (ImGui::Button("Refresh", ImVec2(-1, 0))) skel3D->refresh(*selectedBoneIndex);
             if (ImGui::Button("Refresh All", ImVec2(-1, 0))) skel3D->refresh(*selectedBoneIndex, true);
             ImGui::PopStyleColor();
+        }
+        
+        ImGui::EndChild();
+        ImGui::PopStyleColor();
+    };
+    
+    return tab;
+}
+
+static Editor::Tab CreateMorphTargetEditorTab(const std::string& title, tinyHandle nHandle) {
+    Editor::Tab tab;
+    tab.title = title;
+    tab.color = ImVec4(0.8f, 0.5f, 0.3f, 0.2f); // Orange color for morph editor
+    
+    // Initialize tab-specific state
+    tab.setState<tinyHandle>("handle", nHandle);
+    tab.setState<tinyType::ID>("type", tinyType::TypeID<rtMESHRD3D>());
+    tab.setState<Splitter>("splitter", Splitter());
+    tab.setState<std::string>("searchFilter", std::string());
+    tab.setState<float>("weightMin", -1.0f);
+    tab.setState<float>("weightMax", 1.0f);
+    tab.setState<bool>("enableWeightFilter", false);
+    
+    // Define select function
+    tab.selectFunc = [](Editor::Tab& self) {
+        // Nothing special needed for morph editor on select
+    };
+    
+    // Define context menu
+    tab.contextMenuFunc = [](Editor::Tab& self) {
+        tinyHandle* nHandlePtr = self.getState<tinyHandle>("handle");
+        if (!nHandlePtr) return;
+        tinyHandle nHandle = *nHandlePtr;
+        
+        rtScene* scene = sceneRef;
+        rtMESHRD3D* meshRD = scene->nGetComp<rtMESHRD3D>(nHandle);
+        if (!meshRD) return;
+        
+        if (ImGui::MenuItem("Reset All Weights")) {
+            std::vector<float>& weights = meshRD->mrphWeights();
+            for (float& w : weights) w = 0.0f;
+        }
+        
+        ImGui::Separator();
+        ImGui::Text("Morph Count: %zu", meshRD->mrphWeights().size());
+    };
+    
+    // Define hover tooltip
+    tab.hoverFunc = [](Editor::Tab& self) {
+        tinyHandle* nHandlePtr = self.getState<tinyHandle>("handle");
+        if (!nHandlePtr) return;
+        tinyHandle nHandle = *nHandlePtr;
+        
+        rtScene* scene = sceneRef;
+        rtMESHRD3D* meshRD = scene->nGetComp<rtMESHRD3D>(nHandle);
+        if (!meshRD) return;
+        
+        ImGui::BeginTooltip();
+        ImGui::Text("Morph Target Editor");
+        ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Node: [%u, %u]", nHandle.idx(), nHandle.ver());
+        ImGui::Separator();
+        ImGui::Text("Targets: %zu", meshRD->mrphWeights().size());
+        ImGui::EndTooltip();
+    };
+    
+    // Define render function
+    tab.renderFunc = [](Editor::Tab& self) {
+        tinyHandle* nHandlePtr = self.getState<tinyHandle>("handle");
+        if (!nHandlePtr) return;
+        tinyHandle nHandle = *nHandlePtr;
+        
+        rtScene* scene = sceneRef;
+        rtMESHRD3D* meshRD = scene->nGetComp<rtMESHRD3D>(nHandle);
+        if (!meshRD) {
+            ImGui::Text("Mesh Render component not found");
+            return;
+        }
+        
+        const tinyFS& fs = projRef->fs();
+        tinyHandle meshHandle = meshRD->meshHandle();
+        const tinyMesh* mesh = fs.rGet<tinyMesh>(meshHandle);
+        if (!mesh) {
+            ImGui::Text("No mesh assigned");
+            return;
+        }
+        
+        std::vector<float>& mrphWeights = meshRD->mrphWeights();
+        const auto& morphTargetNames = mesh->mrphTargetNames();
+        
+        if (morphTargetNames.empty()) {
+            ImGui::Text("This mesh has no morph targets");
+            return;
+        }
+        
+        // Get state
+        Splitter* split = self.getState<Splitter>("splitter");
+        std::string* searchFilter = self.getState<std::string>("searchFilter");
+        float* weightMin = self.getState<float>("weightMin");
+        float* weightMax = self.getState<float>("weightMax");
+        bool* enableWeightFilter = self.getState<bool>("enableWeightFilter");
+        
+        if (!split || !searchFilter || !weightMin || !weightMax || !enableWeightFilter) return;
+        
+        split->init(1);
+        split->horizontal = false;
+        split->directionSize = ImGui::GetContentRegionAvail().x;
+        split->calcRegionSizes();
+        
+        // Left panel: Search and filter controls
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
+        ImGui::BeginChild("FilterPanel", ImVec2(split->rSize(0), 0), true);
+        
+        ImGui::TextColored(ImVec4(0.8f, 0.6f, 0.4f, 1.0f), "Search & Filter");
+        ImGui::Separator();
+        
+        // Search by name
+        char searchBuf[256];
+        strncpy(searchBuf, searchFilter->c_str(), 255);
+        searchBuf[255] = '\0';
+        
+        ImGui::Text("Search Name:");
+        if (ImGui::InputText("##search", searchBuf, 256)) {
+            *searchFilter = searchBuf;
+        }
+        
+        ImGui::Separator();
+        
+        // Weight range filter
+        ImGui::Text("Weight Range:");
+        ImGui::Checkbox("Enable Weight Filter", enableWeightFilter);
+        
+        if (*enableWeightFilter) {
+            ImGui::DragFloat("Min##weightmin", weightMin, 0.01f, -1.0f, 1.0f);
+            ImGui::DragFloat("Max##weightmax", weightMax, 0.01f, -1.0f, 1.0f);
+            
+            // Clamp values
+            if (*weightMin < -1.0f) *weightMin = -1.0f;
+            if (*weightMin > 1.0f) *weightMin = 1.0f;
+            if (*weightMax < -1.0f) *weightMax = -1.0f;
+            if (*weightMax > 1.0f) *weightMax = 1.0f;
+            
+            // Ensure min <= max
+            if (*weightMin > *weightMax) {
+                float temp = *weightMin;
+                *weightMin = *weightMax;
+                *weightMax = temp;
+            }
+        }
+        
+        ImGui::Separator();
+        
+        if (ImGui::Button("Clear Filters", ImVec2(-1, 0))) {
+            searchFilter->clear();
+            *enableWeightFilter = false;
+            *weightMin = -1.0f;
+            *weightMax = 1.0f;
+        }
+        
+        if (ImGui::Button("Reset All Weights", ImVec2(-1, 0))) {
+            for (float& w : mrphWeights) w = 0.0f;
+        }
+        
+        ImGui::Separator();
+        
+        // Show stats
+        int visibleCount = 0;
+        for (size_t j = 0; j < morphTargetNames.size(); ++j) {
+            if (j >= mrphWeights.size()) continue;
+            
+            float weight = mrphWeights[j];
+            
+            // Apply weight range filter
+            if (*enableWeightFilter && (weight < *weightMin || weight > *weightMax)) {
+                continue;
+            }
+            
+            // Apply name filter
+            if (!searchFilter->empty()) {
+                const auto& targetInfo = morphTargetNames[j];
+                if (targetInfo.name.find(*searchFilter) == std::string::npos) {
+                    continue;
+                }
+            }
+            
+            visibleCount++;
+        }
+        
+        ImGui::Text("Showing: %d / %zu", visibleCount, morphTargetNames.size());
+        
+        ImGui::EndChild();
+        ImGui::PopStyleColor();
+        
+        ImGui::SameLine();
+        split->render(0);
+        ImGui::SameLine();
+        
+        // Right panel: Morph target sliders
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
+        ImGui::BeginChild("MorphTargets", ImVec2(split->rSize(1), 0), true);
+        
+        ImGui::TextColored(ImVec4(0.8f, 0.6f, 0.4f, 1.0f), "Morph Targets");
+        ImGui::Separator();
+        
+        // Render filtered morph targets
+        for (size_t j = 0; j < morphTargetNames.size(); ++j) {
+            if (j >= mrphWeights.size()) continue;
+            
+            float& weight = mrphWeights[j];
+            
+            // Apply weight range filter
+            if (*enableWeightFilter && (weight < *weightMin || weight > *weightMax)) {
+                continue;
+            }
+            
+            // Apply name filter
+            const auto& targetInfo = morphTargetNames[j];
+            if (!searchFilter->empty()) {
+                if (targetInfo.name.find(*searchFilter) == std::string::npos) {
+                    continue;
+                }
+            }
+            
+            std::string label = "[" + std::to_string(j) + "] " + targetInfo.name;
+            std::string id = "##morph_" + std::to_string(nHandle.raw()) + "_" + std::to_string(j);
+            
+            ImGui::PushItemWidth(-80);
+            if (ImGui::SliderFloat(id.c_str(), &weight, -1.0f, 1.0f, label.c_str())) {
+                // Value changed
+            }
+            ImGui::PopItemWidth();
+            
+            ImGui::SameLine();
+            
+            // Reset button
+            ImGui::PushID(static_cast<int>(j));
+            if (ImGui::Button("Reset", ImVec2(70, 0))) {
+                weight = 0.0f;
+            }
+            ImGui::PopID();
+            
+            // Show precise value on hover
+            if (ImGui::IsItemHovered()) {
+                ImGui::BeginTooltip();
+                ImGui::Text("%.3f", weight);
+                ImGui::EndTooltip();
+            }
         }
         
         ImGui::EndChild();
@@ -992,11 +1285,20 @@ static void RenderSceneNodeHierarchy() {
                 if (const rtNode* node = scene->node(h)) {
                     ImGui::Text("%s", node->cname());
                     ImGui::Separator();
-                    std::string compList = "";
-                    if (node->has<rtTRANFM3D>()) compList += "[Tranfm 3D] ";
-                    if (node->has<rtMESHRD3D>()) compList += "[MeshRd 3D] ";
-                    compList = compList.empty() ? "[None]" : compList;
-                    ImGui::Text("%s", compList.c_str());
+
+                    // Helper function to display component info
+                    bool hasComp = false;
+                    auto displayCompInfo = [&](std::string name, float r, float g, float b) {
+                        ImGui::TextColored(ImVec4(r, g, b, 1.0f), "%s", name.c_str());
+                        hasComp = true;
+                    };
+
+                    if (node->has<rtTRANFM3D>()) displayCompInfo("Transform 3D", 0.5f, 1.0f, 0.5f);
+                    if (node->has<rtMESHRD3D>()) displayCompInfo("Mesh Renderer 3D", 0.5f, 0.5f, 1.0f);
+                    if (node->has<rtSKELE3D>())  displayCompInfo("Skeleton 3D", 1.0f, 0.5f, 1.0f);
+
+                    if (!hasComp) { ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "No Component"); }
+
                 } else {
                     ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid Node!");
                 }
@@ -1343,7 +1645,7 @@ static void RenderMESHRD3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle)
                     const tinyMesh* rMesh = fs.rGet<tinyMesh>(dHandle);
                     if (!rMesh) { ImGui::EndDragDropTarget(); return; }
 
-                    // meshRD->assignMesh(dHandle, rMesh->mrphWeights());
+                    meshRD->assignMesh(dHandle, rMesh);
 
                     ImGui::EndDragDropTarget();
                 }
@@ -1363,45 +1665,69 @@ static void RenderMESHRD3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle)
         }
     );
 
-    // Render the morph weights
-    if (!mesh) return;
+    tinyHandle skeleNodeHandle = meshRD->skeleNodeHandle();
 
-    std::vector<float>& mrphWeights = meshRD->mrphWeights();
-    
-    // Get mesh-level morph target names (shared across all submeshes)
-    const auto& morphTargetNames = mesh->mrphTargetNames();
-    
-    // Show morph targets once at mesh level, not per-submesh
-    for (size_t j = 0; j < morphTargetNames.size(); ++j) {
-        // Out of bound check
-        if (j >= mrphWeights.size()) continue;
-        
-        const auto& targetInfo = morphTargetNames[j];
-        float& weight = mrphWeights[j];
-        
-        std::string id = "##morph_" + std::to_string(nHandle.raw()) + "_" + std::to_string(j);
-        
-        // Custom slider with embedded name (full width)
-        ImGui::PushItemWidth(-1); // Full width
-        
-        // Draw slider without label (label embedded inside)
-        if (ImGui::SliderFloat(id.c_str(), &weight, -1.0f, 1.0f, targetInfo.name.c_str())) {
-            // Value changed
-        }
-        
-        // Show precise value on hover
-        if (ImGui::IsItemHovered()) {
+    // For skeleton node
+    RenderDragField(
+        [&]() { return "Skeleton Component"; },
+        "No Skeleton Node Assigned",
+        []() { return ImVec4(0.8f, 0.6f, 0.6f, 1.0f); },
+        ImVec4(0.2f, 0.2f, 0.2f, 1.0f),
+        [&]() { // Active condition
+            rtSKELE3D* skel3D = scene->nGetComp<rtSKELE3D>(skeleNodeHandle);
+            return skel3D && skel3D->rSkeleton() != nullptr;
+        },
+        [&]() { // Drag Drop handling
+            if (!ImGui::BeginDragDropTarget()) return;
+
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PAYLOAD")) {
+                Payload* data = (Payload*)payload->Data;
+                if (!data->is<rtNode>()) { ImGui::EndDragDropTarget(); return; }
+
+                tinyHandle nHandle = data->handle;
+                rtSKELE3D* skel3D = scene->nGetComp<rtSKELE3D>(nHandle);
+                if (!skel3D || !skel3D->rSkeleton()) { ImGui::EndDragDropTarget(); return; }
+
+                meshRD->assignSkeleNode(nHandle);
+
+                ImGui::EndDragDropTarget();
+            }
+        },
+        []() {  },
+        [&]() {
             ImGui::BeginTooltip();
-            ImGui::Text("%.2f", weight);
+
+            rtSKELE3D* skel3D = scene->nGetComp<rtSKELE3D>(skeleNodeHandle);
+            if (skel3D && skel3D->rSkeleton()) {
+                ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.7f, 1.0f), "[Scene]");
+                ImGui::SameLine();
+                ImGui::Text("Skeleton Handle: [%u, %u]", skeleNodeHandle.idx(), skeleNodeHandle.ver());
+            } else {
+                ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "No Skeleton Assigned");
+            }
+
             ImGui::EndTooltip();
         }
+    );
 
-        // Right-click to reset
-        if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
-            weight = 0.0f;
+    // Morph target editor button
+    if (mesh && !mesh->mrphTargetNames().empty() && !meshRD->mrphWeights().empty()) {
+        ImGui::Separator();
+        
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.5f, 0.3f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.6f, 0.4f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.4f, 0.2f, 1.0f));
+        
+        std::string buttonLabel = "Open Morph Target Editor (" + std::to_string(meshRD->mrphWeights().size()) + " targets)";
+        if (ImGui::Button(buttonLabel.c_str(), ImVec2(-1, 0))) {
+            // Create and open morph editor tab
+            rtNode* node = scene->node(nHandle);
+            std::string tabTitle = "Morph: " + (node ? node->name : "Unknown");
+            Editor::Tab morphTab = CreateMorphTargetEditorTab(tabTitle, nHandle);
+            Editor::addTab(morphTab);
         }
         
-        ImGui::PopItemWidth();
+        ImGui::PopStyleColor(3);
     }
 }
 
@@ -1426,8 +1752,25 @@ static void RenderSKEL3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle) {
         "Skeleton Component",
         []() { return ImVec4(0.8f, 0.6f, 0.6f, 1.0f); },
         ImVec4(0.2f, 0.2f, 0.2f, 1.0f),
-        []() { return true; },
-        []() {  },
+        [&]() {
+            return skel3D->rSkeleton() != nullptr;
+        },
+        [&]() {
+            if (ImGui::BeginDragDropTarget()) {
+                if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PAYLOAD")) {
+                    Payload* data = (Payload*)payload->Data;
+                    if (!data->is<tinyNodeFS>()) { ImGui::EndDragDropTarget(); return; }
+
+                    tinyHandle fHandle = data->handle;
+                    tinyHandle dHandle = fs.dataHandle(fHandle);
+                    if (!dHandle.is<tinySkeleton>()) { ImGui::EndDragDropTarget(); return; }
+
+                    skel3D->init(&fs.r().view<tinySkeleton>(), dHandle);
+
+                    ImGui::EndDragDropTarget();
+                }
+            }
+        },
         []() {  },
         [&]() {
             ImGui::BeginTooltip();
@@ -1441,6 +1784,8 @@ static void RenderSKEL3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle) {
 
                 ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.7f, 1.0f), "[FS]");
                 ImGui::SameLine(); ImGui::Text("%s", fullPath);
+            } else {
+                ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "No Skeleton Assigned");
             }
 
             ImGui::EndTooltip();
@@ -1999,6 +2344,10 @@ void tinyApp::renderUI() {
             
             if (ImGui::Button(label.c_str())) {
                 Editor::selectedTab = i;
+                // Always call selectFunc when tab is clicked
+                if (tab.selectFunc) {
+                    tab.selectFunc(tab);
+                }
             }
             
             bool isHovered = ImGui::IsItemHovered();
