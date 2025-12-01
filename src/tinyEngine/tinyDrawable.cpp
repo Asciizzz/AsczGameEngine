@@ -181,7 +181,8 @@ void tinyDrawable::init(const CreateInfo& info) {
     dummySubmesh.setVrtxStatic({ tinyVertex::Static{} });
     dummySubmesh.setVrtxRigged({ tinyVertex::Rigged{} });
     dummySubmesh.setVrtxColor({ tinyVertex::Color{} });
-    dummySubmesh.addMrphTarget({ "DummyMorph", { tinyVertex::Morph{} } });
+    dummySubmesh.setMrphDeltas({ tinyVertex::Morph{} }, 1);
+    dummy_.mesh.setMrphTargetNames({ "DummyMorph" });
     dummy_.mesh.append(std::move(dummySubmesh));
     dummy_.mesh.vkCreate(dvk_, vrtxExtLayout_, vrtxExtPool_);
 }

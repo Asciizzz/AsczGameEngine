@@ -302,7 +302,7 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
                 pipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, 0,
                     glm::uvec4(
                         submesh->vrtxFlags(), submesh->vrtxCount,
-                        submesh->mrphTargets.size(), draw.matIndex(submesh->material)
+                        submesh->mrphTargetCount, draw.matIndex(submesh->material)
                     )
                 );
                 pipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, sizeof(glm::uvec4),
@@ -312,7 +312,7 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
                     )
                 );
                 pipeline->pushConstants(currentCmd, ShaderStage::VertexAndFragment, 2 * sizeof(glm::uvec4),
-                    glm::uvec4(submesh->mrphTargets.size(), 0, 0, 0)
+                    glm::uvec4(submesh->mrphTargetCount, 0, 0, 0)
                 );
 
                 vkCmdDrawIndexed(

@@ -33,24 +33,18 @@ struct MeshRender3D {
 
         meshHandle_ = meshHandle;
 
-        // For each submesh, prepare morph target info
+        // Mesh-level morph targets (shared across all submeshes)
+        uint32_t meshMorphCount = static_cast<uint32_t>(mesh->mrphTargetCount());
+        mrphWs_.resize(meshMorphCount, 0.0f);
+
+        // For each submesh, store reference to the same mesh-level morph targets
         subMrphs_.clear();
-
-        uint32_t totalTargets = 0;
         for (size_t subIdx = 0; subIdx < mesh->submeshes().size(); ++subIdx) {
-            const auto& submesh = mesh->submeshes()[subIdx];
-            uint32_t targetCount = static_cast<uint32_t>(submesh.mrphTargets.size());
-
             SubMorph sm;
-            sm.offset = totalTargets;
-            sm.count  = targetCount;
-
+            sm.offset = 0;  // All submeshes reference the same mesh-level weights
+            sm.count = meshMorphCount;  // All submeshes use all mesh-level targets
             subMrphs_.push_back(sm);
-
-            totalTargets += targetCount;
         }
-
-        mrphWs_.resize(totalTargets, 0.0f);
 
         return *this;
     }

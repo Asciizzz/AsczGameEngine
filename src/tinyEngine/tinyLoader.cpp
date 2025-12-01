@@ -433,11 +433,67 @@ struct PrimitiveData {
     size_t vrtxCount = 0;
 };
 
-static bool readDeltaAccessor(const tinygltf::Model& model, int accessorIdx, std::vector<glm::vec3>& out) {
+// Read delta accessor with proper sparse support
+// Returns the actual deltas and fills sparseIndices if the accessor is sparse
+static bool readDeltaAccessor(const tinygltf::Model& model, int accessorIdx, 
+                               std::vector<glm::vec3>& outDeltas,
+                               std::vector<int>& outSparseIndices) {
     if (accessorIdx < 0 || accessorIdx >= static_cast<int>(model.accessors.size())) return false;
     const auto& accessor = model.accessors[accessorIdx];
     if (accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT) return false;
     if (accessor.type != TINYGLTF_TYPE_VEC3) return false;
+    
+    outDeltas.clear();
+    outSparseIndices.clear();
+
+    // Handle sparse accessor (common for morph targets)
+    if (accessor.sparse.isSparse) {
+        int sparseCount = accessor.sparse.count;
+        
+        // Read sparse indices
+        const auto& sparseIndices = accessor.sparse.indices;
+        if (sparseIndices.bufferView < 0) return false;
+        
+        const auto& idxBufView = model.bufferViews[sparseIndices.bufferView];
+        const auto& idxBuffer = model.buffers[idxBufView.buffer];
+        const unsigned char* idxData = idxBuffer.data.data() + idxBufView.byteOffset + sparseIndices.byteOffset;
+        
+        outSparseIndices.resize(sparseCount);
+        for (int i = 0; i < sparseCount; ++i) {
+            switch (sparseIndices.componentType) {
+                case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+                    outSparseIndices[i] = static_cast<int>(idxData[i]);
+                    break;
+                case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+                    outSparseIndices[i] = static_cast<int>(reinterpret_cast<const uint16_t*>(idxData)[i]);
+                    break;
+                case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+                    outSparseIndices[i] = static_cast<int>(reinterpret_cast<const uint32_t*>(idxData)[i]);
+                    break;
+                default:
+                    return false;
+            }
+        }
+        
+        // Read sparse values
+        const auto& sparseValues = accessor.sparse.values;
+        if (sparseValues.bufferView < 0) return false;
+        
+        const auto& valBufView = model.bufferViews[sparseValues.bufferView];
+        const auto& valBuffer = model.buffers[valBufView.buffer];
+        size_t stride = valBufView.byteStride ? valBufView.byteStride : sizeof(float) * 3;
+        const unsigned char* valData = valBuffer.data.data() + valBufView.byteOffset + sparseValues.byteOffset;
+        
+        outDeltas.resize(sparseCount);
+        for (int i = 0; i < sparseCount; ++i) {
+            const float* elem = reinterpret_cast<const float*>(valData + i * stride);
+            outDeltas[i] = glm::vec3(elem[0], elem[1], elem[2]);
+        }
+        
+        return true;
+    }
+    
+    // Handle dense accessor (traditional format)
     if (accessor.bufferView < 0 || accessor.bufferView >= static_cast<int>(model.bufferViews.size())) return false;
     const auto& bufferView = model.bufferViews[accessor.bufferView];
     if (bufferView.buffer < 0 || bufferView.buffer >= static_cast<int>(model.buffers.size())) return false;
@@ -445,17 +501,45 @@ static bool readDeltaAccessor(const tinygltf::Model& model, int accessorIdx, std
 
     size_t stride = bufferView.byteStride ? bufferView.byteStride : sizeof(float) * 3;
     const unsigned char* data = buffer.data.data() + bufferView.byteOffset + accessor.byteOffset;
-    out.resize(accessor.count);
+    outDeltas.resize(accessor.count);
 
     for (size_t i = 0; i < accessor.count; ++i) {
         const float* elem = reinterpret_cast<const float*>(data + i * stride);
-        out[i] = glm::vec3(elem[0], elem[1], elem[2]);
+        outDeltas[i] = glm::vec3(elem[0], elem[1], elem[2]);
     }
+    
+    // Dense accessors have sequential indices (0, 1, 2, ...)
+    outSparseIndices.resize(accessor.count);
+    for (size_t i = 0; i < accessor.count; ++i) {
+        outSparseIndices[i] = static_cast<int>(i);
+    }
+    
     return true;
 }
 
 void loadMesh(tinyMesh& mesh, const tinygltf::Model& gltfModel, const tinygltf::Mesh& gltfMesh, const std::vector<tinygltf::Primitive>& primitives) {
     mesh.submeshes().clear();
+
+    // Load mesh-level morph target names (shared across all primitives)
+    std::vector<std::string> morphTargetNames;
+    if (gltfMesh.extras.Has("targetNames") && gltfMesh.extras.Get("targetNames").IsArray()) {
+        size_t nameCount = gltfMesh.extras.Get("targetNames").ArrayLen();
+        morphTargetNames.reserve(nameCount);
+        for (size_t i = 0; i < nameCount; ++i) {
+            std::string name = gltfMesh.extras.Get("targetNames").Get(static_cast<int>(i)).Get<std::string>();
+            if (name.empty()) name = "morph_" + std::to_string(i);
+            morphTargetNames.push_back(std::move(name));
+        }
+    }
+    // If no names in extras, try to infer from first primitive's target count
+    if (morphTargetNames.empty() && !primitives.empty() && !primitives[0].targets.empty()) {
+        size_t targetCount = primitives[0].targets.size();
+        morphTargetNames.reserve(targetCount);
+        for (size_t i = 0; i < targetCount; ++i) {
+            morphTargetNames.push_back("morph_" + std::to_string(i));
+        }
+    }
+    mesh.setMrphTargetNames(std::move(morphTargetNames));
 
     // iterate each primitive -> one Submesh
     for (const auto& primitive : primitives) {
@@ -595,57 +679,80 @@ void loadMesh(tinyMesh& mesh, const tinygltf::Model& gltfModel, const tinygltf::
         submesh.material = tinyHandle(primitive.material);
 
 
-        // --- 6) Morph targets: read per-primitive targets into submesh.mrphTargets ---
+        // --- 6) Morph targets: read per-primitive deltas ---
+        // Process all morph targets for this primitive, building a flattened delta array
+        std::vector<tinyVertex::Morph> allMorphDeltas;
+        uint32_t activeMorphCount = 0;
 
-        printf("Primitive has %zu morph targets\n", primitive.targets.size());
-        for (size_t tgtIdx = 0; tgtIdx < primitive.targets.size(); ++tgtIdx) {
-            const auto& target = primitive.targets[tgtIdx];
+        size_t totalMorphTargets = primitive.targets.size();
+        if (totalMorphTargets > 0) {
+            // Pre-allocate for all targets (we'll fill with zeros for targets with no data)
+            allMorphDeltas.resize(totalMorphTargets * vrtxCount, tinyVertex::Morph{
+                glm::vec4(0.0f), glm::vec4(0.0f), glm::vec4(0.0f)
+            });
 
-            // prepare delta arrays per-vertex for this primitive
-            std::vector<glm::vec3> dPos;
-            std::vector<glm::vec3> dNrm;
-            std::vector<glm::vec3> dTan;
-            bool hasAnyData = false;
+            for (size_t tgtIdx = 0; tgtIdx < totalMorphTargets; ++tgtIdx) {
+                const auto& target = primitive.targets[tgtIdx];
 
-            auto posIt = target.find("POSITION");
-            if (posIt != target.end()) {
-                hasAnyData = hasAnyData || readDeltaAccessor(gltfModel, posIt->second, dPos);
+                // Sparse deltas and their indices
+                std::vector<glm::vec3> dPos, dNrm, dTan;
+                std::vector<int> posIndices, nrmIndices, tanIndices;
+
+                // Read deltas for this target
+                auto posIt = target.find("POSITION");
+                auto nrmIt = target.find("NORMAL");
+                auto tanIt = target.find("TANGENT");
+
+                bool hasAnyData = false;
+                if (posIt != target.end()) {
+                    hasAnyData = readDeltaAccessor(gltfModel, posIt->second, dPos, posIndices) || hasAnyData;
+                }
+                if (nrmIt != target.end()) {
+                    hasAnyData = readDeltaAccessor(gltfModel, nrmIt->second, dNrm, nrmIndices) || hasAnyData;
+                }
+                if (tanIt != target.end()) {
+                    hasAnyData = readDeltaAccessor(gltfModel, tanIt->second, dTan, tanIndices) || hasAnyData;
+                }
+
+                if (!hasAnyData) {
+                    // No data for this target in this primitive - keep zeros
+                    continue;
+                }
+
+                // Calculate base offset for this target's deltas in the flattened array
+                size_t baseOffset = tgtIdx * vrtxCount;
+
+                // Apply sparse position deltas
+                for (size_t i = 0; i < dPos.size(); ++i) {
+                    int vertexIdx = posIndices[i];
+                    if (vertexIdx >= 0 && vertexIdx < static_cast<int>(vrtxCount)) {
+                        allMorphDeltas[baseOffset + vertexIdx].dPos = glm::vec4(dPos[i], 0.0f);
+                    }
+                }
+
+                // Apply sparse normal deltas
+                for (size_t i = 0; i < dNrm.size(); ++i) {
+                    int vertexIdx = nrmIndices[i];
+                    if (vertexIdx >= 0 && vertexIdx < static_cast<int>(vrtxCount)) {
+                        allMorphDeltas[baseOffset + vertexIdx].dNrml = glm::vec4(dNrm[i], 0.0f);
+                    }
+                }
+
+                // Apply sparse tangent deltas
+                for (size_t i = 0; i < dTan.size(); ++i) {
+                    int vertexIdx = tanIndices[i];
+                    if (vertexIdx >= 0 && vertexIdx < static_cast<int>(vrtxCount)) {
+                        allMorphDeltas[baseOffset + vertexIdx].dTang = glm::vec4(dTan[i], 0.0f);
+                    }
+                }
+
+                activeMorphCount++;
             }
-            auto nrmIt = target.find("NORMAL");
-            if (nrmIt != target.end()) {
-                hasAnyData = hasAnyData || readDeltaAccessor(gltfModel, nrmIt->second, dNrm);
+
+            if (activeMorphCount > 0) {
+                submesh.setMrphDeltas(std::move(allMorphDeltas), static_cast<uint32_t>(totalMorphTargets));
+                printf("Submesh has deltas for %u/%zu morph targets\n", activeMorphCount, totalMorphTargets);
             }
-            auto tanIt = target.find("TANGENT");
-            if (tanIt != target.end()) {
-                hasAnyData = hasAnyData || readDeltaAccessor(gltfModel, tanIt->second, dTan);
-            }
-
-            if (!hasAnyData) continue; // skip empty target
-
-            // Fill all missing data with zeros
-            if (dPos.size() != vrtxCount) dPos.resize(vrtxCount, glm::vec3(0.0f));
-            if (dNrm.size() != vrtxCount) dNrm.resize(vrtxCount, glm::vec3(0.0f));
-            if (dTan.size() != vrtxCount) dTan.resize(vrtxCount, glm::vec3(0.0f));
-
-            // Build MorphTarget using tinyVertex::Morph (assumes fields dPos,dNrml,dTang)
-            tinyMesh::Submesh::MorphTarget mt;
-            mt.morphs.resize(vrtxCount);
-            for (size_t v = 0; v < vrtxCount; ++v) {
-                mt.morphs[v].dPos  = glm::vec4(dPos[v], 0.0f);
-                mt.morphs[v].dNrml = glm::vec4(dNrm[v], 0.0f);
-                mt.morphs[v].dTang = glm::vec4(dTan[v], 0.0f);
-            }
-
-            // optional name from mesh.extras.targetNames (mesh-level)
-            if (tgtIdx < gltfMesh.extras.Get("targetNames").ArrayLen()) {
-                mt.name = gltfMesh.extras
-                            .Get("targetNames")
-                            .Get(static_cast<int>(tgtIdx))
-                            .Get<std::string>();
-            }
-            mt.name = checkString(mt.name, "morph", tgtIdx);
-
-            submesh.addMrphTarget(mt);
         }
 
         // push submesh into mesh

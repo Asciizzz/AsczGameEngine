@@ -68,6 +68,11 @@ struct tinyMesh {
     tinyMesh(tinyMesh&&) noexcept = default;
     tinyMesh& operator=(tinyMesh&&) noexcept = default;
 
+    // Mesh-level morph target definitions (shared across all submeshes)
+    struct MorphTargetInfo {
+        std::string name;
+    };
+
     struct Submesh {
         Submesh() noexcept = default;
 
@@ -76,11 +81,6 @@ struct tinyMesh {
 
         Submesh(Submesh&&) noexcept = default;
         Submesh& operator=(Submesh&&) noexcept = default;
-
-        struct MorphTarget {
-            std::string name;
-            std::vector<tinyVertex::Morph> morphs;
-        };
 
         // Methods
 
@@ -108,11 +108,13 @@ struct tinyMesh {
             return *this;
         }
 
-        Submesh& addMrphTarget(const MorphTarget& target) {
-            if (target.morphs.size() != vrtxCount) return *this; // Error, size mismatch
+        Submesh& setMrphDeltas(std::vector<tinyVertex::Morph>&& deltas, uint32_t targetCount) {
+            if (deltas.empty() || targetCount == 0) return *this;
+            if (deltas.size() != targetCount * vrtxCount) return *this; // Error, size mismatch
 
             vrtxTypes |= tinyVertex::Type::Morph;
-            mrphTargets.push_back(target);
+            vmrphsData = std::move(deltas);
+            mrphTargetCount = targetCount;
             return *this;
         }
 
@@ -127,11 +129,7 @@ struct tinyMesh {
             indxData.clear();
             vriggedData.clear();
             vcolorData.clear();
-
-            // Only clear CPU data, keep name
-            for (auto& mt : mrphTargets) {
-                mt.morphs.clear();
-            }
+            vmrphsData.clear();
         }
 
         void expandABmin(const glm::vec3& point) { ABmin = glm::min(ABmin, point); }
@@ -151,8 +149,9 @@ struct tinyMesh {
 
         std::vector<tinyVertex::Rigged> vriggedData; // Optional
         std::vector<tinyVertex::Color>  vcolorData;  // Optional
+        std::vector<tinyVertex::Morph>  vmrphsData;  // Optional - flattened: [target0_v0, target0_v1, ..., target1_v0, ...]
 
-        std::vector<MorphTarget> mrphTargets; // Optional
+        uint32_t mrphTargetCount = 0; // Number of morph targets this submesh has deltas for
 
         tinyHandle material;
 
@@ -187,6 +186,19 @@ struct tinyMesh {
         return submeshes_.size() - 1;
     }
 
+    void setMrphTargetNames(std::vector<std::string>&& names) {
+        mrphTargetNames_.clear();
+        mrphTargetNames_.reserve(names.size());
+        for (auto& name : names) {
+            MorphTargetInfo info;
+            info.name = std::move(name);
+            mrphTargetNames_.push_back(std::move(info));
+        }
+    }
+
+    const std::vector<MorphTargetInfo>& mrphTargetNames() const { return mrphTargetNames_; }
+    size_t mrphTargetCount() const { return mrphTargetNames_.size(); }
+
     static constexpr uint32_t MAX_VERTEX_EXTENSIONS = 32768; // No chance in hell we reach this lmao
 
     void vkCreate(const tinyVk::Device* dvk_, VkDescriptorSetLayout vrtxExtLayout = VK_NULL_HANDLE, VkDescriptorPool vrtxExtPool = VK_NULL_HANDLE) {
@@ -216,9 +228,8 @@ struct tinyMesh {
             }
 
             if (submesh.vrtxTypes & tinyVertex::Type::Morph) {
-                uint32_t targetCount = submesh.mrphTargets.size();
                 submesh.vmrphsOffset = totalDeltaCount;
-                totalDeltaCount    += targetCount * submesh.vrtxCount;
+                totalDeltaCount    += submesh.vmrphsData.size();
             }
 
             submesh.indxOffset = totalIndexCount;
@@ -282,16 +293,13 @@ struct tinyMesh {
                 );
             }
 
-            // Copy morph targets
+            // Copy morph deltas
             if (submesh.vrtxTypes & tinyVertex::Type::Morph) {
-                for (uint32_t i = 0; i < submesh.mrphTargets.size(); ++i) {
-                    const auto& target = submesh.mrphTargets[i];
-                    std::memcpy(
-                        vmrphsRaw.data() + submesh.vmrphsOffset + i * submesh.vrtxCount,
-                        target.morphs.data(),
-                        submesh.vrtxCount * sizeof(tinyVertex::Morph)
-                    );
-                }
+                std::memcpy(
+                    vmrphsRaw.data() + submesh.vmrphsOffset,
+                    submesh.vmrphsData.data(),
+                    submesh.vmrphsData.size() * sizeof(tinyVertex::Morph)
+                );
             }
 
             // Copy indices
@@ -378,6 +386,7 @@ struct tinyMesh {
 
 private:
     std::vector<Submesh> submeshes_;
+    std::vector<MorphTargetInfo> mrphTargetNames_; // Mesh-level morph target definitions
 
     glm::vec3 ABmin_ = glm::vec3(std::numeric_limits<float>::max());
     glm::vec3 ABmax_ = glm::vec3(std::numeric_limits<float>::lowest());

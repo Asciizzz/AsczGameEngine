@@ -920,38 +920,25 @@ static void RenderMESHRD3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle)
     if (!mesh) return;
 
     std::vector<float>& mrphWeights = meshRD->mrphWeights();
-    const std::vector<rtMESHRD3D::SubMorph>& subMrphs = meshRD->subMrphs();
-
-    for (size_t i = 0; i < subMrphs.size(); ++i) {
-        const tinyMesh::Submesh* submesh = mesh->submesh(i);
-        if (!submesh) continue;
-
-        const rtMESHRD3D::SubMorph& subMrph = subMrphs[i];
-        uint32_t offset = subMrph.offset;
-        uint32_t count  = subMrph.count;
-
-        for (uint32_t j = 0; j < count; ++j) {
-            // Out of bound
-            if (offset + j >= mrphWeights.size()) continue;
-            if (j >= submesh->mrphTargets.size()) continue;
-
-            // Get the actual target in the submesh
-            // submesh->mrphTargets;
-            const tinyMesh::Submesh::MorphTarget& target = submesh->mrphTargets[j];
-
-            uint32_t mrphIdx = offset + j;
-
-            std::string label = target.name + "##" + std::to_string(nHandle.raw()) + std::to_string(i) + std::to_string(j);
-
-            ImGui::SliderFloat(
-                label.c_str(),
-                &mrphWeights[mrphIdx],
-                0.0f,
-                1.0f
-            );
-        }
-
-        // Each submorph has its own set of 
+    
+    // Get mesh-level morph target names (shared across all submeshes)
+    const auto& morphTargetNames = mesh->mrphTargetNames();
+    
+    // Show morph targets once at mesh level, not per-submesh
+    for (size_t j = 0; j < morphTargetNames.size(); ++j) {
+        // Out of bound check
+        if (j >= mrphWeights.size()) continue;
+        
+        const auto& targetInfo = morphTargetNames[j];
+        
+        std::string label = targetInfo.name + "##" + std::to_string(nHandle.raw()) + std::to_string(j);
+        
+        ImGui::SliderFloat(
+            label.c_str(),
+            &mrphWeights[j],
+            0.0f,
+            1.0f
+        );
     }
 
     // const std::vector<uint32_t>& subWithMrphs = mesh->subWithMrphs();
