@@ -1739,7 +1739,7 @@ void tinyApp::renderUI() {
 
 
     // Fun debug: Hold space to instantiate the currently selected scene file to the root of the current scene
-    if (ImGui::IsKeyDown(ImGuiKey_Space)) {
+    if (ImGui::IsKeyDown(ImGuiKey_Space) && false) {
         tinyHandle fHandle = State::selected;
         if (fHandle.is<tinyNodeFS>()) {
             tinyFS& fs = project->fs();

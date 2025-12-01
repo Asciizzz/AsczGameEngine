@@ -63,7 +63,7 @@ void main() {
     if (alpha < 0.7) discard;
 
     // vec3 fColor = baseColor.rgb * albColor.rgb + emissColor.rgb;
-    vec3 fColor = baseColor.rgb * albColor.rgb;
+    vec3 fColor = baseColor.rgb * albColor.rgb * fragColor.rgb;
 
     outColor = vec4(fColor * lDot, alpha);
 }
