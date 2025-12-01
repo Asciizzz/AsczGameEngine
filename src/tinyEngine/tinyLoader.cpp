@@ -438,14 +438,64 @@ static bool readDeltaAccessor(const tinygltf::Model& model, int accessorIdx, std
     const auto& accessor = model.accessors[accessorIdx];
     if (accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT) return false;
     if (accessor.type != TINYGLTF_TYPE_VEC3) return false;
-    if (accessor.bufferView < 0 || accessor.bufferView >= static_cast<int>(model.bufferViews.size())) return false;
+    
+    out.resize(accessor.count, glm::vec3(0.0f)); // Initialize with zeros
+    
+    // Handle sparse accessors (common for morph targets with mostly zero deltas)
+    if (accessor.sparse.isSparse) {
+        // Read sparse indices
+        const auto& indicesAccessor = accessor.sparse.indices;
+        const auto& indicesBV = model.bufferViews[indicesAccessor.bufferView];
+        const auto& indicesBuffer = model.buffers[indicesBV.buffer];
+        const uint8_t* indicesData = indicesBuffer.data.data() + indicesBV.byteOffset + indicesAccessor.byteOffset;
+        
+        // Read sparse values
+        const auto& valuesAccessor = accessor.sparse.values;
+        const auto& valuesBV = model.bufferViews[valuesAccessor.bufferView];
+        const auto& valuesBuffer = model.buffers[valuesBV.buffer];
+        const uint8_t* valuesData = valuesBuffer.data.data() + valuesBV.byteOffset + valuesAccessor.byteOffset;
+        
+        size_t count = accessor.sparse.count;
+        size_t valueStride = sizeof(float) * 3; // vec3
+        
+        for (size_t i = 0; i < count; ++i) {
+            // Read index based on component type
+            uint32_t idx = 0;
+            switch (indicesAccessor.componentType) {
+                case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+                    idx = indicesData[i];
+                    break;
+                case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+                    idx = *reinterpret_cast<const uint16_t*>(indicesData + i * sizeof(uint16_t));
+                    break;
+                case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+                    idx = *reinterpret_cast<const uint32_t*>(indicesData + i * sizeof(uint32_t));
+                    break;
+                default:
+                    return false;
+            }
+            
+            if (idx >= out.size()) continue; // Skip invalid indices
+            
+            // Read vec3 value
+            const float* value = reinterpret_cast<const float*>(valuesData + i * valueStride);
+            out[idx] = glm::vec3(value[0], value[1], value[2]);
+        }
+        return true;
+    }
+    
+    // Handle regular (non-sparse) accessors
+    if (accessor.bufferView < 0 || accessor.bufferView >= static_cast<int>(model.bufferViews.size())) {
+        // No buffer view and not sparse = all zeros (valid for morph targets)
+        return true;
+    }
+    
     const auto& bufferView = model.bufferViews[accessor.bufferView];
     if (bufferView.buffer < 0 || bufferView.buffer >= static_cast<int>(model.buffers.size())) return false;
     const auto& buffer = model.buffers[bufferView.buffer];
 
     size_t stride = bufferView.byteStride ? bufferView.byteStride : sizeof(float) * 3;
     const unsigned char* data = buffer.data.data() + bufferView.byteOffset + accessor.byteOffset;
-    out.resize(accessor.count);
 
     for (size_t i = 0; i < accessor.count; ++i) {
         const float* elem = reinterpret_cast<const float*>(data + i * stride);
@@ -596,64 +646,31 @@ void loadMesh(tinyMesh& mesh, const tinygltf::Model& gltfModel, const tinygltf::
 
 
         // --- 6) Morph targets: read per-primitive targets into submesh.mrphTargets ---
-        // In glTF, mesh.extras.targetNames defines ALL morph targets at mesh level
-        // Each primitive may have sparse data (not all morphs defined for all primitives)
-        // We need to create morph targets for ALL mesh-level targets, filling with zeros where needed
-        
-        size_t totalMorphTargets = 0;
-        
-        // First, try to determine total number of morph targets from mesh extras
-        if (gltfMesh.extras.Has("targetNames") && gltfMesh.extras.Get("targetNames").IsArray()) {
-            totalMorphTargets = gltfMesh.extras.Get("targetNames").ArrayLen();
-        }
-        
-        // If no extras, check mesh.weights array (standard glTF property)
-        if (totalMorphTargets == 0 && !gltfMesh.weights.empty()) {
-            totalMorphTargets = gltfMesh.weights.size();
-        }
-        
-        // Final fallback: use the primitive's targets array size
-        if (totalMorphTargets == 0) {
-            totalMorphTargets = primitive.targets.size();
-        }
-        
-        #ifdef TINYLOADER_DEBUG_MORPHS
-        if (totalMorphTargets > 0) {
-            std::cout << "[MorphDebug] Mesh '" << gltfMesh.name << "' primitive has " 
-                      << totalMorphTargets << " morph targets (primitive.targets.size=" 
-                      << primitive.targets.size() << ")" << std::endl;
-        }
-        #endif
-        
-        // Process all morph targets (even if this primitive doesn't have data for some)
-        for (size_t tgtIdx = 0; tgtIdx < totalMorphTargets; ++tgtIdx) {
+
+        for (size_t tgtIdx = 0; tgtIdx < primitive.targets.size(); ++tgtIdx) {
+            const auto& target = primitive.targets[tgtIdx];
+
             // prepare delta arrays per-vertex for this primitive
             std::vector<glm::vec3> dPos;
             std::vector<glm::vec3> dNrm;
             std::vector<glm::vec3> dTan;
             bool hasAnyData = false;
 
-            // Check if this primitive has data for this morph target
-            if (tgtIdx < primitive.targets.size()) {
-                const auto& target = primitive.targets[tgtIdx];
-
-                auto posIt = target.find("POSITION");
-                if (posIt != target.end()) {
-                    hasAnyData = hasAnyData || readDeltaAccessor(gltfModel, posIt->second, dPos);
-                }
-                auto nrmIt = target.find("NORMAL");
-                if (nrmIt != target.end()) {
-                    hasAnyData = hasAnyData || readDeltaAccessor(gltfModel, nrmIt->second, dNrm);
-                }
-                auto tanIt = target.find("TANGENT");
-                if (tanIt != target.end()) {
-                    hasAnyData = hasAnyData || readDeltaAccessor(gltfModel, tanIt->second, dTan);
-                }
+            auto posIt = target.find("POSITION");
+            if (posIt != target.end()) {
+                hasAnyData = hasAnyData || readDeltaAccessor(gltfModel, posIt->second, dPos);
+            }
+            auto nrmIt = target.find("NORMAL");
+            if (nrmIt != target.end()) {
+                hasAnyData = hasAnyData || readDeltaAccessor(gltfModel, nrmIt->second, dNrm);
+            }
+            auto tanIt = target.find("TANGENT");
+            if (tanIt != target.end()) {
+                hasAnyData = hasAnyData || readDeltaAccessor(gltfModel, tanIt->second, dTan);
             }
 
-            // Always create morph target entry, even if no data (fills with zeros)
-            // This ensures all primitives have the same number of morph targets
-            
+            if (!hasAnyData) continue; // skip empty target
+
             // Fill all missing data with zeros
             if (dPos.size() != vrtxCount) dPos.resize(vrtxCount, glm::vec3(0.0f));
             if (dNrm.size() != vrtxCount) dNrm.resize(vrtxCount, glm::vec3(0.0f));
@@ -668,12 +685,15 @@ void loadMesh(tinyMesh& mesh, const tinygltf::Model& gltfModel, const tinygltf::
                 mt.morphs[v].dTang = glm::vec4(dTan[v], 0.0f);
             }
 
-            // Get name from mesh.extras.targetNames (mesh-level)
-            if (tgtIdx < gltfMesh.extras.Get("targetNames").ArrayLen()) {
-                mt.name = gltfMesh.extras
-                            .Get("targetNames")
-                            .Get(static_cast<int>(tgtIdx))
-                            .Get<std::string>();
+            // optional name from mesh.extras.targetNames (mesh-level)
+            if (gltfMesh.extras.Has("targetNames")) {
+                const auto& targetNames = gltfMesh.extras.Get("targetNames");
+                if (targetNames.IsArray() && tgtIdx < static_cast<size_t>(targetNames.ArrayLen())) {
+                    const auto& nameValue = targetNames.Get(static_cast<int>(tgtIdx));
+                    if (nameValue.IsString()) {
+                        mt.name = nameValue.Get<std::string>();
+                    }
+                }
             }
             mt.name = checkString(mt.name, "morph", tgtIdx);
 
