@@ -1748,8 +1748,17 @@ void tinyApp::renderUI() {
                 rtScene* srcScene = fs.rGet<rtScene>(dHandle);
                 rtScene* curScene = project->scene(State::sceneHandle);
                 if (srcScene && curScene) {
-                    tinyHandle newNodeHdl = curScene->instantiate(dHandle);
-                    State::selected = newNodeHdl;
+                    tinyHandle nodeHdl = curScene->instantiate(dHandle);
+
+                    // Spawn them at completely random position
+                    glm::vec3 randPos = glm::vec3(
+                        (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 100.0f,
+                        (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 100.0f,
+                        (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 100.0f
+                    );
+
+                    rtTRANFM3D* transf = curScene->nGetComp<rtTRANFM3D>(nodeHdl);
+                    if (transf) transf->local = glm::translate(glm::mat4(1.0f), randPos);
                 }
             }
         }
