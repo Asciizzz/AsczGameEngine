@@ -56,6 +56,12 @@ namespace Editor {
         
         // Custom render function - each tab defines its own rendering logic
         std::function<void(Tab&)> renderFunc;
+        
+        // Optional context menu callback - called when right-clicking on tab
+        std::function<void(Tab&)> contextMenuFunc;
+        
+        // Optional hover callback - called when hovering over tab
+        std::function<void(Tab&)> hoverFunc;
 
         bool operator==(const Tab& o) const {
             return handle == o.handle && title == o.title && type == o.type;
@@ -442,6 +448,63 @@ static Editor::Tab CreateScriptEditorTab(const std::string& title, tinyHandle fH
     // Initialize tab-specific state
     tab.setState<Splitter>("splitter", Splitter());
     tab.setState<tinyHandle>("lastScriptHandle", tinyHandle());
+    tab.setState<bool>("horizontal", true);
+    
+    // Define context menu for script tab
+    tab.contextMenuFunc = [fHandle](Editor::Tab& self) {
+        tinyFS& fs = projRef->fs();
+        const tinyFS::Node* node = fs.fNode(fHandle);
+        if (!node) return;
+        
+        tinyHandle dHandle = fs.dataHandle(fHandle);
+        tinyScript* script = fs.rGet<tinyScript>(dHandle);
+        if (!script) return;
+        
+        if (ImGui::MenuItem("Compile")) {
+            script->compile();
+        }
+        
+        ImGui::Separator();
+        
+        bool* horizontal = self.getState<bool>("horizontal");
+        if (horizontal) {
+            const char* layoutLabel = *horizontal ? "Switch to Vertical" : "Switch to Horizontal";
+            if (ImGui::MenuItem(layoutLabel)) {
+                *horizontal = !*horizontal;
+            }
+        }
+        
+        ImGui::Separator();
+        
+        if (script->valid()) {
+            ImGui::TextColored(ImVec4(0.2f, 0.8f, 0.2f, 1.0f), "Compiled v%u", script->version());
+        } else {
+            ImGui::TextColored(ImVec4(0.9f, 0.5f, 0.2f, 1.0f), "Not Compiled");
+        }
+    };
+    
+    // Define hover tooltip for script tab
+    tab.hoverFunc = [fHandle](Editor::Tab& self) {
+        tinyFS& fs = projRef->fs();
+        const tinyFS::Node* node = fs.fNode(fHandle);
+        if (!node) return;
+        
+        ImGui::BeginTooltip();
+        ImGui::Text("Script: %s", node->cname());
+        
+        tinyHandle dHandle = fs.dataHandle(fHandle);
+        tinyScript* script = fs.rGet<tinyScript>(dHandle);
+        if (script) {
+            if (script->valid()) {
+                ImGui::TextColored(ImVec4(0.2f, 0.8f, 0.2f, 1.0f), "Compiled v%u", script->version());
+            } else if (script->debug().empty()) {
+                ImGui::TextColored(ImVec4(0.9f, 0.5f, 0.2f, 1.0f), "Not Compiled");
+            } else {
+                ImGui::TextColored(ImVec4(0.9f, 0.2f, 0.2f, 1.0f), "Compilation Error");
+            }
+        }
+        ImGui::EndTooltip();
+    };
     
     // Define the custom render function for script editing
     tab.renderFunc = [](Editor::Tab& self) {
@@ -466,13 +529,18 @@ static Editor::Tab CreateScriptEditorTab(const std::string& title, tinyHandle fH
         Splitter* split = self.getState<Splitter>("splitter");
         if (!split) return;
         
+        bool* horizontal = self.getState<bool>("horizontal");
+        if (!horizontal) return;
+        
         split->init(1);
-        split->directionSize = ImGui::GetContentRegionAvail().y;
+        split->horizontal = *horizontal;
+        split->directionSize = *horizontal ? ImGui::GetContentRegionAvail().y : ImGui::GetContentRegionAvail().x;
         split->calcRegionSizes();
         
         // Code editor
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
-        ImGui::BeginChild("CodeEditor", ImVec2(0, split->rSize(0)), true);
+        ImVec2 codeEditorSize = *horizontal ? ImVec2(0, split->rSize(0)) : ImVec2(split->rSize(0), 0);
+        ImGui::BeginChild("CodeEditor", codeEditorSize, true);
         
         tinyDebug& debug = script->debug();
         
@@ -484,11 +552,16 @@ static Editor::Tab CreateScriptEditorTab(const std::string& title, tinyHandle fH
         ImGui::EndChild();
         ImGui::PopStyleColor();
         
+        if (!*horizontal) ImGui::SameLine();
+        
         split->render(0);
+        
+        if (!*horizontal) ImGui::SameLine();
         
         // Debug console
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
-        ImGui::BeginChild("DebugTerminal", ImVec2(0, split->rSize(1)), true);
+        ImVec2 debugConsoleSize = *horizontal ? ImVec2(0, split->rSize(1)) : ImVec2(split->rSize(1), 0);
+        ImGui::BeginChild("DebugTerminal", debugConsoleSize, true);
         
         ImGui::TextColored(ImVec4(0.6f, 0.6f, 1.0f, 1.0f), "Debug Console");
         ImGui::SameLine();
@@ -520,6 +593,52 @@ static Editor::Tab CreateSkeletonEditorTab(const std::string& title, tinyHandle 
     tab.setState<glm::quat>("initialRotation", glm::quat());
     tab.setState<bool>("isDraggingRotation", false);
     tab.setState<glm::vec3>("displayEuler", glm::vec3(0.0f));
+    
+    // Define context menu for skeleton tab
+    tab.contextMenuFunc = [nHandle](Editor::Tab& self) {
+        rtScene* scene = sceneRef;
+        rtSKELE3D* skel3D = scene->nGetComp<rtSKELE3D>(nHandle);
+        if (!skel3D) return;
+        
+        const tinySkeleton* skeleton = skel3D->rSkeleton();
+        if (!skeleton) return;
+        
+        int* selectedBoneIndex = self.getState<int>("selectedBoneIndex");
+        if (!selectedBoneIndex) return;
+        
+        if (*selectedBoneIndex >= 0) {
+            if (ImGui::MenuItem("Refresh Selected Bone")) {
+                skel3D->refresh(*selectedBoneIndex);
+            }
+            if (ImGui::MenuItem("Refresh All from Selected")) {
+                skel3D->refresh(*selectedBoneIndex, true);
+            }
+            ImGui::Separator();
+        }
+        
+        ImGui::Text("Bone Count: %zu", skeleton->bones.size());
+    };
+    
+    // Define hover tooltip for skeleton tab
+    tab.hoverFunc = [nHandle](Editor::Tab& self) {
+        rtScene* scene = sceneRef;
+        rtSKELE3D* skel3D = scene->nGetComp<rtSKELE3D>(nHandle);
+        if (!skel3D) return;
+        
+        const tinySkeleton* skeleton = skel3D->rSkeleton();
+        if (!skeleton) return;
+        
+        int* selectedBoneIndex = self.getState<int>("selectedBoneIndex");
+        
+        ImGui::BeginTooltip();
+        ImGui::Text("Skeleton Editor");
+        ImGui::Separator();
+        ImGui::Text("Bones: %zu", skeleton->bones.size());
+        if (selectedBoneIndex && *selectedBoneIndex >= 0) {
+            ImGui::Text("Selected: %d - %s", *selectedBoneIndex, skeleton->bones[*selectedBoneIndex].name.c_str());
+        }
+        ImGui::EndTooltip();
+    };
     
     // Define the custom render function for skeleton editing
     tab.renderFunc = [&](Editor::Tab& self) {
@@ -1866,7 +1985,7 @@ void tinyApp::renderUI() {
 
         int tabToClose = -1;
         for (size_t i = 0; i < Editor::tabs.size(); ++i) {
-            const Editor::Tab& tab = Editor::tabs[i];
+            Editor::Tab& tab = Editor::tabs[i];
             ImGui::PushID(static_cast<int>(i));
 
             // Use tab's custom color if selected, otherwise gray
@@ -1875,22 +1994,22 @@ void tinyApp::renderUI() {
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(tabColor.x * 1.2f, tabColor.y * 1.2f, tabColor.z * 1.2f, 1.0f));
             ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(tabColor.x * 0.8f, tabColor.y * 0.8f, tabColor.z * 0.8f, 1.0f));
             
-            // Create button label with integrated close button
-            std::string label = tab.title + "  x";
-            ImVec2 textSize = ImGui::CalcTextSize(label.c_str());
+            // Create button label with integrated close button (x centered in spacing)
+            std::string label = tab.title + " x";
             
             if (ImGui::Button(label.c_str())) {
                 Editor::selectedTab = i;
             }
             
+            bool isHovered = ImGui::IsItemHovered();
+            ImVec2 buttonMin = ImGui::GetItemRectMin();
+            ImVec2 buttonMax = ImGui::GetItemRectMax();
+            ImVec2 mousePos = ImGui::GetMousePos();
+            
             // Check if close button (x) was clicked
-            if (ImGui::IsItemHovered()) {
-                ImVec2 buttonMin = ImGui::GetItemRectMin();
-                ImVec2 buttonMax = ImGui::GetItemRectMax();
-                ImVec2 mousePos = ImGui::GetMousePos();
-                
+            if (isHovered) {
                 // Close button is in the right portion of the tab
-                float closeButtonWidth = ImGui::CalcTextSize(" x").x + 10.0f;
+                float closeButtonWidth = ImGui::CalcTextSize(" x").x;
                 if (mousePos.x > buttonMax.x - closeButtonWidth && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
                     tabToClose = static_cast<int>(i);
                 }
@@ -1904,6 +2023,43 @@ void tinyApp::renderUI() {
                         IM_COL32(0, 0, 0, 60)
                     );
                 }
+                
+                // Call hover callback if defined
+                if (tab.hoverFunc) {
+                    tab.hoverFunc(tab);
+                }
+            }
+            
+            // Right-click context menu
+            if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
+                ImGui::OpenPopup(("TabContext##" + std::to_string(i)).c_str());
+            }
+            
+            if (ImGui::BeginPopup(("TabContext##" + std::to_string(i)).c_str())) {
+                if (tab.contextMenuFunc) {
+                    tab.contextMenuFunc(tab);
+                } else {
+                    // Default context menu
+                    if (ImGui::MenuItem("Close")) {
+                        tabToClose = static_cast<int>(i);
+                    }
+                    if (ImGui::MenuItem("Close Others")) {
+                        for (int j = static_cast<int>(Editor::tabs.size()) - 1; j >= 0; --j) {
+                            if (static_cast<size_t>(j) != i) {
+                                Editor::closeTab(static_cast<size_t>(j));
+                                if (static_cast<size_t>(j) < i) {
+                                    tabToClose = static_cast<int>(i) - 1;
+                                }
+                            }
+                        }
+                    }
+                    if (ImGui::MenuItem("Close All")) {
+                        for (int j = static_cast<int>(Editor::tabs.size()) - 1; j >= 0; --j) {
+                            Editor::closeTab(static_cast<size_t>(j));
+                        }
+                    }
+                }
+                ImGui::EndPopup();
             }
             
             ImGui::PopStyleColor(3);
