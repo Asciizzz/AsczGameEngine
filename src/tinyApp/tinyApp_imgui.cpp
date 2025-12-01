@@ -94,25 +94,25 @@ namespace Editor {
 
     static std::vector<Tab> tabs;
     static size_t selectedTab = 0;
+    void selectTab(size_t index) {
+        if (index >= tabs.size()) return;
+
+        selectedTab = index;
+        if (tabs[index].selectFunc) {
+            tabs[index].selectFunc(tabs[index]);
+        }
+    }
 
     size_t addTab(Tab tab, bool select = true) {
         for (size_t i = 0; i < tabs.size(); ++i) {
             if (tabs[i] == tab) {
-                if (select) {
-                    selectedTab = i;
-                    if (tabs[i].selectFunc) {
-                        tabs[i].selectFunc(tabs[i]);
-                    }
-                }
+                if (select) selectTab(i);
                 return i;
             }
         }
 
-        if (select) selectedTab = tabs.size();
         tabs.push_back(tab);
-        if (select && tabs.back().selectFunc) {
-            tabs.back().selectFunc(tabs.back());
-        }
+        if (select) selectTab(tabs.size() - 1);
         return tabs.size() - 1;
     }
 
@@ -453,7 +453,7 @@ static Editor::Tab CreateScriptEditorTab(const std::string& title, tinyHandle fH
     tab.setState<tinyType::ID>("type", tinyType::TypeID<tinyScript>());
     tab.setState<Splitter>("splitter", Splitter());
     tab.setState<tinyHandle>("lastScriptHandle", tinyHandle());
-    tab.setState<bool>("horizontal", true);
+    tab.setState<bool>("horizontal", false);
     
     // Define select function - called when tab becomes active
     tab.selectFunc = [](Editor::Tab& self) {
@@ -951,9 +951,13 @@ static Editor::Tab CreateMorphTargetEditorTab(const std::string& title, tinyHand
         searchBuf[255] = '\0';
         
         ImGui::Text("Search Name:");
+
+        // Make input full width
+        ImGui::PushItemWidth(-1);
         if (ImGui::InputText("##search", searchBuf, 256)) {
             *searchFilter = searchBuf;
         }
+        ImGui::PopItemWidth();
         
         ImGui::Separator();
         
@@ -1477,7 +1481,9 @@ static void RenderFileNodeHierarchy() {
             }
 
             ImGui::Separator();
-            if (ImGui::MenuItem("Delete", nullptr, nullptr)) projRef->fRemove(h);
+
+            bool canDelete = h != fs.rootHandle();
+            if (ImGui::MenuItem("Delete", nullptr, nullptr, canDelete)) projRef->fRemove(h);
         },
         // DbClick - Do nothing for now
         [&fs](tinyHandle h) {
@@ -1568,11 +1574,13 @@ static void RenderTRANFM3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle)
 
     bool changed = false;
 
-    if (ImGui::DragFloat3("Translation", &pos.x, 0.1f)) {
+    float vSpeed = ImGui::GetIO().KeyShift ? 1.0f : ImGui::GetIO().KeyCtrl ? 0.01f : 0.1f;
+
+    if (ImGui::DragFloat3("Translation", &pos.x, vSpeed)) {
         changed = true;
     }
 
-    if (ImGui::DragFloat3("Rotation", &displayEuler.x, 0.5f)) {
+    if (ImGui::DragFloat3("Rotation", &displayEuler.x, vSpeed * 5.0f)) {
         // Euler angle is a b*tch
         if (!isDraggingRotation) {
             initialRotation = rot;
@@ -1588,7 +1596,7 @@ static void RenderTRANFM3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle)
         isDraggingRotation = false;
     }
 
-    if (ImGui::DragFloat3("Scale", &scale.x, 0.1f)) {
+    if (ImGui::DragFloat3("Scale", &scale.x, vSpeed)) {
         changed = true;
     }
 
@@ -2311,18 +2319,13 @@ void tinyApp::renderUI() {
     }
 
     if (tinyUI::Begin("Editor", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar)) {
-        // Draw the tabs
-
         size_t currentTab = Editor::selectedTab;
 
-        // Calculate tab bar height with proper spacing to avoid vertical scrollbar
         float tabBarHeight = 32.0f;
         
-        // Draw a child window for tabs with horizontal scroll only
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0)); // Transparent background
         ImGui::BeginChild("Tabs", ImVec2(0, tabBarHeight), false, ImGuiWindowFlags_HorizontalScrollbar);
 
-        // Handle mouse wheel scrolling for horizontal scroll
         if (ImGui::IsWindowHovered() && ImGui::GetIO().MouseWheel != 0.0f) {
             float scrollAmount = -ImGui::GetIO().MouseWheel * 20.0f;
             ImGui::SetScrollX(ImGui::GetScrollX() + scrollAmount);
@@ -2333,37 +2336,26 @@ void tinyApp::renderUI() {
             Editor::Tab& tab = Editor::tabs[i];
             ImGui::PushID(static_cast<int>(i));
 
-            // Use tab's custom color if selected, otherwise gray
-            ImVec4 tabColor = (i == currentTab) ? tab.color : ImVec4(0.3f, 0.3f, 0.3f, 1.0f);
+            ImVec4 tabColor = (i == currentTab) ? tab.color : ImVec4(0.3f, 0.3f, 0.3f, 0.2f);
             ImGui::PushStyleColor(ImGuiCol_Button, tabColor);
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(tabColor.x * 1.2f, tabColor.y * 1.2f, tabColor.z * 1.2f, 1.0f));
             ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(tabColor.x * 0.8f, tabColor.y * 0.8f, tabColor.z * 0.8f, 1.0f));
-            
-            // Create button label with integrated close button (x centered in spacing)
+
             std::string label = tab.title + " x";
-            
-            if (ImGui::Button(label.c_str())) {
-                Editor::selectedTab = i;
-                // Always call selectFunc when tab is clicked
-                if (tab.selectFunc) {
-                    tab.selectFunc(tab);
-                }
-            }
+
+            if (ImGui::Button(label.c_str())) Editor::selectTab(i);
             
             bool isHovered = ImGui::IsItemHovered();
             ImVec2 buttonMin = ImGui::GetItemRectMin();
             ImVec2 buttonMax = ImGui::GetItemRectMax();
             ImVec2 mousePos = ImGui::GetMousePos();
-            
-            // Check if close button (x) was clicked
+
             if (isHovered) {
-                // Close button is in the right portion of the tab
                 float closeButtonWidth = ImGui::CalcTextSize(" x").x;
                 if (mousePos.x > buttonMax.x - closeButtonWidth && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
                     tabToClose = static_cast<int>(i);
                 }
-                
-                // Draw darker overlay on close button area when hovering
+
                 if (mousePos.x > buttonMax.x - closeButtonWidth) {
                     ImDrawList* drawList = ImGui::GetWindowDrawList();
                     drawList->AddRectFilled(
@@ -2372,14 +2364,10 @@ void tinyApp::renderUI() {
                         IM_COL32(0, 0, 0, 60)
                     );
                 }
-                
-                // Call hover callback if defined
-                if (tab.hoverFunc) {
-                    tab.hoverFunc(tab);
-                }
+
+                if (tab.hoverFunc) tab.hoverFunc(tab);
             }
-            
-            // Right-click context menu
+
             if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
                 ImGui::OpenPopup(("TabContext##" + std::to_string(i)).c_str());
             }
@@ -2419,21 +2407,26 @@ void tinyApp::renderUI() {
 
         ImGui::EndChild();
         ImGui::PopStyleColor();
-        
-        // Close tab after iteration to avoid iterator invalidation
+
         if (tabToClose >= 0) {
             Editor::closeTab(static_cast<size_t>(tabToClose));
         }
 
-        // Render the current tab using its custom render function (no header)
         Editor::Tab* tab = Editor::currentTab();
-        if (tab && tab->renderFunc) {
-            tab->renderFunc(*tab);
-        } else if (tab) {
-            ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.2f, 1.0f), "No render function defined for this tab.");
-        }
+        if (tab && tab->renderFunc) tab->renderFunc(*tab);
+        else if (tab) ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.2f, 1.0f), "Empty Tab");
 
         tinyUI::End();
+    }
+
+    // Press Ctrl + Tab to cycle through tabs
+    if (ImGui::IsKeyDown(ImGuiMod_Ctrl) && ImGui::IsKeyPressed(ImGuiKey_Tab, false)) {
+        size_t tabCount = Editor::tabs.size();
+        if (tabCount > 0) {
+            Editor::selectedTab = (Editor::selectedTab + 1) % tabCount;
+            Editor::Tab& tab = Editor::tabs[Editor::selectedTab];
+            if (tab.selectFunc) tab.selectFunc(tab);
+        }
     }
 
 

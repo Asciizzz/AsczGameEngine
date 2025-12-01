@@ -163,6 +163,8 @@ echo Contents:
 if exist "%RELEASE_DIST_NAME%\%DIST_NAME%_release.exe" echo   [OK] %DIST_NAME%_release.exe
 if exist "%RELEASE_DIST_NAME%\Shaders" echo   [OK] Shaders folder
 if exist "%RELEASE_DIST_NAME%\Assets" echo   [OK] Assets folder
+if exist "%RELEASE_DIST_NAME%\imgui.ini" echo   [OK] imgui.ini
+if exist "%RELEASE_DIST_NAME%\Ascz.ico" echo   [OK] Ascz.ico
 if exist "%RELEASE_DIST_NAME%\README.txt" echo   [OK] README.txt
 if exist "%RELEASE_DIST_NAME%\launch.bat" echo   [OK] launch.bat
 

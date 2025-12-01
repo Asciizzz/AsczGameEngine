@@ -183,10 +183,14 @@ add_custom_command(TARGET AsczGame POST_BUILD
     COMMAND $<$<CONFIG:Debug>:${CMAKE_COMMAND}> -E make_directory ${CMAKE_SOURCE_DIR}/${DIST_NAME}_Debug
     COMMAND $<$<CONFIG:Debug>:${CMAKE_COMMAND}> -E copy $<TARGET_FILE:AsczGame> ${CMAKE_SOURCE_DIR}/${DIST_NAME}_Debug/
     COMMAND $<$<CONFIG:Debug>:${CMAKE_COMMAND}> -E copy_directory ${CMAKE_SOURCE_DIR}/Shaders ${CMAKE_SOURCE_DIR}/${DIST_NAME}_Debug/Shaders
+    COMMAND $<$<CONFIG:Debug>:${CMAKE_COMMAND}> -E copy_if_different ${CMAKE_SOURCE_DIR}/imgui.ini ${CMAKE_SOURCE_DIR}/${DIST_NAME}_Debug/imgui.ini
+    COMMAND $<$<CONFIG:Debug>:${CMAKE_COMMAND}> -E copy_if_different ${CMAKE_SOURCE_DIR}/Ascz.ico ${CMAKE_SOURCE_DIR}/${DIST_NAME}_Debug/Ascz.ico
     
     COMMAND $<$<CONFIG:Release>:${CMAKE_COMMAND}> -E make_directory ${CMAKE_SOURCE_DIR}/${DIST_NAME}_Release
     COMMAND $<$<CONFIG:Release>:${CMAKE_COMMAND}> -E copy $<TARGET_FILE:AsczGame> ${CMAKE_SOURCE_DIR}/${DIST_NAME}_Release/
     COMMAND $<$<CONFIG:Release>:${CMAKE_COMMAND}> -E copy_directory ${CMAKE_SOURCE_DIR}/Shaders ${CMAKE_SOURCE_DIR}/${DIST_NAME}_Release/Shaders
+    COMMAND $<$<CONFIG:Release>:${CMAKE_COMMAND}> -E copy_if_different ${CMAKE_SOURCE_DIR}/imgui.ini ${CMAKE_SOURCE_DIR}/${DIST_NAME}_Release/imgui.ini
+    COMMAND $<$<CONFIG:Release>:${CMAKE_COMMAND}> -E copy_if_different ${CMAKE_SOURCE_DIR}/Ascz.ico ${CMAKE_SOURCE_DIR}/${DIST_NAME}_Release/Ascz.ico
 )
 
 # Copy DLLs only for Release builds (for portability)
@@ -252,6 +256,8 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
         COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/${DEBUG_DIST_NAME}
         COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:AsczGame> ${CMAKE_SOURCE_DIR}/${DEBUG_DIST_NAME}/
         COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Shaders ${CMAKE_SOURCE_DIR}/${DEBUG_DIST_NAME}/Shaders
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/imgui.ini ${CMAKE_SOURCE_DIR}/${DEBUG_DIST_NAME}/imgui.ini
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/Ascz.ico ${CMAKE_SOURCE_DIR}/${DEBUG_DIST_NAME}/Ascz.ico
     )
 endif()
 
