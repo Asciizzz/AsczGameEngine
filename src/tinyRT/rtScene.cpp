@@ -183,6 +183,13 @@ void Scene::update(FrameStart frameStart) noexcept {
         // Update components
         for (auto& [_, compHandle] : node->comps) {
             if (rtTRANFM3D* tranfm3D = rt_.get<rtTRANFM3D>(compHandle)) {
+                // Scale restriction: local cannot have 0 scale on any axis
+                for (int i = 0; i < 3; ++i) {
+                    if (glm::length(glm::vec3(tranfm3D->local[i])) < 1e-6f) {
+                        tranfm3D->local[i][i] = 1e-6f * (tranfm3D->local[i][i] < 0.0f ? -1.0f : 1.0f);
+                    }
+                }
+
                 tranfm3D->world = parentMat * tranfm3D->local;
                 currentWorld = currentWorld * tranfm3D->local;
             }

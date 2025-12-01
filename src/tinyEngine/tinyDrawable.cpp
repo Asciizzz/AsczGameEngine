@@ -298,6 +298,7 @@ void tinyDrawable::submit(const Entry& entry) noexcept {
 
                     matData.uint1.x = getTextureIndex(rMat->albTexture);
                     matData.uint1.y = getTextureIndex(rMat->nrmlTexture);
+                    matData.uint1.z = getTextureIndex(rMat->emissTexture);
 
                     matData_.push_back(matData);
                 }

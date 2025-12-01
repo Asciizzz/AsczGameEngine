@@ -28,7 +28,7 @@ layout(std430, set = 2, binding = 0) readonly buffer MatBuffer {
 };
 
 layout(set = 3, binding = 0) uniform sampler2D textures[];
-vec4 getTexture(uint texIndex, vec2 uv) {
+vec4 texColor(uint texIndex, vec2 uv) {
     return texture(textures[nonuniformEXT(texIndex)], uv);
 }
 
@@ -54,12 +54,15 @@ void main() {
 
     Material mat = materials[pConst.data0.w];
 
-    vec4 albColor = getTexture(mat.tex1.x, fragUV);
+    vec4 albColor = texColor(mat.tex1.x, fragUV);
+    vec4 emissColor = texColor(mat.tex1.z, fragUV);
+
     vec4 baseColor = mat.base;
-    
+
     float alpha = baseColor.a * albColor.a;
     if (alpha < 0.7) discard;
 
+    // vec3 fColor = baseColor.rgb * albColor.rgb + emissColor.rgb;
     vec3 fColor = baseColor.rgb * albColor.rgb;
 
     outColor = vec4(fColor * lDot, alpha);

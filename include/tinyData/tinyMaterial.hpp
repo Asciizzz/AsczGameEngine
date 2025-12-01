@@ -19,4 +19,5 @@ struct  tinyMaterial {
     glm::vec4 baseColor;
     tinyHandle albTexture;
     tinyHandle nrmlTexture;
+    tinyHandle emissTexture;
 }; 

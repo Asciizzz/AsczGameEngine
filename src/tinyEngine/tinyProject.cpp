@@ -76,6 +76,9 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
             tinyHandle nrmlHandle = linkHandle(mMaterial.nrmlIndx, glbTexRHandle);
             material.nrmlTexture = nrmlHandle;
 
+            tinyHandle emissHandle = linkHandle(mMaterial.emisIndx, glbTexRHandle);
+            material.emissTexture = emissHandle;
+
             tinyHandle fnHandle = fs_->createFile(mMaterial.name, std::move(material), fnMatFolder);
             tinyHandle dataHandle = fs_->dataHandle(fnHandle);
             glmMatRHandle.push_back(dataHandle);
