@@ -596,31 +596,64 @@ void loadMesh(tinyMesh& mesh, const tinygltf::Model& gltfModel, const tinygltf::
 
 
         // --- 6) Morph targets: read per-primitive targets into submesh.mrphTargets ---
-
-        for (size_t tgtIdx = 0; tgtIdx < primitive.targets.size(); ++tgtIdx) {
-            const auto& target = primitive.targets[tgtIdx];
-
+        // In glTF, mesh.extras.targetNames defines ALL morph targets at mesh level
+        // Each primitive may have sparse data (not all morphs defined for all primitives)
+        // We need to create morph targets for ALL mesh-level targets, filling with zeros where needed
+        
+        size_t totalMorphTargets = 0;
+        
+        // First, try to determine total number of morph targets from mesh extras
+        if (gltfMesh.extras.Has("targetNames") && gltfMesh.extras.Get("targetNames").IsArray()) {
+            totalMorphTargets = gltfMesh.extras.Get("targetNames").ArrayLen();
+        }
+        
+        // If no extras, check mesh.weights array (standard glTF property)
+        if (totalMorphTargets == 0 && !gltfMesh.weights.empty()) {
+            totalMorphTargets = gltfMesh.weights.size();
+        }
+        
+        // Final fallback: use the primitive's targets array size
+        if (totalMorphTargets == 0) {
+            totalMorphTargets = primitive.targets.size();
+        }
+        
+        #ifdef TINYLOADER_DEBUG_MORPHS
+        if (totalMorphTargets > 0) {
+            std::cout << "[MorphDebug] Mesh '" << gltfMesh.name << "' primitive has " 
+                      << totalMorphTargets << " morph targets (primitive.targets.size=" 
+                      << primitive.targets.size() << ")" << std::endl;
+        }
+        #endif
+        
+        // Process all morph targets (even if this primitive doesn't have data for some)
+        for (size_t tgtIdx = 0; tgtIdx < totalMorphTargets; ++tgtIdx) {
             // prepare delta arrays per-vertex for this primitive
             std::vector<glm::vec3> dPos;
             std::vector<glm::vec3> dNrm;
             std::vector<glm::vec3> dTan;
             bool hasAnyData = false;
 
-            auto posIt = target.find("POSITION");
-            if (posIt != target.end()) {
-                hasAnyData = hasAnyData || readDeltaAccessor(gltfModel, posIt->second, dPos);
-            }
-            auto nrmIt = target.find("NORMAL");
-            if (nrmIt != target.end()) {
-                hasAnyData = hasAnyData || readDeltaAccessor(gltfModel, nrmIt->second, dNrm);
-            }
-            auto tanIt = target.find("TANGENT");
-            if (tanIt != target.end()) {
-                hasAnyData = hasAnyData || readDeltaAccessor(gltfModel, tanIt->second, dTan);
+            // Check if this primitive has data for this morph target
+            if (tgtIdx < primitive.targets.size()) {
+                const auto& target = primitive.targets[tgtIdx];
+
+                auto posIt = target.find("POSITION");
+                if (posIt != target.end()) {
+                    hasAnyData = hasAnyData || readDeltaAccessor(gltfModel, posIt->second, dPos);
+                }
+                auto nrmIt = target.find("NORMAL");
+                if (nrmIt != target.end()) {
+                    hasAnyData = hasAnyData || readDeltaAccessor(gltfModel, nrmIt->second, dNrm);
+                }
+                auto tanIt = target.find("TANGENT");
+                if (tanIt != target.end()) {
+                    hasAnyData = hasAnyData || readDeltaAccessor(gltfModel, tanIt->second, dTan);
+                }
             }
 
-            if (!hasAnyData) continue; // skip empty target
-
+            // Always create morph target entry, even if no data (fills with zeros)
+            // This ensures all primitives have the same number of morph targets
+            
             // Fill all missing data with zeros
             if (dPos.size() != vrtxCount) dPos.resize(vrtxCount, glm::vec3(0.0f));
             if (dNrm.size() != vrtxCount) dNrm.resize(vrtxCount, glm::vec3(0.0f));
@@ -635,7 +668,7 @@ void loadMesh(tinyMesh& mesh, const tinygltf::Model& gltfModel, const tinygltf::
                 mt.morphs[v].dTang = glm::vec4(dTan[v], 0.0f);
             }
 
-            // optional name from mesh.extras.targetNames (mesh-level)
+            // Get name from mesh.extras.targetNames (mesh-level)
             if (tgtIdx < gltfMesh.extras.Get("targetNames").ArrayLen()) {
                 mt.name = gltfMesh.extras
                             .Get("targetNames")
