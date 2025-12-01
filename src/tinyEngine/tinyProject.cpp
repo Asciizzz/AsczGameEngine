@@ -43,7 +43,7 @@ tinyProject::~tinyProject() {
 #include "tinyRT/rtSkeleton.hpp"
 
 tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
-    parentFolder = parentFolder ? parentFolder : fs_->root();
+    parentFolder = parentFolder ? parentFolder : fs_->rootHandle();
 
     tinyHandle fnModelFolder = fs_->createFolder(model.name, parentFolder);
 
@@ -130,7 +130,7 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
         const tinyModel::Node& ogNode = model.nodes[nodeIndex];
 
         // Ignore the root node for naming purposes
-        tinyHandle nodeHandle = nodeIndex ? scene.nAdd(ogNode.name, parentHandle) : scene.root();
+        tinyHandle nodeHandle = nodeIndex ? scene.nAdd(ogNode.name, parentHandle) : scene.rootHandle();
         nodeMap[nodeIndex] = nodeHandle;
 
         if (ogNode.hasTRFM3D()) {
@@ -166,6 +166,9 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
         }
     };
     addNodeRecursive(0, tinyHandle());
+
+    // Rename the root node to the model's name
+    scene.root()->name = model.name;
 
     // Add scene to registry
     tinyHandle fnHandle = fs_->createFile(model.name, std::move(scene), fnModelFolder);

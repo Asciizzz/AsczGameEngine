@@ -110,8 +110,11 @@ public:
 // Node APIs
     std::string& nName(tinyHandle nHandle) noexcept;
 
-    [[nodiscard]] tinyHandle root() const noexcept { return root_; }
+    [[nodiscard]] tinyHandle rootHandle() const noexcept { return root_; }
     bool rootShift() noexcept;
+
+    [[nodiscard]] Node* root() noexcept { return nodes_.get(root_); }
+    [[nodiscard]] const Node* root() const noexcept { return nodes_.get(root_); }
 
     [[nodiscard]] Node* node(tinyHandle nHandle) noexcept { return nodes_.get(nHandle); }
     [[nodiscard]] const Node* node(tinyHandle nHandle) const noexcept { return nodes_.get(nHandle); }

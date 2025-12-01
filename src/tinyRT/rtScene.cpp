@@ -274,7 +274,7 @@ tinyHandle Scene::instantiate(tinyHandle sceneHandle, tinyHandle parent) noexcep
         from_to[fromHandle] = toHandle;
 
         // Find new root
-        if (fromHandle == fromScene->root()) newRootHandle = toHandle;
+        if (fromHandle == fromScene->rootHandle()) newRootHandle = toHandle;
 
         // Establish parent-child relationship
         toNode->parent = toParent;
@@ -303,7 +303,7 @@ tinyHandle Scene::instantiate(tinyHandle sceneHandle, tinyHandle parent) noexcep
         }
     };
 
-    cloneRec(fromScene->root(), parent);
+    cloneRec(fromScene->rootHandle(), parent);
 
     return newRootHandle;
 }

@@ -82,7 +82,7 @@ public:
         }
     }
 
-    [[nodiscard]] tinyHandle root() const noexcept { return rootHandle_; }
+    [[nodiscard]] tinyHandle rootHandle() const noexcept { return rootHandle_; }
 
 // ------------------------------- Node creation -------------------------------
 

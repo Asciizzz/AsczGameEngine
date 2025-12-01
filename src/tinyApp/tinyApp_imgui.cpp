@@ -39,11 +39,39 @@ namespace State {
 }
 
 namespace Editor {
-    static tinyHandle selected;
-    static const char* what = "None";
+    struct Tab {
+        std::string title;
+        tinyHandle handle;
+        tinyType::ID type;
 
-    static bool is(const char* typeName) {
-        return std::strcmp(what, typeName) == 0;
+        bool operator==(const Tab& o) const {
+            return handle == o.handle && title == o.title && type == o.type;
+        }
+
+        template<typename T>
+        bool isType() const { return type == tinyType::TypeID<T>(); }
+        bool isType(tinyType::ID tID) const { return type == tID; }
+    };
+
+    static std::vector<Tab> tabs;
+    static size_t selectedTab = 0;
+
+    size_t addTab(Tab tab, bool select = true) {
+        for (size_t i = 0; i < tabs.size(); ++i) {
+            if (tabs[i] == tab) {
+                if (select) selectedTab = i;
+                return i;
+            }
+        }
+
+        if (select) selectedTab = tabs.size();
+        tabs.push_back(tab);
+        return tabs.size() - 1;
+    }
+
+    const Tab* currentTab() {
+        if (tabs.empty() || selectedTab >= tabs.size()) return nullptr;
+        return &tabs[selectedTab];
     }
 }
 
@@ -331,6 +359,13 @@ struct Splitter {
             ImGui::SetMouseCursor(horizontal ? ImGuiMouseCursor_ResizeNS : ImGuiMouseCursor_ResizeEW);
         }
 
+        // Double click to put it at the middle between neighbors
+        if (M_DBCLICKED(ImGuiMouseButton_Left)) {
+            float lowerBound = (index == 0) ? 0.0f : positions[index - 1];
+            float upperBound = (index == positions.size() - 1) ? 1.0f : positions[index + 1];
+            positions[index] = (lowerBound + upperBound) / 2.0f;
+        }
+
         ImGui::PopStyleColor(3);
     }
 
@@ -439,7 +474,7 @@ static void RenderSceneNodeHierarchy() {
     tinyFS& fs = projRef->fs();
 
     RenderGenericNodeHierarchy(
-        scene->root(), 0,
+        scene->rootHandle(), 0,
         // Div
         [scene](tinyHandle h, int depth) {
             rtNode* node = scene->node(h);
@@ -532,7 +567,7 @@ static void RenderSceneNodeHierarchy() {
             }
             ImGui::Separator();
 
-            bool canDelete = h != sceneRef->root();
+            bool canDelete = h != sceneRef->rootHandle();
             if (ImGui::MenuItem("Erase", nullptr, false, canDelete)) sceneRef->nErase(h);
         },
         // DbClick - Do nothing for now
@@ -598,7 +633,7 @@ static void RenderFileNodeHierarchy() {
     tinyFS& fs = projRef->fs();
 
     RenderGenericNodeHierarchy(
-        fs.root(), 0,
+        fs.rootHandle(), 0,
         // Div
         [&fs](tinyHandle h, int depth) {
             const tinyNodeFS* node = fs.fNode(h);
@@ -742,7 +777,11 @@ static void RenderFileNodeHierarchy() {
                 State::sceneHandle = dHandle;
             // Script file -> open code editor
             } else if (dHandle.is<tinyScript>()) {
-                Editor::selected = h;
+                Editor::Tab tab;
+                tab.title = node->name;
+                tab.type = tinyType::TypeID<tinyScript>();
+                tab.handle = h;
+                Editor::addTab(tab);
             }
         },
         // Hover
@@ -948,6 +987,11 @@ static void RenderMESHRD3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle)
             ImGui::Text("%.2f", weight);
             ImGui::EndTooltip();
         }
+
+        // Right-click to reset
+        if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
+            weight = 0.0f;
+        }
         
         ImGui::PopItemWidth();
     }
@@ -997,8 +1041,15 @@ static void RenderSKEL3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle) {
 
     // For the time being just open the editor
     if (ImGui::Button("Open Runtime Skeleton Editor", ImVec2(-1, 0))) {
-        Editor::selected = nHandle;
-        Editor::what = "SKEL3D";
+        // Editor::selected = nHandle;
+        // Editor::what = "SKEL3D";
+
+        Editor::Tab tab;
+        tab.title = scene->nName(nHandle) + " - Skeleton";
+        tab.type = tinyType::TypeID<rtSKELE3D>();
+        tab.handle = nHandle;
+        Editor::addTab(tab);
+
     }
 }
 
@@ -1347,7 +1398,11 @@ static void RenderFileInspector(tinyProject* project) {
         // A button to open editor (overrides the editorSelection)
 
         if (ImGui::Button("Open in Editor", ImVec2(-1, 0))) {
-            Editor::selected = handle;
+            Editor::addTab({
+                node->name,
+                tinyType::TypeID<tinyScript>(),
+                handle
+            });
         }
     } else if (dHandle.is<tinyTexture>()) {
         tinyTexture* texture = fs.rGet<tinyTexture>(dHandle);
@@ -1367,7 +1422,10 @@ static void RenderInspector(tinyProject* project) {
 // ============================================================================
 
 static void RenderScriptEditor() {
-    tinyHandle fHandle = Editor::selected;
+    const Editor::Tab* tab = Editor::currentTab();
+    if (!tab || !tab->isType<tinyScript>()) return;
+
+    tinyHandle fHandle = tab->handle;
 
     tinyFS& fs = projRef->fs();
     const tinyFS::Node* node = fs.fNode(fHandle);
@@ -1437,11 +1495,12 @@ static void RenderScriptEditor() {
 }
 
 static void RenderSkeleNodeEditor() {
-    if (Editor::what != "SKEL3D") return;
+    const Editor::Tab* tab = Editor::currentTab();
+    if (!tab || !tab->isType<rtSKELE3D>()) return;
 
     rtScene* scene = sceneRef;
 
-    tinyHandle nHandle = Editor::selected;
+    tinyHandle nHandle = tab->handle;
     rtSKELE3D* skel3D = scene->nGetComp<rtSKELE3D>(nHandle);
     if (!skel3D) return;
 
@@ -1732,8 +1791,40 @@ void tinyApp::renderUI() {
     }
 
     if (tinyUI::Begin("Editor", nullptr, ImGuiWindowFlags_NoCollapse)) {
+        // RenderScriptEditor();
+        // RenderSkeleNodeEditor();
+
+        // Draw the tabs
+
+        size_t currentTab = Editor::selectedTab;
+
+        // Draw a window (with x scroll) for the tabs (scroll bar always visible)
+
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0)); // Transparent background
+        ImGui::BeginChild("Tabs", ImVec2(0, 30), false, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_NoMove);
+
+        for (size_t i = 0; i < Editor::tabs.size(); ++i) {
+            // Draw the tabs button (blue if selected, gray if not)
+            const Editor::Tab& tab = Editor::tabs[i];
+            ImGui::PushID(static_cast<int>(i));
+
+            ImVec4 tabColor = (i == currentTab) ? ImVec4(0.2f, 0.5f, 0.8f, 1.0f) : ImVec4(0.3f, 0.3f, 0.3f, 1.0f);
+            ImGui::PushStyleColor(ImGuiCol_Button, tabColor);
+            if (ImGui::Button(tab.title.c_str())) {
+                Editor::selectedTab = i;
+            }
+            ImGui::PopStyleColor();
+            ImGui::PopID();
+
+            if (i < Editor::tabs.size() - 1) ImGui::SameLine();
+        }
+
+        ImGui::EndChild();
+        ImGui::PopStyleColor();
+
         RenderScriptEditor();
         RenderSkeleNodeEditor();
+
         tinyUI::End();
     }
 
