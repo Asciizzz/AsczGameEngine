@@ -413,7 +413,7 @@ void tinyDrawable::submit(const Entry& entry) noexcept {
             size_t mrphWsDataSize = thisCount * sizeof(float);
             size_t mrphWsDataOffset = mrphWsCount_ * sizeof(float) + mrphWsOffset(frameIndex_);
             mrphWsBuffer_.copyData(morphData.weights->data(), mrphWsDataSize, mrphWsDataOffset);
-            
+    
             // Store the offset for this node
             dataMap_[nodeHandle] = mrphWsCount_;
             mrphIt = dataMap_.find(nodeHandle);

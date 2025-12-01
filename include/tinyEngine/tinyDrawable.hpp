@@ -68,12 +68,12 @@ public:
 
         // Additional data
 
-        struct SkeleData { // Can be shared among multiple entries
-            tinyHandle skeleNode; // Cache this handle
+        struct SkeleData {
+            tinyHandle skeleNode; // For skin grouping
             const std::vector<glm::mat4>* skinData = nullptr;
         } skeleData;
 
-        struct MorphData { // Mesh-level morph weights
+        struct MorphData {
             tinyHandle node; // For morph grouping
             const std::vector<float>* weights = nullptr;
         } morphData;
