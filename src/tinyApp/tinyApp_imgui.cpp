@@ -1736,4 +1736,22 @@ void tinyApp::renderUI() {
         RenderSkeleNodeEditor();
         tinyUI::End();
     }
+
+
+    // Fun debug: Hold space to instantiate the currently selected scene file to the root of the current scene
+    if (ImGui::IsKeyDown(ImGuiKey_Space)) {
+        tinyHandle fHandle = State::selected;
+        if (fHandle.is<tinyNodeFS>()) {
+            tinyFS& fs = project->fs();
+            tinyHandle dHandle = fs.dataHandle(fHandle);
+            if (dHandle.is<rtScene>()) {
+                rtScene* srcScene = fs.rGet<rtScene>(dHandle);
+                rtScene* curScene = project->scene(State::sceneHandle);
+                if (srcScene && curScene) {
+                    tinyHandle newNodeHdl = curScene->instantiate(dHandle);
+                    State::selected = newNodeHdl;
+                }
+            }
+        }
+    }
 }
