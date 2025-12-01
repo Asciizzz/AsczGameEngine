@@ -751,7 +751,6 @@ void loadMesh(tinyMesh& mesh, const tinygltf::Model& gltfModel, const tinygltf::
 
             if (activeMorphCount > 0) {
                 submesh.setMrphDeltas(std::move(allMorphDeltas), static_cast<uint32_t>(totalMorphTargets));
-                printf("Submesh has deltas for %u/%zu morph targets\n", activeMorphCount, totalMorphTargets);
             }
         }
 

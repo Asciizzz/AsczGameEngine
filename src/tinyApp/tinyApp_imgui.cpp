@@ -930,37 +930,27 @@ static void RenderMESHRD3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle)
         if (j >= mrphWeights.size()) continue;
         
         const auto& targetInfo = morphTargetNames[j];
+        float& weight = mrphWeights[j];
         
-        std::string label = targetInfo.name + "##" + std::to_string(nHandle.raw()) + std::to_string(j);
+        std::string id = "##morph_" + std::to_string(nHandle.raw()) + "_" + std::to_string(j);
         
-        ImGui::SliderFloat(
-            label.c_str(),
-            &mrphWeights[j],
-            0.0f,
-            1.0f
-        );
+        // Custom slider with embedded name (full width)
+        ImGui::PushItemWidth(-1); // Full width
+        
+        // Draw slider without label (label embedded inside)
+        if (ImGui::SliderFloat(id.c_str(), &weight, -1.0f, 1.0f, targetInfo.name.c_str())) {
+            // Value changed
+        }
+        
+        // Show precise value on hover
+        if (ImGui::IsItemHovered()) {
+            ImGui::BeginTooltip();
+            ImGui::Text("%.2f", weight);
+            ImGui::EndTooltip();
+        }
+        
+        ImGui::PopItemWidth();
     }
-
-    // const std::vector<uint32_t>& subWithMrphs = mesh->subWithMrphs();
-    // for (size_t i = 0; i < subWithMrphs.size(); ++i) {
-    //     uint32_t subIdx = static_cast<uint32_t>(subWithMrphs[i]);
-
-    //     std::vector<float>* subWeights = meshRD->subMrphWeights(i);
-    //     if (!subWeights) continue;
-
-    //     const tinyMesh::Submesh* submesh = mesh->submesh(i);
-    //     if (!submesh) continue;
-
-    //     for (size_t j = 0; j < subWeights->size(); ++j) {
-    //         std::string label = "Morph " + std::to_string(j) + "##" + std::to_string(nHandle.value) + std::to_string(i) + std::to_string(j);
-    //         ImGui::SliderFloat(
-    //             label.c_str(),
-    //             &(*subWeights)[j],
-    //             0.0f,
-    //             1.0f
-    //         );
-    //     }
-    // }
 }
 
 /*
