@@ -183,9 +183,8 @@ void Scene::update(FrameStart frameStart) noexcept {
         // Update components
         for (auto& [_, compHandle] : node->comps) {
             if (rtTRANFM3D* tranfm3D = rt_.get<rtTRANFM3D>(compHandle)) {
-                tranfm3D->local.update();
-                tranfm3D->world = parentMat * tranfm3D->local.Mat4;
-                currentWorld = currentWorld * tranfm3D->local.Mat4;
+                tranfm3D->world = parentMat * tranfm3D->local;
+                currentWorld = currentWorld * tranfm3D->local;
             }
 
             if (rtMESHRD3D* meshRD3D = rt_.get<rtMESHRD3D>(compHandle)) {

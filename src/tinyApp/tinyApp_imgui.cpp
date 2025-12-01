@@ -807,34 +807,52 @@ static void RenderTRANFM3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle)
     rtTRANFM3D* trfm3D = scene->nGetComp<rtTRANFM3D>(nHandle);
     if (!trfm3D) return;
 
-    Tr3D& local = trfm3D->local;
+    // Decompose local transform
+    glm::vec3 pos, scale, skew;
+    glm::quat rot;
+    glm::vec4 persp;
+    glm::decompose(trfm3D->local, scale, rot, pos, skew, persp);
 
     static glm::quat initialRotation;
     static bool isDraggingRotation = false;
     static glm::vec3 displayEuler;
 
-    if (ImGui::DragFloat3("Translation", &local.T.x, 0.1f)) { }
+    bool changed = false;
+
+    if (ImGui::DragFloat3("Translation", &pos.x, 0.1f)) {
+        changed = true;
+    }
 
     if (ImGui::DragFloat3("Rotation", &displayEuler.x, 0.5f)) {
         // Euler angle is a b*tch
         if (!isDraggingRotation) {
-            initialRotation = local.R;
+            initialRotation = rot;
             isDraggingRotation = true;
         }
         glm::vec3 initialEuler = glm::eulerAngles(initialRotation) * (180.0f / 3.14159265f);
         glm::vec3 delta = displayEuler - initialEuler;
-        local.R = initialRotation * glm::quat(glm::radians(delta));
+        rot = initialRotation * glm::quat(glm::radians(delta));
+        changed = true;
     }
 
     if (!ImGui::IsItemActive()) {
         isDraggingRotation = false;
     }
 
-    if (ImGui::DragFloat3("Scale", &local.S.x, 0.1f)) { }
+    if (ImGui::DragFloat3("Scale", &scale.x, 0.1f)) {
+        changed = true;
+    }
+
+    // Recompose transform if changed
+    if (changed) {
+        trfm3D->local = glm::translate(glm::mat4(1.0f), pos) * 
+                        glm::mat4_cast(rot) * 
+                        glm::scale(glm::mat4(1.0f), scale);
+    }
 
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.2f, 0.2f, 1.0f));
     if (ImGui::Button("Reset", ImVec2(-1, 0))) {
-        local = Tr3D();
+        trfm3D->local = glm::mat4(1.0f);
         displayEuler = glm::vec3(0.0f);
     }
     ImGui::PopStyleColor();

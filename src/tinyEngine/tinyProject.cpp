@@ -132,14 +132,7 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
 
         if (ogNode.hasTRFM3D()) {
             rtTRANFM3D* trfm = scene.nWriteComp<rtTRANFM3D>(nodeHandle);
-            trfm->local.T = glm::vec3(ogNode.TRFM3D[3]);
-            trfm->local.R = glm::quat_cast(ogNode.TRFM3D);
-            trfm->local.S = glm::vec3(
-                glm::length(glm::vec3(ogNode.TRFM3D[0])),
-                glm::length(glm::vec3(ogNode.TRFM3D[1])),
-                glm::length(glm::vec3(ogNode.TRFM3D[2]))
-            );
-            trfm->local.update();
+            trfm->local = ogNode.TRFM3D;
         }
 
         if (ogNode.hasMESHR()) {
