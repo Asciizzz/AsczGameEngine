@@ -2239,7 +2239,7 @@ static void RenderFileInspector(tinyProject* project) {
             const tinyTexture* tex = fs.rGet<tinyTexture>(texHandle);
             RenderDragField(
                 [&]() { return label; },
-                "No Texture Assigned",
+                label,
                 [&]() { 
                     if (!tex) return ImVec4(0.5f, 0.5f, 0.5f, 1.0f);
                     return activeColor;
@@ -2284,9 +2284,30 @@ static void RenderFileInspector(tinyProject* project) {
 
             // Render texture preview
             if (tex) Texture::Render(tex, *imguiSampler);
+
+            // Hover to display full path
+            tinyHandle fHandle = fs.rDataToFile(texHandle);
+            if (M_HOVERED) {
+                ImGui::BeginTooltip();
+
+                ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.7f, 1.0f), "[FS]");
+                ImGui::SameLine();
+
+                const char* fullPath = fs.path(fHandle);
+                ImGui::Text("%s", fullPath ? fullPath : "<Invalid Texture>");
+
+                ImGui::EndTooltip();
+            }
+
+            // Click to select texture in hierarchy
+            if (ImGui::IsItemClicked()) {
+                State::selected = fHandle;
+            }
         };
 
         texDragField("Albedo Texture", material->albTexture);
+        texDragField("Normal Texture", material->nrmlTexture, ImVec4(0.5f, 0.5f, 1.0f, 1.0f));
+        texDragField("Emission Texture", material->emissTexture, ImVec4(1.0f, 0.8f, 0.3f, 1.0f));
     }
 }
 
