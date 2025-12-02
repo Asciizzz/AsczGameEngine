@@ -183,7 +183,7 @@ namespace Texture {
 
     static UnorderedMap<uint64_t, ImTextureID> textureCache;
 
-    static void Render(const tinyTexture* texture, VkSampler sampler) {
+    static void Render(const tinyTexture* texture, VkSampler sampler, ImVec2 drawSize = ImVec2(128, 128)) {
         uint64_t cacheKey = (uint64_t)texture->view();
 
         ImTextureID texId;
@@ -202,16 +202,15 @@ namespace Texture {
 
         ImVec2 imgSize;
         float imgRatio = texture->aspectRatio();
-        
-        ImVec2 availSize = ImGui::GetContentRegionAvail();
-        float availRatio = availSize.x / availSize.y;
 
-        if (availRatio < imgRatio) {
-            imgSize.x = availSize.x;
-            imgSize.y = availSize.x / imgRatio;
+        float drawRatio = drawSize.x / drawSize.y;
+
+        if (drawRatio < imgRatio) {
+            imgSize.x = drawSize.x;
+            imgSize.y = drawSize.x / imgRatio;
         } else {
-            imgSize.y = availSize.y;
-            imgSize.x = availSize.y * imgRatio;
+            imgSize.y = drawSize.y;
+            imgSize.x = drawSize.y * imgRatio;
         }
 
         ImGui::Image(texId, imgSize);
@@ -1682,9 +1681,20 @@ static void RenderFileNodeHierarchy() {
                     ImGui::Text("Folder (%zu items)", node->children.size());
                 } else {
                     ImGui::SameLine();
+                    
+                    tinyHandle dHandle = fs.dataHandle(h);
 
-                    tinyFS::TypeInfo* typeInfo = fs.typeInfo(fs.typeID(h));
+                    tinyFS::TypeInfo* typeInfo = fs.typeInfo(dHandle.tID());
                     ImGui::TextColored(IMVEC4_COLOR3(typeInfo->color, 1.0f), ".%s", typeInfo->c_str());
+
+                    // If texture, show preview
+                    if (dHandle.is<tinyTexture>()) {
+                        const tinyTexture* tex = fs.rGet<tinyTexture>(dHandle);
+                        if (tex) {
+                            ImGui::Separator();
+                            Texture::Render(tex, *imguiSampler, ImVec2(256, 256));
+                        }
+                    }
                 }
                 ImGui::EndTooltip();
             }
@@ -2228,7 +2238,10 @@ static void RenderFileInspector(tinyProject* project) {
     } else if (dHandle.is<tinyTexture>()) {
         tinyTexture* texture = fs.rGet<tinyTexture>(dHandle);
 
-        Texture::Render(texture, *imguiSampler);
+        ImVec2 availSize = ImGui::GetContentRegionAvail();
+        ImVec2 imgSize = ImVec2(availSize.x, availSize.x / (float)texture->height() * (float)texture->width());
+
+        Texture::Render(texture, *imguiSampler, imgSize);
     } else if (dHandle.is<tinyMaterial>()) {
         tinyMaterial* material = fs.rGet<tinyMaterial>(dHandle);
 
@@ -2237,9 +2250,16 @@ static void RenderFileInspector(tinyProject* project) {
 
         auto texDragField = [&](const char* label, tinyHandle& texHandle, ImVec4 activeColor = ImVec4(0.8f, 0.8f, 0.8f, 1.0f)) {
             const tinyTexture* tex = fs.rGet<tinyTexture>(texHandle);
+
+            tinyHandle fHandle = fs.rDataToFile(texHandle);
+            const char* fullPath = fs.path(fHandle);
+            fullPath = fullPath ? fullPath : "<Invalid Path>";
+
+            std::string invalidLabel = "No " + std::string(label) + " Assigned";
+
             RenderDragField(
-                [&]() { return label; },
-                label,
+                [&]() { return fullPath; },
+                invalidLabel.c_str(),
                 [&]() { 
                     if (!tex) return ImVec4(0.5f, 0.5f, 0.5f, 1.0f);
                     return activeColor;
@@ -2268,40 +2288,34 @@ static void RenderFileInspector(tinyProject* project) {
                     ImGui::BeginTooltip();
 
                     if (tex) {
+                        ImGui::TextColored(ImVec4(0.2f, 0.8f, 0.2f, 1.0f), label);
+                        ImGui::Separator();
+
                         tinyHandle fHandle = fs.rDataToFile(texHandle);
                         const char* fullPath = fs.path(fHandle);
-                        fullPath = fullPath ? fullPath : "<Invalid Texture>";
+                        fullPath = fullPath ? fullPath : "<Invalid Path>";
 
                         ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.7f, 1.0f), "[FS]");
                         ImGui::SameLine(); ImGui::Text("%s", fullPath);
+
+                        float aspectRatio = static_cast<float>(tex->width()) / static_cast<float>(tex->height());
+                        ImVec2 imgSize = ImVec2(256, 256 / aspectRatio);
+                        Texture::Render(tex, *imguiSampler, imgSize);
                     } else {
-                        ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "No Texture Assigned");
+                        std::string labelStr = "No " + std::string(label) + " Assigned";
+                        ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), labelStr.c_str());
                     }
 
                     ImGui::EndTooltip();
                 }
             );
 
-            // Render texture preview
-            if (tex) Texture::Render(tex, *imguiSampler);
-
-            // Hover to display full path
-            tinyHandle fHandle = fs.rDataToFile(texHandle);
-            if (M_HOVERED) {
-                ImGui::BeginTooltip();
-
-                ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.7f, 1.0f), "[FS]");
-                ImGui::SameLine();
-
-                const char* fullPath = fs.path(fHandle);
-                ImGui::Text("%s", fullPath ? fullPath : "<Invalid Texture>");
-
-                ImGui::EndTooltip();
-            }
-
-            // Click to select texture in hierarchy
-            if (ImGui::IsItemClicked()) {
-                State::selected = fHandle;
+            // Right click for context menu
+            if (ImGui::BeginPopupContextItem(label)) {
+                if (ImGui::MenuItem("Remove")) {
+                    texHandle = tinyHandle();
+                }
+                ImGui::EndPopup();
             }
         };
 

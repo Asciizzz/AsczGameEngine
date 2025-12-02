@@ -234,6 +234,14 @@ void Scene::update(FrameStart frameStart) noexcept {
             else if (rtSKELE3D* skel3D = rt_.get<rtSKELE3D>(compHandle)) {
                 skel3D->update();
             }
+
+
+            // Fund debug:
+            if (node->name != "Debug") continue;
+
+            if (rtTRANFM3D* tranfm3D = rt_.get<rtTRANFM3D>(compHandle)) {
+                tranfm3D->local = glm::rotate(tranfm3D->local, dt, glm::vec3(0.0f, 1.0f, 0.0f));
+            }
         }
 
         // Recurse into children
