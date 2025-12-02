@@ -52,24 +52,16 @@ namespace Editor {
         
         // Dynamic state storage - each tab can store any type of data
         std::unordered_map<std::string, std::any> state;
-        
-        // Custom render function - each tab defines its own rendering logic
+
         std::function<void(Tab&)> renderFunc;
-        
-        // Optional select callback - called when tab becomes active
         std::function<void(Tab&)> selectFunc;
-        
-        // Optional context menu callback - called when right-clicking on tab
         std::function<void(Tab&)> contextMenuFunc;
-        
-        // Optional hover callback - called when hovering over tab
         std::function<void(Tab&)> hoverFunc;
 
         bool operator==(const Tab& o) const {
             return title == o.title;
         }
-        
-        // Helper methods to access state with type safety
+
         template<typename T>
         T* getState(const std::string& key) {
             auto it = state.find(key);
@@ -126,14 +118,12 @@ namespace Editor {
         if (index >= tabs.size()) return;
         
         tabs.erase(tabs.begin() + index);
-        
-        // Adjust selectedTab to adjacent tab
+
         if (tabs.empty()) {
             selectedTab = 0;
         } else if (selectedTab >= tabs.size()) {
             selectedTab = tabs.size() - 1;
         }
-        // If we closed a tab before the selected one, adjust the index
         else if (index < selectedTab) {
             selectedTab--;
         }
@@ -1369,6 +1359,11 @@ static void RenderSceneNodeHierarchy() {
             }
             ImGui::SameLine();
 
+            // Click on the icon to expand/collapse
+            if (ImGui::IsItemClicked()) {
+                if (hasChildren) State::setExpanded(h, !State::isExpanded(h));
+            }
+
             if (State::renamed == h) {
                 bool enter = ImGui::InputText("##rename", State::renameBuffer, sizeof(State::renameBuffer), ImGuiInputTextFlags_EnterReturnsTrue);
                 if (enter || ImGui::IsItemDeactivatedAfterEdit()) {
@@ -1415,7 +1410,6 @@ static void RenderSceneNodeHierarchy() {
         // LClick
         [](tinyHandle h) {
             State::selected = h;
-            State::setExpanded(h, !State::isExpanded(h));
         },
         // RClick
         [](tinyHandle h) {
