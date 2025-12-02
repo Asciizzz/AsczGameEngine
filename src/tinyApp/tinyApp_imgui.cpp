@@ -182,7 +182,7 @@ namespace Texture {
 
     static UnorderedMap<uint64_t, ImTextureID> textureCache;
 
-    static void Render(tinyTexture* texture, VkSampler sampler) {
+    static void Render(const tinyTexture* texture, VkSampler sampler) {
         uint64_t cacheKey = (uint64_t)texture->view();
 
         ImTextureID texId;
@@ -2159,6 +2159,64 @@ static void RenderFileInspector(tinyProject* project) {
         tinyTexture* texture = fs.rGet<tinyTexture>(dHandle);
 
         Texture::Render(texture, *imguiSampler);
+    } else if (dHandle.is<tinyMaterial>()) {
+        tinyMaterial* material = fs.rGet<tinyMaterial>(dHandle);
+
+        glm::vec4& baseColor = material->baseColor;
+        ImGui::ColorEdit4("Base Color", &baseColor.x);
+
+        auto texDragField = [&](const char* label, tinyHandle& texHandle, ImVec4 activeColor = ImVec4(0.8f, 0.8f, 0.8f, 1.0f)) {
+            const tinyTexture* tex = fs.rGet<tinyTexture>(texHandle);
+            RenderDragField(
+                [&]() { return label; },
+                "No Texture Assigned",
+                [&]() { 
+                    if (!tex) return ImVec4(0.5f, 0.5f, 0.5f, 1.0f);
+                    return activeColor;
+                },
+                ImVec4(0.2f, 0.2f, 0.2f, 1.0),
+                [&]() { return tex != nullptr; },
+                [&]() { // Drag Drop handling
+                    if (!ImGui::BeginDragDropTarget()) return;
+
+                    if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PAYLOAD")) {
+                        Payload* data = (Payload*)payload->Data;
+                        if (!data->is<tinyNodeFS>()) { ImGui::EndDragDropTarget(); return; }
+
+                        tinyHandle fHandle = data->handle;
+                        tinyHandle dHandle = fs.dataHandle(fHandle);
+                        const tinyTexture* tex = fs.rGet<tinyTexture>(dHandle);
+                        if (!tex) { ImGui::EndDragDropTarget(); return; }
+
+                        texHandle = dHandle;
+
+                        ImGui::EndDragDropTarget();
+                    }
+                },
+                []() {  },
+                [&]() {
+                    ImGui::BeginTooltip();
+
+                    if (tex) {
+                        tinyHandle fHandle = fs.rDataToFile(texHandle);
+                        const char* fullPath = fs.path(fHandle);
+                        fullPath = fullPath ? fullPath : "<Invalid Texture>";
+
+                        ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.7f, 1.0f), "[FS]");
+                        ImGui::SameLine(); ImGui::Text("%s", fullPath);
+                    } else {
+                        ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "No Texture Assigned");
+                    }
+
+                    ImGui::EndTooltip();
+                }
+            );
+
+            // Render texture preview
+            if (tex) Texture::Render(tex, *imguiSampler);
+        };
+
+        texDragField("Albedo Texture", material->albTexture);
     }
 }
 
