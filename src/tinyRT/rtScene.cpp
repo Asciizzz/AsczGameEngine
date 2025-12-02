@@ -4,12 +4,9 @@
 #include "tinyRT/rtTransform.hpp"
 #include "tinyRT/rtMesh.hpp"
 #include "tinyRT/rtSkeleton.hpp"
+#include "tinyRT/rtScript.hpp"
 
 using namespace tinyRT;
-
-Scene::~Scene() noexcept {
-}
-
 
 void Scene::init(const SceneRes& res) noexcept {
     res_ = res;
@@ -194,7 +191,7 @@ void Scene::update(FrameStart frameStart) noexcept {
                 currentWorld = currentWorld * tranfm3D->local;
             }
 
-            if (rtMESHRD3D* meshRD3D = rt_.get<rtMESHRD3D>(compHandle)) {
+            else if (rtMESHRD3D* meshRD3D = rt_.get<rtMESHRD3D>(compHandle)) {
                 // Frustum culling
                 const tinyMesh* mesh = fsr().get<tinyMesh>(meshRD3D->meshHandle());
 
@@ -234,7 +231,7 @@ void Scene::update(FrameStart frameStart) noexcept {
                 }
             }
 
-            if (rtSKELE3D* skel3D = rt_.get<rtSKELE3D>(compHandle)) {
+            else if (rtSKELE3D* skel3D = rt_.get<rtSKELE3D>(compHandle)) {
                 skel3D->update();
             }
         }
@@ -295,6 +292,11 @@ tinyHandle Scene::instantiate(tinyHandle sceneHandle, tinyHandle parent) noexcep
         if (const rtSKELE3D* fromSkele3D = fromScene->nGetComp<rtSKELE3D>(fromHandle)) {
             rtSKELE3D* toSkele3D = nWriteComp<rtSKELE3D>(toHandle);
             toSkele3D->copy(fromSkele3D);
+        }
+
+        if (const rtSCRIPT* fromScript = fromScene->nGetComp<rtSCRIPT>(fromHandle)) {
+            rtSCRIPT* toScript = nWriteComp<rtSCRIPT>(toHandle);
+            toScript->copy(fromScript);
         }
 
         // Recurse into children

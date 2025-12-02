@@ -101,8 +101,6 @@ class Scene {
 
 public:
     Scene() noexcept = default;
-    ~Scene() noexcept;
-
     void init(const SceneRes& res) noexcept;
 
     Scene(const Scene&) = delete;

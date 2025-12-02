@@ -20,27 +20,6 @@ std::string tinyText::readFrom(const std::string& filePath) noexcept {
     return content;
 }
 
-// ==================== tinyDebug Implementation ====================
-
-void tinyDebug::log(const std::string& message, float r, float g, float b) {
-    Entry entry;
-    entry.str = message;
-    entry.color[0] = r;
-    entry.color[1] = g;
-    entry.color[2] = b;
-
-    // FIFO: if we're at max capacity, remove oldest entry
-    if (logs_.size() >= maxLogs_) {
-        logs_.erase(logs_.begin());
-    }
-    
-    logs_.push_back(entry);
-}
-
-void tinyDebug::clear() {
-    logs_.clear();
-}
-
 // ==================== tinyScript Implementation ====================
 
 tinyScript::~tinyScript() {

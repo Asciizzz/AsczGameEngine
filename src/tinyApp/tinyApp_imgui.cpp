@@ -17,6 +17,7 @@
 #include "tinyRT/rtTransform.hpp"
 #include "tinyRT/rtMesh.hpp"
 #include "tinyRT/rtSkeleton.hpp"
+#include "tinyRT/rtScript.hpp"
 
 using namespace tinyVk;
 
@@ -615,7 +616,7 @@ static Editor::Tab CreateScriptEditorTab(const std::string& title, tinyHandle fH
     return tab;
 }
 
-static Editor::Tab CreateSkeletonEditorTab(const std::string& title, tinyHandle nHandle) {
+static Editor::Tab CreateRtSkeletonEditorTab(const std::string& title, tinyHandle nHandle) {
     Editor::Tab tab;
     tab.title = title;
     tab.color = ImVec4(0.6f, 0.3f, 0.7f, 0.4f); // Purple color for skeletons
@@ -839,7 +840,7 @@ static Editor::Tab CreateSkeletonEditorTab(const std::string& title, tinyHandle 
     return tab;
 }
 
-static Editor::Tab CreateMorphTargetEditorTab(const std::string& title, tinyHandle nHandle) {
+static Editor::Tab CreateRtMorphTargetEditorTab(const std::string& title, tinyHandle nHandle) {
     Editor::Tab tab;
     tab.title = title;
     tab.color = ImVec4(0.8f, 0.5f, 0.3f, 0.4f); // Orange color for morph editor
@@ -1089,6 +1090,170 @@ static Editor::Tab CreateMorphTargetEditorTab(const std::string& title, tinyHand
     return tab;
 }
 
+static Editor::Tab CreateRtScriptEditorTab(const std::string& title, tinyHandle nHandle) {
+    Editor::Tab tab;
+    tab.title = title;
+    tab.color = ImVec4(0.3f, 0.5f, 0.8f, 0.4f); // Blue color for script components
+    
+    // Initialize tab-specific state
+    tab.setState<tinyHandle>("handle", nHandle);
+    tab.setState<tinyType::ID>("type", tinyType::TypeID<rtSCRIPT>());
+
+    tinyFS& fs = projRef->fs();
+
+    // Define context menu for script component tab
+    tab.contextMenuFunc = [](Editor::Tab& self) {
+        tinyHandle* nHandlePtr = self.getState<tinyHandle>("handle");
+        if (!nHandlePtr) return;
+        tinyHandle nHandle = *nHandlePtr;
+
+        rtScene* scene = sceneRef;
+        rtSCRIPT* scriptComp = scene->nGetComp<rtSCRIPT>(nHandle);
+        if (!scriptComp) return;
+    };
+    
+    // Define hover tooltip for script component tab
+    tab.hoverFunc = [](Editor::Tab& self) {
+        tinyHandle* nHandlePtr = self.getState<tinyHandle>("handle");
+        if (!nHandlePtr) return;
+        tinyHandle nHandle = *nHandlePtr;
+
+        rtScene* scene = sceneRef;
+        rtSCRIPT* scriptComp = scene->nGetComp<rtSCRIPT>(nHandle);
+        if (!scriptComp) return;
+        
+        ImGui::BeginTooltip();
+        ImGui::Text("Script Component");
+        ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Node: [%u, %u]", nHandle.idx(), nHandle.ver());
+        ImGui::EndTooltip();
+    };
+    
+    // Define the custom render function for script component
+    tab.renderFunc = [](Editor::Tab& self) {
+        tinyHandle* nHandlePtr = self.getState<tinyHandle>("handle");
+        if (!nHandlePtr) return;
+        tinyHandle nHandle = *nHandlePtr;
+        
+        rtScene* scene = sceneRef;
+        rtSCRIPT* scriptComp = scene->nGetComp<rtSCRIPT>(nHandle);
+        if (!scriptComp) {
+            ImGui::Text("Script component not found");
+            return;
+        }
+
+        ImVec4 varColor = ImVec4(0.2f, 0.5f, 0.8f, 0.2f);
+        ImGui::PushStyleColor(ImGuiCol_Header, varColor);
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.6f, 0.9f, 0.6f));
+
+        if (ImGui::CollapsingHeader("Variables", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::PushStyleColor(ImGuiCol_ChildBg, varColor);
+
+            ImGui::BeginChild("VariablesContent", ImVec2(0, 0), ImGuiChildFlags_AutoResizeY, 0);
+
+            tinyVarsMap& vMap = scriptComp->vars();
+            std::vector<std::pair<std::string, tinyVarsMap::mapped_type>> sortedItems(vMap.begin(), vMap.end());
+            std::sort(sortedItems.begin(), sortedItems.end(), [](const auto& a, const auto& b) {
+                auto getOrder = [](const auto& v) -> int {
+                    using T = std::decay_t<decltype(v)>;
+                    if constexpr (std::is_same_v<T, bool>) return 0;
+                    if constexpr (std::is_same_v<T, int>) return 1;
+                    if constexpr (std::is_same_v<T, float>) return 2;
+                    if constexpr (std::is_same_v<T, glm::vec2>) return 3;
+                    if constexpr (std::is_same_v<T, glm::vec3>) return 4;
+                    if constexpr (std::is_same_v<T, glm::vec4>) return 5;
+                    if constexpr (std::is_same_v<T, std::string>) return 6;
+                    if constexpr (std::is_same_v<T, tinyHandle>) return 7;
+                    return 8;
+                };
+                int orderA = std::visit(getOrder, a.second);
+                int orderB = std::visit(getOrder, b.second);
+                if (orderA != orderB) return orderA < orderB;
+                return a.first < b.first;
+            });
+            for (auto& [name, value] : sortedItems) {
+                auto& realValue = vMap[name];
+
+                std::visit([&](auto&& val) {
+                    using T = std::decay_t<decltype(val)>;
+                    if constexpr (std::is_same_v<T, float>) ImGui::DragFloat(name.c_str(), &val, 0.1f); else
+                    if constexpr (std::is_same_v<T, int>)   ImGui::DragInt(  name.c_str(), &val);       else
+                    if constexpr (std::is_same_v<T, bool>)  ImGui::Checkbox( name.c_str(), &val);       else
+                    if constexpr (std::is_same_v<T, glm::vec2>) ImGui::DragFloat2(name.c_str(), &val.x, 0.1f); else
+                    if constexpr (std::is_same_v<T, glm::vec3>) ImGui::DragFloat3(name.c_str(), &val.x, 0.1f); else
+                    if constexpr (std::is_same_v<T, glm::vec4>) ImGui::DragFloat4(name.c_str(), &val.x, 0.1f); else
+                    if constexpr (std::is_same_v<T, std::string>) {
+                        static std::map<std::string, std::string> buffers;
+                        if (buffers.find(name) == buffers.end()) {
+                            buffers[name] = val;
+                        }
+                        char buf[256];
+                        strcpy(buf, buffers[name].c_str());
+                        if (ImGui::InputText(name.c_str(), buf, sizeof(buf))) {
+                            buffers[name] = buf;
+                            val = buf;
+                        }
+                    } else if constexpr (std::is_same_v<T, tinyHandle>) {
+                        ImGui::PushID(name.c_str());
+                        static std::string labelBuffer;
+
+                        std::string type = "Unknown";
+                        if (val.is<rtNode>())  type = "Node"; else
+                        if (val.is<rtScene>()) type = "Scene"; else
+                        if (val.is<tinyScript>())  type = "Script";
+
+                        RenderDragField(
+                            [&]() {
+                                std::string info = " [" + type + ", " + std::to_string(val.idx()) + ", " + std::to_string(val.ver()) + "]";
+
+                                labelBuffer = name + info;
+                                return labelBuffer.c_str();
+                            },
+                            name.c_str(),
+                            [&]() {
+                                return ImVec4(0.6f, 0.4f, 0.9f, 1.0f);
+                            },
+                            ImVec4(0.2f, 0.2f, 0.2f, 1.0f),
+                            [&]() { return static_cast<bool>(val); },
+                            [&]() {
+                                if (ImGui::BeginDragDropTarget()) {
+                                    if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PAYLOAD")) {
+                                        Payload* data = (Payload*)payload->Data;
+
+                                        // Scene node
+                                        if (data->is<rtNode>() && val.is<rtNode>()) {
+                                            val = data->handle;
+                                        }
+                                        // // File need a bit more checking
+                                        // else if (data->handle.is<tinyNodeFS>()) {
+                                        //     tinyHandle dHandle = fs.dataHandle(data->handle);
+                                        //     if (val.is(dHandle.tID())) val = dHandle;
+                                        // }
+
+                                        ImGui::EndDragDropTarget();
+                                    }
+                                }
+                            },
+                            []() {  },
+                            [name]() {
+                                ImGui::BeginTooltip();
+                                ImGui::Text("%s", name.c_str());
+                                ImGui::EndTooltip();
+                            }
+                        );
+                        ImGui::PopID();
+                    }
+                }, realValue);
+            }
+            ImGui::EndChild();
+            ImGui::PopStyleColor();
+        }
+        
+        ImGui::PopStyleColor(2);
+    };
+
+    return tab;
+}
+
 // ============================================================================
 // Node Tree Rendering Abstraction
 // ============================================================================
@@ -1300,6 +1465,7 @@ static void RenderSceneNodeHierarchy() {
                     if (node->has<rtTRANFM3D>()) displayCompInfo("Transform 3D", 0.5f, 1.0f, 0.5f);
                     if (node->has<rtMESHRD3D>()) displayCompInfo("Mesh Renderer 3D", 0.5f, 0.5f, 1.0f);
                     if (node->has<rtSKELE3D>())  displayCompInfo("Skeleton 3D", 1.0f, 0.5f, 1.0f);
+                    if (node->has<rtSCRIPT>())   displayCompInfo("Script", 1.0f, 1.0f, 0.5f);
 
                     if (!hasComp) { ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "No Component"); }
 
@@ -1731,7 +1897,7 @@ static void RenderMESHRD3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle)
             // Create and open morph editor tab
             rtNode* node = scene->node(nHandle);
             std::string tabTitle = "Morph: " + (node ? node->name : "Unknown");
-            Editor::Tab morphTab = CreateMorphTargetEditorTab(tabTitle, nHandle);
+            Editor::Tab morphTab = CreateRtMorphTargetEditorTab(tabTitle, nHandle);
             Editor::addTab(morphTab);
         }
         
@@ -1804,17 +1970,17 @@ static void RenderSKEL3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle) {
     if (ImGui::Button("Open Runtime Skeleton Editor", ImVec2(-1, 0))) {
         std::string handle = "[" + std::to_string(nHandle.idx()) + ", " + std::to_string(nHandle.ver()) + "]";
         std::string title = scene->nName(nHandle) + " " + handle + " - Skeleton";
-        Editor::addTab(CreateSkeletonEditorTab(title, nHandle));
+        Editor::addTab(CreateRtSkeletonEditorTab(title, nHandle));
     }
 }
 
-/*
+static void RenderSCRIPT(const tinyFS& fs, rtScene* scene, tinyHandle nHandle) {
+    rtSCRIPT* scriptComp = scene->nGetComp<rtSCRIPT>(nHandle);
+    if (!scriptComp) return;
 
-static void RenderSCRIPT(const tinyFS& fs, rtScene* scene, rtScene::NWrap& wrap) {
-    tinyRT_SCRIPT* script = wrap.script;
-    if (!script) return;
+    rtNode* node = scene->node(nHandle);
 
-    tinyHandle scriptHandle = script->scriptHandle();
+    tinyHandle scriptHandle = scriptComp->scriptHandle();
     tinyHandle scriptFHandle = fs.rDataToFile(scriptHandle);
 
     const tinyScript* scriptPtr = fs.rGet<tinyScript>(scriptHandle);
@@ -1826,7 +1992,7 @@ static void RenderSCRIPT(const tinyFS& fs, rtScene* scene, rtScene::NWrap& wrap)
         [&]() { return ImVec4(0.4f, 0.6f, 0.9f, 1.0f); },
         ImVec4(0.2f, 0.2f, 0.2f, 1.0f),
         [&]() { return scriptPtr != nullptr; },
-        [&fs, script]() {
+        [&fs, scriptComp, &scriptPtr]() {
             if (ImGui::BeginDragDropTarget()) {
                 if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PAYLOAD")) {
                     Payload* data = (Payload*)payload->Data;
@@ -1836,7 +2002,14 @@ static void RenderSCRIPT(const tinyFS& fs, rtScene* scene, rtScene::NWrap& wrap)
                     tinyHandle dHandle = fs.dataHandle(fHandle);
                     if (!dHandle.is<tinyScript>()) { ImGui::EndDragDropTarget(); return; }
 
-                    script->assign(dHandle);
+                    scriptPtr = fs.rGet<tinyScript>(dHandle);
+                    if (scriptPtr) {
+                        scriptComp->set(dHandle);
+
+                        scriptPtr->initVars(scriptComp->vars());
+                        scriptPtr->initLocals(scriptComp->locals());
+                    }
+
                     ImGui::EndDragDropTarget();
                 }
             }
@@ -1855,118 +2028,15 @@ static void RenderSCRIPT(const tinyFS& fs, rtScene* scene, rtScene::NWrap& wrap)
         }
     );
 
-    ImGui::Separator();
+    if (!scriptPtr) return; // No valid script assigned
 
-    ImVec4 varColor = ImVec4(0.2f, 0.5f, 0.8f, 0.2f);
-    ImGui::PushStyleColor(ImGuiCol_Header, varColor);
-    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.6f, 0.9f, 0.6f));
+    if (ImGui::Button("Open in Editor", ImVec2(-1, 0))) {
+        std::string title = node->name;
+        title += " [" + std::to_string(nHandle.idx()) + ", " + std::to_string(nHandle.ver()) + "] Script";
 
-    if (ImGui::CollapsingHeader("Variables", ImGuiTreeNodeFlags_DefaultOpen)) {
-        ImGui::PushStyleColor(ImGuiCol_ChildBg, varColor);
-
-        ImGui::BeginChild("VariablesContent", ImVec2(0, 0), ImGuiChildFlags_AutoResizeY, 0);
-
-        tinyVarsMap& vMap = script->vMap();
-        std::vector<std::pair<std::string, tinyVarsMap::mapped_type>> sortedItems(vMap.begin(), vMap.end());
-        std::sort(sortedItems.begin(), sortedItems.end(), [](const auto& a, const auto& b) {
-            auto getOrder = [](const auto& v) -> int {
-                using T = std::decay_t<decltype(v)>;
-                if constexpr (std::is_same_v<T, bool>) return 0;
-                if constexpr (std::is_same_v<T, int>) return 1;
-                if constexpr (std::is_same_v<T, float>) return 2;
-                if constexpr (std::is_same_v<T, glm::vec2>) return 3;
-                if constexpr (std::is_same_v<T, glm::vec3>) return 4;
-                if constexpr (std::is_same_v<T, glm::vec4>) return 5;
-                if constexpr (std::is_same_v<T, std::string>) return 6;
-                if constexpr (std::is_same_v<T, tinyHandle>) return 7;
-                return 8;
-            };
-            int orderA = std::visit(getOrder, a.second);
-            int orderB = std::visit(getOrder, b.second);
-            if (orderA != orderB) return orderA < orderB;
-            return a.first < b.first;
-        });
-        for (auto& [name, value] : sortedItems) {
-            auto& realValue = vMap[name];
-
-            std::visit([&](auto&& val) {
-                using T = std::decay_t<decltype(val)>;
-                if constexpr (std::is_same_v<T, float>) ImGui::DragFloat(name.c_str(), &val, 0.1f); else
-                if constexpr (std::is_same_v<T, int>)   ImGui::DragInt(  name.c_str(), &val);       else
-                if constexpr (std::is_same_v<T, bool>)  ImGui::Checkbox( name.c_str(), &val);       else
-                if constexpr (std::is_same_v<T, glm::vec2>) ImGui::DragFloat2(name.c_str(), &val.x, 0.1f); else
-                if constexpr (std::is_same_v<T, glm::vec3>) ImGui::DragFloat3(name.c_str(), &val.x, 0.1f); else
-                if constexpr (std::is_same_v<T, glm::vec4>) ImGui::DragFloat4(name.c_str(), &val.x, 0.1f); else
-                if constexpr (std::is_same_v<T, std::string>) {
-                    static std::map<std::string, std::string> buffers;
-                    if (buffers.find(name) == buffers.end()) {
-                        buffers[name] = val;
-                    }
-                    char buf[256];
-                    strcpy(buf, buffers[name].c_str());
-                    if (ImGui::InputText(name.c_str(), buf, sizeof(buf))) {
-                        buffers[name] = buf;
-                        val = buf;
-                    }
-                } else if constexpr (std::is_same_v<T, tinyHandle>) {
-                    ImGui::PushID(name.c_str());
-                    static std::string labelBuffer;
-
-                    std::string type = "Unknown";
-                    if (val.is<tinyNodeRT>())  type = "Node"; else
-                    if (val.is<rtScene>()) type = "Scene"; else
-                    if (val.is<tinyScript>())  type = "Script"; else
-                    if (val.is<tinymesh>())  type = "Mesh";
-
-                    RenderDragField(
-                        [&]() {
-                            std::string info = " [" + type + ", " + std::to_string(val.idx()) + ", " + std::to_string(val.ver()) + "]";
-
-                            labelBuffer = name + info;
-                            return labelBuffer.c_str();
-                        },
-                        name.c_str(),
-                        [&]() {
-                            return ImVec4(0.6f, 0.4f, 0.9f, 1.0f);
-                        },
-                        ImVec4(0.2f, 0.2f, 0.2f, 1.0f),
-                        [&]() { return static_cast<bool>(val); },
-                        [&fs, &val]() {
-                            if (ImGui::BeginDragDropTarget()) {
-                                if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PAYLOAD")) {
-                                    Payload* data = (Payload*)payload->Data;
-
-                                    // Scene node
-                                    if (data->is<tinyNodeRT>() && val.is<tinyNodeRT>()) {
-                                        val = data->handle;
-                                    }
-                                    // File need a bit more checking
-                                    else if (data->handle.is<tinyNodeFS>()) {
-                                        tinyHandle dHandle = fs.dataHandle(data->handle);
-                                        if (val.is(dHandle.tID())) val = dHandle;
-                                    }
-
-                                    ImGui::EndDragDropTarget();
-                                }
-                            }
-                        },
-                        []() {  },
-                        [name]() {
-                            ImGui::BeginTooltip();
-                            ImGui::Text("%s", name.c_str());
-                            ImGui::EndTooltip();
-                        }
-                    );
-                    ImGui::PopID();
-                }
-            }, realValue);
-        }
-        ImGui::EndChild();
-        ImGui::PopStyleColor();
+        Editor::addTab(CreateRtScriptEditorTab(title, nHandle));
     }
-    ImGui::PopStyleColor(2);
 }
-*/
 
 struct CompInfo {
     std::string name;
@@ -2059,12 +2129,12 @@ static void RenderSceneNodeInspector(tinyProject* project) {
         [&]() { scene->nAddComp<rtSKELE3D>(handle); },
         [&]() { scene->nEraseComp<rtSKELE3D>(handle); }
     });
-    // components.push_back({
-    //     "Runtime Script", wrap.script != nullptr,
-    //     [&]() { RenderSCRIPT(fs, scene, wrap); },
-    //     [&scene, handle]() { scene->writeComp<tinyNodeRT::SCRIPT>(handle); },
-    //     [&scene, handle]() { scene->removeComp<tinyNodeRT::SCRIPT>(handle); }
-    // });
+    components.push_back({
+        "Runtime Script", node->has<rtSCRIPT>(),
+        [&]() { RenderSCRIPT(fs, scene, handle); },
+        [&]() { scene->nAddComp<rtSCRIPT>(handle); },
+        [&]() { scene->nEraseComp<rtSCRIPT>(handle); }
+    });
 
     // Sort: active first
     std::sort(components.begin(), components.end(), [](const CompInfo& a, const CompInfo& b) {
