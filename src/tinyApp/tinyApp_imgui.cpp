@@ -384,11 +384,11 @@ struct Splitter {
 
     float rSize(size_t index) const {
         if (index >= regionSizes.size()) return 0.01f;
-        float size = regionSizes[index] * directionSize - splitterSize * tinyUI::Theme().fontScale;
+        float size = regionSizes[index] * directionSize - splitterSize * ImGui::GetIO().FontGlobalScale;
         return size > 0.0f ? size : 0.01f;
     }
 
-    void render(size_t index) {
+    void render(size_t index, const std::string& id = "Splitter") {
         if (index >= positions.size()) return;
 
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.4f, 0.4f, 0.4f, 0.6f));
@@ -397,7 +397,8 @@ struct Splitter {
 
         ImVec2 size = horizontal ? ImVec2(-1, splitterSize) : ImVec2(splitterSize, -1);
 
-        ImGui::Button(("##Splitter" + std::to_string(index)).c_str(), size);
+        std::string splitterID = "##" + id + "_Splitter_" + std::to_string(index);
+        ImGui::Button(splitterID.c_str(), size);
 
         if (ImGui::IsItemActive()) {
             float delta = horizontal ? ImGui::GetIO().MouseDelta.y : ImGui::GetIO().MouseDelta.x;
@@ -759,7 +760,7 @@ static Editor::Tab CreateRtSkeletonEditorTab(const std::string& title, tinyHandl
         
         ImGui::SameLine();
         
-        split->render(0);
+        split->render(0, "SkeletonEditorSplitter");
         
         ImGui::SameLine();
         
@@ -2350,45 +2351,42 @@ void tinyApp::renderUI() {
     static bool showThemeEditor = false;
     if (showThemeEditor) {
         if (tinyUI::Begin("Theme Editor", &showThemeEditor)) {
-            tinyUI::ThemeStruct& theme = tinyUI::Theme();
+            ImGuiStyle& style = tinyUI::Style();
+            ImGuiIO& io = ImGui::GetIO();
 
             if (ImGui::CollapsingHeader("Colors")) {
-                ImGui::ColorEdit4("Text", &theme.text.x);
-                ImGui::ColorEdit4("Text Disabled", &theme.textDisabled.x);
-                ImGui::ColorEdit4("Window Background", &theme.windowBg.x);
-                ImGui::ColorEdit4("Child Background", &theme.childBg.x);
-                ImGui::ColorEdit4("Border", &theme.border.x);
-                ImGui::ColorEdit4("Title Background", &theme.titleBg.x);
-                ImGui::ColorEdit4("Title Background Active", &theme.titleBgActive.x);
-                ImGui::ColorEdit4("Title Background Collapsed", &theme.titleBgCollapsed.x);
-                ImGui::ColorEdit4("Button", &theme.button.x);
-                ImGui::ColorEdit4("Button Hovered", &theme.buttonHovered.x);
-                ImGui::ColorEdit4("Button Active", &theme.buttonActive.x);
-                ImGui::ColorEdit4("Header", &theme.header.x);
-                ImGui::ColorEdit4("Header Hovered", &theme.headerHovered.x);
-                ImGui::ColorEdit4("Header Active", &theme.headerActive.x);
-                ImGui::ColorEdit4("Frame Background", &theme.frameBg.x);
-                ImGui::ColorEdit4("Frame Background Hovered", &theme.frameBgHovered.x);
-                ImGui::ColorEdit4("Frame Background Active", &theme.frameBgActive.x);
-                ImGui::ColorEdit4("Scrollbar Background", &theme.scrollbarBg.x);
-                ImGui::ColorEdit4("Scrollbar Grab", &theme.scrollbarGrab.x);
-                ImGui::ColorEdit4("Scrollbar Grab Hovered", &theme.scrollbarGrabHovered.x);
-                ImGui::ColorEdit4("Scrollbar Grab Active", &theme.scrollbarGrabActive.x);
+                ImGui::ColorEdit4("Text", &style.Colors[ImGuiCol_Text].x);
+                ImGui::ColorEdit4("Text Disabled", &style.Colors[ImGuiCol_TextDisabled].x);
+                ImGui::ColorEdit4("Window Background", &style.Colors[ImGuiCol_WindowBg].x);
+                ImGui::ColorEdit4("Child Background", &style.Colors[ImGuiCol_ChildBg].x);
+                ImGui::ColorEdit4("Border", &style.Colors[ImGuiCol_Border].x);
+                ImGui::ColorEdit4("Title Background", &style.Colors[ImGuiCol_TitleBg].x);
+                ImGui::ColorEdit4("Title Background Active", &style.Colors[ImGuiCol_TitleBgActive].x);
+                ImGui::ColorEdit4("Title Background Collapsed", &style.Colors[ImGuiCol_TitleBgCollapsed].x);
+                ImGui::ColorEdit4("Button", &style.Colors[ImGuiCol_Button].x);
+                ImGui::ColorEdit4("Button Hovered", &style.Colors[ImGuiCol_ButtonHovered].x);
+                ImGui::ColorEdit4("Button Active", &style.Colors[ImGuiCol_ButtonActive].x);
+                ImGui::ColorEdit4("Header", &style.Colors[ImGuiCol_Header].x);
+                ImGui::ColorEdit4("Header Hovered", &style.Colors[ImGuiCol_HeaderHovered].x);
+                ImGui::ColorEdit4("Header Active", &style.Colors[ImGuiCol_HeaderActive].x);
+                ImGui::ColorEdit4("Frame Background", &style.Colors[ImGuiCol_FrameBg].x);
+                ImGui::ColorEdit4("Frame Background Hovered", &style.Colors[ImGuiCol_FrameBgHovered].x);
+                ImGui::ColorEdit4("Frame Background Active", &style.Colors[ImGuiCol_FrameBgActive].x);
+                ImGui::ColorEdit4("Scrollbar Background", &style.Colors[ImGuiCol_ScrollbarBg].x);
+                ImGui::ColorEdit4("Scrollbar Grab", &style.Colors[ImGuiCol_ScrollbarGrab].x);
+                ImGui::ColorEdit4("Scrollbar Grab Hovered", &style.Colors[ImGuiCol_ScrollbarGrabHovered].x);
+                ImGui::ColorEdit4("Scrollbar Grab Active", &style.Colors[ImGuiCol_ScrollbarGrabActive].x);
             }
 
             if (ImGui::CollapsingHeader("Sizes & Rounding")) {
-                ImGui::DragFloat("Scrollbar Size", &theme.scrollbarSize, 0.01f, 0.0f, 20.0f);
-                ImGui::DragFloat("Scrollbar Rounding", &theme.scrollbarRounding, 0.01f, 0.0f, 10.0f);
-                ImGui::DragFloat("Frame Rounding", &theme.frameRounding, 0.01f, 0.0f, 10.0f);
-                ImGui::DragFloat("Child Rounding", &theme.childRounding, 0.01f, 0.0f, 10.0f);
-                ImGui::DragFloat("Button Rounding", &theme.buttonRounding, 0.01f, 0.0f, 10.0f);
-                ImGui::DragFloat("Window Rounding", &theme.windowRounding, 0.01f, 0.0f, 10.0f);
-                ImGui::DragFloat("Window Border Size", &theme.windowBorderSize, 0.01f, 0.0f, 5.0f);
-                ImGui::DragFloat("Font Scale", &theme.fontScale, 0.01f, 0.5f, 2.0f);
-            }
-
-            if (ImGui::Button("Apply")) {
-                theme.apply();
+                ImGui::DragFloat("Scrollbar Size", &style.ScrollbarSize, 0.01f, 0.0f, 20.0f);
+                ImGui::DragFloat("Scrollbar Rounding", &style.ScrollbarRounding, 0.01f, 0.0f, 10.0f);
+                ImGui::DragFloat("Frame Rounding", &style.FrameRounding, 0.01f, 0.0f, 10.0f);
+                ImGui::DragFloat("Child Rounding", &style.ChildRounding, 0.01f, 0.0f, 10.0f);
+                ImGui::DragFloat("Button Rounding", &style.GrabRounding, 0.01f, 0.0f, 10.0f);
+                ImGui::DragFloat("Window Rounding", &style.WindowRounding, 0.01f, 0.0f, 10.0f);
+                ImGui::DragFloat("Window Border Size", &style.WindowBorderSize, 0.01f, 0.0f, 5.0f);
+                ImGui::DragFloat("Font Scale", &io.FontGlobalScale, 0.01f, 0.5f, 2.0f);
             }
 
             tinyUI::End();

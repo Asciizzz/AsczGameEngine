@@ -31,7 +31,7 @@ void main() {
 
     vec3 baseSky = vec3(0.44, 0.59, 0.77);
 
-    vec3 baseHorizon = vec3(1.0);
+    vec3 baseHorizon = vec3(0.5, 0, 0.5);
     float horizonFactor = smoothstep(-0.1, 0.2, rayDir.y);
     baseSky = mix(baseHorizon, baseSky, horizonFactor);
 

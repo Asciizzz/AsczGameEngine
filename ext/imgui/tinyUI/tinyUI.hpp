@@ -30,81 +30,50 @@ struct IBackend {
     virtual const char* getName() const = 0;
 };
 
-struct ThemeStruct {
-    ImVec4 windowBg = ImVec4(0.00f, 0.00f, 0.00f, 0.65f);
-    ImVec4 childBg = ImVec4(0.10f, 0.10f, 0.10f, 1.00f);
-    ImVec4 border = ImVec4(0.30f, 0.30f, 0.30f, 0.50f);
-    ImVec4 titleBg = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
-    ImVec4 titleBgActive = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
-    ImVec4 titleBgCollapsed = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
-    ImVec4 text = ImVec4(0.90f, 0.90f, 0.90f, 1.00f);
-    ImVec4 textDisabled = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
-    ImVec4 button = ImVec4(0.20f, 0.40f, 0.80f, 1.00f);
-    ImVec4 buttonHovered = ImVec4(0.40f, 0.60f, 0.90f, 1.00f);
-    ImVec4 buttonActive = ImVec4(0.50f, 0.70f, 1.00f, 1.00f);
-    ImVec4 header = ImVec4(0.25f, 0.25f, 0.30f, 0.55f);
-    ImVec4 headerHovered = ImVec4(0.35f, 0.35f, 0.40f, 0.55f);
-    ImVec4 headerActive = ImVec4(0.45f, 0.45f, 0.50f, 0.55f);
-    ImVec4 frameBg = ImVec4(0.16f, 0.16f, 0.18f, 1.00f);
-    ImVec4 frameBgHovered = ImVec4(0.20f, 0.20f, 0.22f, 1.00f);
-    ImVec4 frameBgActive = ImVec4(0.24f, 0.24f, 0.26f, 1.00f);
-    ImVec4 scrollbarBg = ImVec4(0.10f, 0.10f, 0.10f, 0.50f);
-    ImVec4 scrollbarGrab = ImVec4(0.40f, 0.40f, 0.40f, 0.80f);
-    ImVec4 scrollbarGrabHovered = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
-    ImVec4 scrollbarGrabActive = ImVec4(0.60f, 0.60f, 0.60f, 1.00f);
-
-    float scrollbarSize = 8.0f;
-    float scrollbarRounding = 0.0f;
-    float frameRounding = 0.0f;
-    float childRounding = 0.0f;
-    float buttonRounding = 0.0f;
-    float windowRounding = 0.0f;
-    float windowBorderSize = 1.0f;
-    float fontScale = 1.4f;
-
-    inline void apply() const {
-        ImGuiStyle& style = ImGui::GetStyle();
-        style.Colors[ImGuiCol_Text] = text;
-        style.Colors[ImGuiCol_TextDisabled] = textDisabled;
-        style.Colors[ImGuiCol_WindowBg] = windowBg;
-        style.Colors[ImGuiCol_ChildBg] = childBg;
-        style.Colors[ImGuiCol_Border] = border;
-        style.Colors[ImGuiCol_TitleBg] = titleBg;
-        style.Colors[ImGuiCol_TitleBgActive] = titleBgActive;
-        style.Colors[ImGuiCol_TitleBgCollapsed] = titleBgCollapsed;
-        style.Colors[ImGuiCol_Button] = button;
-        style.Colors[ImGuiCol_ButtonHovered] = buttonHovered;
-        style.Colors[ImGuiCol_ButtonActive] = buttonActive;
-        style.Colors[ImGuiCol_Header] = header;
-        style.Colors[ImGuiCol_HeaderHovered] = headerHovered;
-        style.Colors[ImGuiCol_HeaderActive] = headerActive;
-        style.Colors[ImGuiCol_FrameBg] = frameBg;
-        style.Colors[ImGuiCol_FrameBgHovered] = frameBgHovered;
-        style.Colors[ImGuiCol_FrameBgActive] = frameBgActive;
-        style.Colors[ImGuiCol_ScrollbarBg] = scrollbarBg;
-        style.Colors[ImGuiCol_ScrollbarGrab] = scrollbarGrab;
-        style.Colors[ImGuiCol_ScrollbarGrabHovered] = scrollbarGrabHovered;
-        style.Colors[ImGuiCol_ScrollbarGrabActive] = scrollbarGrabActive;
-
-        style.ScrollbarSize = scrollbarSize;
-        style.ScrollbarRounding = scrollbarRounding;
-        style.FrameRounding = frameRounding;
-        style.ChildRounding = childRounding;
-        style.GrabRounding = buttonRounding;
-        style.WindowRounding = windowRounding;
-        style.WindowBorderSize = windowBorderSize;
-
-        ImGui::GetIO().FontGlobalScale = fontScale;
-    }
-};
-
 namespace detail {
     inline IBackend* backend = nullptr;
-    inline ThemeStruct Theme;
+
+    inline void applyDefaultTheme() {
+        ImGuiStyle& style = ImGui::GetStyle();
+        
+        // Colors
+        style.Colors[ImGuiCol_Text] = ImVec4(0.90f, 0.90f, 0.90f, 1.00f);
+        style.Colors[ImGuiCol_TextDisabled] = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
+        style.Colors[ImGuiCol_WindowBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.65f);
+        style.Colors[ImGuiCol_ChildBg] = ImVec4(0.10f, 0.10f, 0.10f, 1.00f);
+        style.Colors[ImGuiCol_Border] = ImVec4(0.30f, 0.30f, 0.30f, 0.50f);
+        style.Colors[ImGuiCol_TitleBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+        style.Colors[ImGuiCol_TitleBgActive] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+        style.Colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+        style.Colors[ImGuiCol_Button] = ImVec4(0.20f, 0.40f, 0.80f, 1.00f);
+        style.Colors[ImGuiCol_ButtonHovered] = ImVec4(0.40f, 0.60f, 0.90f, 1.00f);
+        style.Colors[ImGuiCol_ButtonActive] = ImVec4(0.50f, 0.70f, 1.00f, 1.00f);
+        style.Colors[ImGuiCol_Header] = ImVec4(0.25f, 0.25f, 0.30f, 0.55f);
+        style.Colors[ImGuiCol_HeaderHovered] = ImVec4(0.35f, 0.35f, 0.40f, 0.55f);
+        style.Colors[ImGuiCol_HeaderActive] = ImVec4(0.45f, 0.45f, 0.50f, 0.55f);
+        style.Colors[ImGuiCol_FrameBg] = ImVec4(0.16f, 0.16f, 0.18f, 1.00f);
+        style.Colors[ImGuiCol_FrameBgHovered] = ImVec4(0.20f, 0.20f, 0.22f, 1.00f);
+        style.Colors[ImGuiCol_FrameBgActive] = ImVec4(0.24f, 0.24f, 0.26f, 1.00f);
+        style.Colors[ImGuiCol_ScrollbarBg] = ImVec4(0.10f, 0.10f, 0.10f, 0.50f);
+        style.Colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.40f, 0.40f, 0.40f, 0.80f);
+        style.Colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
+        style.Colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.60f, 0.60f, 0.60f, 1.00f);
+
+        // Sizes and rounding
+        style.ScrollbarSize = 8.0f;
+        style.ScrollbarRounding = 0.0f;
+        style.FrameRounding = 0.0f;
+        style.ChildRounding = 0.0f;
+        style.GrabRounding = 0.0f;
+        style.WindowRounding = 0.0f;
+        style.WindowBorderSize = 1.0f;
+
+        ImGui::GetIO().FontGlobalScale = 1.4f;
+    }
 }
 
-inline ThemeStruct& Theme() {
-    return detail::Theme;
+inline ImGuiStyle& Style() {
+    return ImGui::GetStyle();
 }
 
 
@@ -123,7 +92,7 @@ inline bool Init(IBackend* b, void* windowHandle = nullptr) {
     info.windowHandle = windowHandle;
     detail::backend->init(info);
 
-    detail::Theme.apply();
+    detail::applyDefaultTheme();
     return true;
 }
 
