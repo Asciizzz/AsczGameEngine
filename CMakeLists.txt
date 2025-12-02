@@ -75,11 +75,9 @@ file(GLOB_RECURSE SRC_FILES
     src/tinyData/tinyCamera.cpp
     src/tinyScript/tinyScript.cpp
 
-    # src/tinyRT/tinyRT_Skeleton3D.cpp
     # src/tinyRT/tinyRT_Anime3D.cpp
     # src/tinyRT/tinyRT_Script.cpp
 
-    src/tinyRT/SceneRes.cpp
     src/tinyRT/rtScene.cpp
 
     src/tinyEngine/tinyGlobal.cpp

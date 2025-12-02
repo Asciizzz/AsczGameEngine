@@ -55,7 +55,7 @@ void tinyApp::initComponents() {
 
 // PLAYGROUND FROM HERE
 
-    const SceneRes& sharedRes = project->sharedRes();
+    const rtSceneRes& sharedRes = project->sharedRes();
     VkRenderPass renderPass = renderer->getMainRenderPass();
 
     // ===== Pipeline 1: Sky =====

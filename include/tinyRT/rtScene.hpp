@@ -1,8 +1,28 @@
 #pragma once
 
-#include "SceneRes.hpp"
+
+#include "tinyRegistry.hpp"
+#include "tinyCamera.hpp"
+#include "tinyDrawable.hpp"
 
 namespace tinyRT {
+
+struct SceneRes {
+    uint32_t maxFramesInFlight = 0; // If you messed this up the app just straight up jump off a cliff
+
+    tinyRegistry* fsr = nullptr; // For stuffs and things
+    const tinyVk::Device* dvk = nullptr;   // For GPU resource creation
+    tinyCamera* camera = nullptr;    // For global UBOs
+    tinyDrawable* drawable = nullptr;
+
+// File system helper
+
+    template<typename T> tinyPool<T>& fsView() { return fsr->view<T>(); }
+    template<typename T> const tinyPool<T>& fsView() const { return fsr->view<T>(); }
+
+    template<typename T> T* fsGet(tinyHandle handle) { return fsr->get<T>(handle); }
+    template<typename T> const T* fsGet(tinyHandle handle) const { return fsr->get<T>(handle); }
+};
 
 struct Node {
     // Empty ahh container 🥀🙏
@@ -190,3 +210,4 @@ public:
 
 using rtNode = tinyRT::Node;
 using rtScene = tinyRT::Scene;
+using rtSceneRes = tinyRT::SceneRes;

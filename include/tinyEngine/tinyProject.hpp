@@ -46,7 +46,7 @@ public:
 
     tinyDrawable& drawable() { return *drawable_; }
 
-    const SceneRes& sharedRes() const { return sharedRes_; }
+    const rtSceneRes& sharedRes() const { return sharedRes_; }
     const tinyVk::Device* vkDevice() const { return dvk_; }
 
     tinyCamera* camera() const { return camera_.get(); }
@@ -79,7 +79,7 @@ private:
 
     UniquePtr<tinyFS> fs_;
     UniquePtr<tinyDrawable> drawable_;
-    SceneRes sharedRes_;
+    rtSceneRes sharedRes_;
 
     // void setupFS();
     // void vkCreateResources();

@@ -224,8 +224,8 @@ void Renderer::drawSky(const tinyProject* project, const PipelineRaster* skyPipe
 #define NULL_TERNARY(x, t, f) ((x) != VK_NULL_HANDLE) ? (t) : (f)
 
 void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const PipelineRaster* testPipeline) const {
-    const SceneRes& sharedRes = scene->res();
-    
+    const rtSceneRes& sharedRes = scene->res();
+
     const tinyDrawable& draw = *sharedRes.drawable;
     
     const tinyGlobal* global = project->global();
