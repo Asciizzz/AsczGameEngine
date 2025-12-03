@@ -29,14 +29,18 @@ void main() {
     float time = glb.prop1.x * 500.0; // Time scaling
     vec3 rayDir = reconstructRayDirection();
 
-    vec3 baseSky = vec3(0.44, 0.59, 0.77);
+    // vec3 baseSky = vec3(0.44, 0.59, 0.77);
+    // vec3 baseHorizon = vec3(1.0);
 
-    vec3 baseHorizon = vec3(0.5, 0, 0.5);
-    float horizonFactor = smoothstep(-0.1, 0.2, rayDir.y);
+    vec3 baseSky = vec3(0.5, 0, 0.5);
+    vec3 baseHorizon = vec3(0.5, 0.2, 0.1);
+    vec3 groundColor = vec3(0.5, 0.2, 0.1);
+
+    float horizonFactor = smoothstep(-0.1, 1.0, rayDir.y);
     baseSky = mix(baseHorizon, baseSky, horizonFactor);
 
     // Below horizon
-    if (rayDir.y < 0.0) baseSky = vec3(0.02, 0.02, 0.02);
+    if (rayDir.y < 0.0) baseSky = groundColor;
 
     outColor = vec4(baseSky, 1.0);
 }
