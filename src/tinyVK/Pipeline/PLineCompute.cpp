@@ -1,11 +1,11 @@
-// PipelineCompute.cpp
+// PLineCompute.cpp
 #include "tinyVk/Pipeline/Pipeline_compute.hpp"
 #include <stdexcept>
 
 using namespace tinyVk;
 
-void PipelineCompute::create() {
-    auto code = PipelineCore::readFile(cfg.compPath);
+void PLineCompute::create() {
+    auto code = PLineCore::readFile(cfg.compPath);
     VkShaderModule mod = core.createModule(code);
 
     VkPipelineLayoutCreateInfo lci{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };

@@ -62,35 +62,35 @@ void tinyApp::initComponents() {
     RasterCfg skyCfg;
     skyCfg.renderPass = renderPass;
     skyCfg.setLayouts = { project->descSLayout_Global() };
-    skyCfg.withShaders("Shaders/bin/Sky/sky.vert.spv", "Shaders/bin/Sky/sky.frag.spv")
-        .withCulling(CullMode::None)
-        .withDepthTest(false, VK_COMPARE_OP_LESS)
-        .withDepthWrite(false);
-    // No vertex input needed for sky (fullscreen quad)
-    
-    pipelineSky = MakeUnique<PipelineRaster>(device, skyCfg);
+    skyCfg.vrtxPath = "Shaders/bin/Sky/sky.vert.spv";
+    skyCfg.fragPath = "Shaders/bin/Sky/sky.frag.spv";
+    skyCfg.cullMode = VK_CULL_MODE_NONE;
+    skyCfg.depthTestEnable = VK_FALSE;
+    skyCfg.depthWriteEnable = VK_FALSE;
+
+    pipelineSky = MakeUnique<PLineRaster>(device, skyCfg);
 
     // ===== Pipeline 4: Test =====
 
     RasterCfg testCfg;
     testCfg.renderPass = renderPass;
-    testCfg
-        .withDescriptorLayouts({
-            project->descSLayout_Global(), // Set 0
-            project->drawable().vrtxExtLayout(), // Set 1
-            project->drawable().matDescLayout(), // Set 2
-            project->drawable().texDescLayout(), // Set 3
-            project->drawable().skinDescLayout(), // Set 4
-            project->drawable().mrphWsDescLayout(), // Set 5
-        })
-        .withPushConstants(ShaderStage::VertexAndFragment, 0, 48) // 3 x uvec4
-        .withShaders("Shaders/bin/Test/Test.vert.spv", "Shaders/bin/Test/Test.frag.spv")
-        .withVertexInput(
-            tinyDrawable::bindingDesc(),
-            tinyDrawable::attributeDescs()
-        );
+    testCfg.vrtxPath = "Shaders/bin/Test/test.vert.spv";
+    testCfg.fragPath = "Shaders/bin/Test/test.frag.spv";
+    testCfg.setLayouts = {
+        project->descSLayout_Global(),         // Set 0
+        project->drawable().vrtxExtLayout(),   // Set 1
+        project->drawable().matDescLayout(),   // Set 2
+        project->drawable().texDescLayout(),   // Set 3
+        project->drawable().skinDescLayout(),  // Set 4
+        project->drawable().mrphWsDescLayout() // Set 5
+    };
+    testCfg.pushConstantRanges = {
+        { ShaderStage::VertexAndFragment, 0, 48 } // 3 x uvec4
+    };
+    testCfg.attributes = tinyDrawable::attributeDescs();
+    testCfg.bindings = tinyDrawable::bindingDesc();
 
-    pipelineTest = MakeUnique<PipelineRaster>(device, testCfg);
+    pipelineTest = MakeUnique<PLineRaster>(device, testCfg);
     // ===== Initialize UI System =====
     initUI();
 

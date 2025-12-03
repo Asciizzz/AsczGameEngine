@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tinyVk/Pipeline/Pipeline_core.hpp"
+#include "tinyVk/Pipeline/PLineCore.hpp"
 
 namespace tinyVk {
 
@@ -10,9 +10,9 @@ struct ComputePipelineConfig {
     std::string compPath;
 };
 
-class PipelineCompute {
+class PLineCompute {
 public:
-    PipelineCompute(VkDevice device, ComputePipelineConfig cfg)
+    PLineCompute(VkDevice device, ComputePipelineConfig cfg)
         : core(device), cfg(std::move(cfg)) {}
 
     void create();
@@ -45,7 +45,7 @@ public:
     ComputePipelineConfig cfg;
 
 private:
-    PipelineCore core;
+    PLineCore core;
 };
 
 } // namespace tinyVk

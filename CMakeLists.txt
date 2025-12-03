@@ -99,8 +99,8 @@ file(GLOB_RECURSE SRC_FILES
     src/tinyVk/Resource/Descriptor.cpp
     src/tinyVk/Resource/TextureVk.cpp
 
-    src/tinyVk/Pipeline/Pipeline_core.cpp
-    src/tinyVk/Pipeline/Pipeline_raster.cpp
+    src/tinyVk/Pipeline/PLineCore.cpp
+    src/tinyVk/Pipeline/PLineRaster.cpp
     src/tinyVk/Pipeline/Pipeline_compute.cpp
 
     src/tinyVk/Render/FrameBuffer.cpp

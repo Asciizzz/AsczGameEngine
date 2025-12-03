@@ -205,7 +205,7 @@ uint32_t Renderer::beginFrame() {
 }
 
 // Sky rendering using dedicated sky pipeline
-void Renderer::drawSky(const tinyProject* project, const PipelineRaster* skyPipeline) const {
+void Renderer::drawSky(const tinyProject* project, const PLineRaster* skyPipeline) const {
     VkCommandBuffer currentCmd = cmdBuffers[currentFrame];
 
     // Bind sky pipeline
@@ -223,7 +223,7 @@ void Renderer::drawSky(const tinyProject* project, const PipelineRaster* skyPipe
 
 #define NULL_TERNARY(x, t, f) ((x) != VK_NULL_HANDLE) ? (t) : (f)
 
-void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const PipelineRaster* testPipeline) const {
+void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const PLineRaster* testPipeline) const {
     const rtSceneRes& sharedRes = scene->res();
 
     const tinyDrawable& draw = *sharedRes.drawable;
@@ -257,7 +257,7 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
     for (const auto& shaderGroup : shaderGroups) { // For each shader groups:
         // In the future you will change this to a r.get<tinyShader>(shaderHandle)
         tinyHandle shaderHandle = shaderGroup.shader;
-        const PipelineRaster* pipeline = testPipeline;
+        const PLineRaster* pipeline = testPipeline;
 
         pipeline->bindCmd(currentCmd);
 

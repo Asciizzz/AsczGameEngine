@@ -8,7 +8,7 @@
 
 #include "tinyVk/System/CmdBuffer.hpp"
 #include "tinyVk/Render/Swapchain.hpp"
-#include "tinyVk/Pipeline/Pipeline_raster.hpp"
+#include "tinyVk/Pipeline/PLineRaster.hpp"
 #include "tinyVk/Render/DepthImage.hpp"
 #include "tinyVk/Render/RenderPass.hpp"
 #include "tinyVk/Render/RenderTarget.hpp"
@@ -51,8 +51,8 @@ public:
     // DepthImage getter for external access
     DepthImage* getDepthManager() const { return depthImage.get(); }
 
-    void drawSky(const tinyProject* project, const PipelineRaster* skyPipeline) const;
-    void drawTest(const tinyProject* project, const rtScene* scene, const PipelineRaster* testPipeline) const;
+    void drawSky(const tinyProject* project, const PLineRaster* skyPipeline) const;
+    void drawTest(const tinyProject* project, const rtScene* scene, const PLineRaster* testPipeline) const;
 
     // Safe resource deletion with Vulkan synchronization
     void processPendingRemovals(tinyProject* project, rtScene* activeScene);

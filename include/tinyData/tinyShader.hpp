@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tinyVk/Pipeline/Pipeline_raster.hpp"
+#include "tinyVk/Pipeline/PLineRaster.hpp"
 
 struct tinyShader {
     tinyShader() noexcept = default;
@@ -11,8 +11,8 @@ struct tinyShader {
     tinyShader(tinyShader&&) noexcept = default;
     tinyShader& operator=(tinyShader&&) noexcept = default;
 
-    tinyVk::PipelineRaster& rasPipeline() noexcept { return rasPipeline_; }
+    tinyVk::PLineRaster& rasPipeline() noexcept { return rasPipeline_; }
 
 private:
-    tinyVk::PipelineRaster rasPipeline_;
+    tinyVk::PLineRaster rasPipeline_;
 };

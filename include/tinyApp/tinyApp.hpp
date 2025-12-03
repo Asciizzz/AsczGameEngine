@@ -17,7 +17,7 @@
 #include "tinyVk/Resource/Descriptor.hpp"
 
 #include "tinyVk/Render/Renderer.hpp"
-#include "tinyVk/Pipeline/Pipeline_raster.hpp"
+#include "tinyVk/Pipeline/PLineRaster.hpp"
 
 #include "tinyEngine/tinyProject.hpp"
 #include <unordered_set>
@@ -49,8 +49,8 @@ private:
 
     UniquePtr<tinyVk::Renderer> renderer;
 
-    UniquePtr<tinyVk::PipelineRaster> pipelineSky;
-    UniquePtr<tinyVk::PipelineRaster> pipelineTest;
+    UniquePtr<tinyVk::PLineRaster> pipelineSky;
+    UniquePtr<tinyVk::PLineRaster> pipelineTest;
 
     UniquePtr<tinyProject> project; // New gigachad system
 

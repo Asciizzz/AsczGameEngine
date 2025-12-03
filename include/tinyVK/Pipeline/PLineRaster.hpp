@@ -1,22 +1,8 @@
-// PipelineRaster.hpp
+// PLineRaster.hpp
 #pragma once
-#include "tinyVk/Pipeline/Pipeline_core.hpp"
+#include "tinyVk/Pipeline/PLineCore.hpp"
 
 namespace tinyVk {
-
-enum class CullMode {
-    None = VK_CULL_MODE_NONE,
-    Front = VK_CULL_MODE_FRONT_BIT,
-    Back = VK_CULL_MODE_BACK_BIT,
-    FrontAndBack = VK_CULL_MODE_FRONT_AND_BACK
-};
-
-enum class BlendMode {
-    None,           // No blending
-    Alpha,          // Standard alpha blending
-    Additive,       // Additive blending
-    Multiply        // Multiplicative blending
-};
 
 struct RasterCfg {
     // External dependencies - set by pipeline system
@@ -50,71 +36,69 @@ struct RasterCfg {
     VkBlendOp       alphaBlendOp        = VK_BLEND_OP_ADD;
 
     // Shader paths
-    std::string vertPath;
+    std::string vrtxPath;
     std::string fragPath;
 
-    // FLUENT API METHODS
-    
-    // Shader configuration
-    RasterCfg& withShaders(const std::string& vertexPath, const std::string& fragmentPath) {
-        vertPath = vertexPath;
-        fragPath = fragmentPath;
-        return *this;
-    }
+    // // Shader configuration
+    // RasterCfg& withShaders(const std::string& vertexPath, const std::string& fragmentPath) {
+    //     vrtxPath = vertexPath;
+    //     fragPath = fragmentPath;
+    //     return *this;
+    // }
 
-    // Direct vertex input configuration from named inputs
-    RasterCfg& withVertexInput(const std::vector<VkVertexInputBindingDescription>& inputBindings,
-                               const std::vector<VkVertexInputAttributeDescription>& inputAttributes) {
-        bindings = inputBindings;
-        attributes = inputAttributes;
-        return *this;
-    }
+    // // Direct vertex input configuration from named inputs
+    // RasterCfg& withVertexInput(const std::vector<VkVertexInputBindingDescription>& inputBindings,
+    //                            const std::vector<VkVertexInputAttributeDescription>& inputAttributes) {
+    //     bindings = inputBindings;
+    //     attributes = inputAttributes;
+    //     return *this;
+    // }
 
-    // Depth testing
-    RasterCfg& withDepthTest(bool enable, VkCompareOp compareOp = VK_COMPARE_OP_LESS) {
-        depthTestEnable = enable ? VK_TRUE : VK_FALSE;
-        depthCompareOp = compareOp;
-        return *this;
-    }
+    // // Depth testing
+    // RasterCfg& withDepthTest(bool enable, VkCompareOp compareOp = VK_COMPARE_OP_LESS) {
+    //     depthTestEnable = enable ? VK_TRUE : VK_FALSE;
+    //     depthCompareOp = compareOp;
+    //     return *this;
+    // }
 
-    RasterCfg& withDepthWrite(bool enable) {
-        depthWriteEnable = enable ? VK_TRUE : VK_FALSE;
-        return *this;
-    }
+    // RasterCfg& withDepthWrite(bool enable) {
+    //     depthWriteEnable = enable ? VK_TRUE : VK_FALSE;
+    //     return *this;
+    // }
 
-    // Culling
-    RasterCfg& withCulling(CullMode mode) {
-        cullMode = static_cast<VkCullModeFlags>(mode);
-        return *this;
-    }
+    // // Culling
+    // RasterCfg& withCulling(CullMode mode) {
+    //     cullMode = static_cast<VkCullModeFlags>(mode);
+    //     return *this;
+    // }
 
-    // Blending
-    RasterCfg& withBlending(BlendMode mode);
+    // // Blending
+    // RasterCfg& withBlending(BlendMode mode);
 
-    // Polygon mode
-    RasterCfg& withPolygonMode(VkPolygonMode mode) {
-        polygonMode = mode;
-        return *this;
-    }
+    // // Polygon mode
+    // RasterCfg& withPolygonMode(VkPolygonMode mode) {
+    //     polygonMode = mode;
+    //     return *this;
+    // }
 
-    // Push constants
-    RasterCfg& withPushConstants(VkShaderStageFlags stages, uint32_t offset, uint32_t size) {
-        pushConstantRanges.push_back({stages, offset, size});
-        return *this;
-    }
+    // // Push constants
+    // RasterCfg& withPushConstants(VkShaderStageFlags stages, uint32_t offset, uint32_t size) {
+    //     pushConstantRanges.push_back({stages, offset, size});
+    //     return *this;
+    // }
 
-    // Descriptor set layouts (internal - used by pipeline system)
-    RasterCfg& withDescriptorLayouts(const std::vector<VkDescriptorSetLayout>& layouts) {
-        setLayouts = layouts;
-        return *this;
-    }
+    // // Descriptor set layouts (internal - used by pipeline system)
+    // RasterCfg& withDescriptorLayouts(const std::vector<VkDescriptorSetLayout>& layouts) {
+    //     setLayouts = layouts;
+    //     return *this;
+    // }
 
 
 };
 
-class PipelineRaster {
+class PLineRaster {
 public:
-    PipelineRaster(VkDevice device, RasterCfg cfg)
+    PLineRaster(VkDevice device, RasterCfg cfg)
         : core(device), cfg(std::move(cfg)) {}
 
     void withRenderPass(VkRenderPass rp) { cfg.renderPass = rp; }
@@ -154,7 +138,7 @@ public:
     RasterCfg cfg;
 
 private:
-    PipelineCore core;
+    PLineCore core;
 };
 
 } // namespace tinyVk

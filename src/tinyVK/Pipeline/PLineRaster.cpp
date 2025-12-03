@@ -1,57 +1,17 @@
-#include "tinyVk/Pipeline/Pipeline_raster.hpp"
+#include "tinyVk/Pipeline/PLineRaster.hpp"
 
 #include <stdexcept>
 
 using namespace tinyVk;
 
-RasterCfg& RasterCfg::withBlending(BlendMode mode) {
-    switch (mode) {
-    case BlendMode::None:
-        blendEnable         = VK_FALSE;
-        break;
-
-    case BlendMode::Alpha:
-        blendEnable         = VK_TRUE;
-        srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-        dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-        colorBlendOp        = VK_BLEND_OP_ADD;
-        srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-        dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-        alphaBlendOp        = VK_BLEND_OP_ADD;
-        break;
-
-    case BlendMode::Additive:
-        blendEnable         = VK_TRUE;
-        srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-        dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
-        colorBlendOp        = VK_BLEND_OP_ADD;
-        srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-        dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-        alphaBlendOp        = VK_BLEND_OP_ADD;
-        break;
-
-    case BlendMode::Multiply:
-        blendEnable         = VK_TRUE;
-        srcColorBlendFactor = VK_BLEND_FACTOR_DST_COLOR;
-        dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
-        colorBlendOp        = VK_BLEND_OP_ADD;
-        srcAlphaBlendFactor = VK_BLEND_FACTOR_DST_ALPHA;
-        dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-        alphaBlendOp        = VK_BLEND_OP_ADD;
-        break;
-    }
-
-    return *this;
-}
-
-void PipelineRaster::create() {
+void PLineRaster::create() {
     // 1. Shader modules - check for empty paths
-    if (cfg.vertPath.empty() || cfg.fragPath.empty()) {
-        throw std::runtime_error("Pipeline has empty shader paths! Vertex: '" + cfg.vertPath + "', Fragment: '" + cfg.fragPath + "'");
+    if (cfg.vrtxPath.empty() || cfg.fragPath.empty()) {
+        throw std::runtime_error("Pipeline has empty shader paths! Vertex: '" + cfg.vrtxPath + "', Fragment: '" + cfg.fragPath + "'");
     }
 
-    VkShaderModule vert = PipelineCore::createModuleFromPath(core.getDevice(), cfg.vertPath);
-    VkShaderModule frag = PipelineCore::createModuleFromPath(core.getDevice(), cfg.fragPath);
+    VkShaderModule vert = PLineCore::createModuleFromPath(core.getDevice(), cfg.vrtxPath);
+    VkShaderModule frag = PLineCore::createModuleFromPath(core.getDevice(), cfg.fragPath);
 
     VkPipelineShaderStageCreateInfo stages[2]{};
     stages[0].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;

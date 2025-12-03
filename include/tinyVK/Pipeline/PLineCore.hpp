@@ -7,10 +7,10 @@
 namespace tinyVk {
 
 // Core pipeline functionality as a component - replaces PipelineBase
-class PipelineCore {
+class PLineCore {
 public:
-    explicit PipelineCore(VkDevice device) : device(device) {}
-    ~PipelineCore() { cleanup(); }
+    explicit PLineCore(VkDevice device) : device(device) {}
+    ~PLineCore() { cleanup(); }
 
     // Lifecycle management
     void cleanup() {
