@@ -16,4 +16,5 @@ struct Script {
 
 } // namespace tinyRT
 
+using rtScript = tinyRT::Script;
 using rtSCRIPT = tinyRT::Script;

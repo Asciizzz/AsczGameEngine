@@ -119,3 +119,4 @@ private:
 };
 
 using rtSKELE3D = tinyRT::Skeleton3D;
+using rtSkeleton3D = tinyRT::Skeleton3D;
