@@ -2166,7 +2166,7 @@ static inline void registerNodeBindings(lua_State* L) {
 
     // Node metatable
     LUA_BEGIN_METATABLE("Node");
-    LUA_REG_METHOD(node_transform3D, "transform3D");
+    LUA_REG_METHOD(node_transform3D, "Transform3D");
     /*
     LUA_REG_METHOD(node_skeleton3D, "skeleton3D");
     LUA_REG_METHOD(node_anime3D, "anime3D");
