@@ -18,7 +18,7 @@ struct tinyScript {
 
     bool compile();
 
-    void update(void* rtScript, void* scene, tinyHandle nodeHandle, float deltaTime) const;
+    void update(void* rtScript, void* scene, tinyHandle nodeHandle, float deltaTime);
 
     // Get internal Lua state for advanced operations (use with caution!)
     lua_State* luaState() const { return luaInstance_.state(); }
@@ -34,6 +34,10 @@ struct tinyScript {
     const tinyVarsMap& defaultVars() const { return defaultVars_; }
     const tinyVarsMap& defaultLocals() const { return defaultLocals_; }
     const std::vector<std::string>& varsOrder() const { return varsOrder_; }
+    
+    // Globals (shared across all instances)
+    tinyVarsMap& globals() { return globals_; }
+    const tinyVarsMap& globals() const { return globals_; }
 
     void initVars(tinyVarsMap& outVars) const;
     void initLocals(tinyVarsMap& outLocals) const;
@@ -57,6 +61,7 @@ private:
 
     void cacheDefaultVars();
     void cacheDefaultLocals();
+    void cacheGlobals();
 
     void cacheDefaultTable(const char* tableName, tinyVarsMap& outMap);  // Shared implementation
 

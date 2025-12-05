@@ -192,6 +192,7 @@ bool tinyScript::compile() {
 
     cacheDefaultVars();
     cacheDefaultLocals();
+    cacheGlobals();
 
     return true;
 }
@@ -322,7 +323,11 @@ void tinyScript::cacheDefaultLocals() {
     cacheDefaultTable("LOCALS", defaultLocals_);
 }
 
-void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, float deltaTime) const {
+void tinyScript::cacheGlobals() {
+    cacheDefaultTable("GLOBALS", globals_);
+}
+
+void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, float deltaTime) {
     if (!valid()) return;
 
     auto* rt = static_cast<rtSCRIPT*>(rtScript);
@@ -383,6 +388,9 @@ void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, floa
     // Push VARS and LOCALS tables to Lua
     lua_newtable(L); pushToTable(vars);   lua_setglobal(L, "VARS");
     lua_newtable(L); pushToTable(locals); lua_setglobal(L, "LOCALS");
+    
+    // Push GLOBALS to Lua (mutable, shared across all instances)
+    lua_newtable(L); pushToTable(globals_); lua_setglobal(L, "GLOBALS");
 
     // Push other globals
     lua_pushnumber(L, deltaTime); lua_setglobal(L, "DELTATIME");
@@ -401,4 +409,5 @@ void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, floa
     // Pull values back from Lua using helper
     pullMapFromLua(L, "VARS", vars);
     pullMapFromLua(L, "LOCALS", locals);
+    pullMapFromLua(L, "GLOBALS", globals_);
 }

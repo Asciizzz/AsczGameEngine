@@ -368,9 +368,9 @@ static inline SDL_Scancode getScancodeFromName(const std::string& keyName) {
     return (it != keyMap.end()) ? it->second : SDL_SCANCODE_UNKNOWN;
 }
 
-static inline int lua_kState(lua_State* L) {
+static inline int lua_KState(lua_State* L) {
     if (!lua_isstring(L, 1))
-        return luaL_error(L, "kState expects string");
+        return luaL_error(L, "KState expects string");
     
     std::string keyName = lua_tostring(L, 1);
     std::transform(keyName.begin(), keyName.end(), keyName.begin(), ::tolower);
@@ -426,38 +426,56 @@ static inline int transform3d_setPos(lua_State* L) {
     return 0;
 }
 
-static inline int transform3d_getRot(lua_State* L) {
+static inline int transform3d_rotX(lua_State* L) {
     tinyHandle* handle = getTransform3DHandle(L, 1);
     if (!handle) return 0;
+    
+    float degrees = luaL_checknumber(L, 2);
     
     auto trfm3D = getSceneFromLua(L)->nGetComp<rtTransform3D>(*handle);
     if (trfm3D) {
         glm::vec3 pos, scale;
         glm::quat rot;
         decomposeMatrix(trfm3D->local, pos, rot, scale);
-
-        glm::vec3 euler = glm::eulerAngles(rot);
-        pushVec3(L, euler);
-        return 1;
+        
+        glm::quat rotX = glm::angleAxis(glm::radians(degrees), glm::vec3(1.0f, 0.0f, 0.0f));
+        trfm3D->local = composeMatrix(pos, rotX * rot, scale);
     }
     return 0;
 }
 
-static inline int transform3d_setRot(lua_State* L) {
+static inline int transform3d_rotY(lua_State* L) {
     tinyHandle* handle = getTransform3DHandle(L, 1);
     if (!handle) return 0;
     
-    glm::vec3* euler = getVec3(L, 2);
-    if (!euler) return luaL_error(L, "setRot expects Vec3");
+    float degrees = luaL_checknumber(L, 2);
     
     auto trfm3D = getSceneFromLua(L)->nGetComp<rtTransform3D>(*handle);
     if (trfm3D) {
         glm::vec3 pos, scale;
         glm::quat rot;
         decomposeMatrix(trfm3D->local, pos, rot, scale);
+        
+        glm::quat rotY = glm::angleAxis(glm::radians(degrees), glm::vec3(0.0f, 1.0f, 0.0f));
+        trfm3D->local = composeMatrix(pos, rotY * rot, scale);
+    }
+    return 0;
+}
 
-        glm::quat newRot = glm::quat(*euler);
-        trfm3D->local = composeMatrix(pos, newRot, scale);
+static inline int transform3d_rotZ(lua_State* L) {
+    tinyHandle* handle = getTransform3DHandle(L, 1);
+    if (!handle) return 0;
+    
+    float degrees = luaL_checknumber(L, 2);
+    
+    auto trfm3D = getSceneFromLua(L)->nGetComp<rtTransform3D>(*handle);
+    if (trfm3D) {
+        glm::vec3 pos, scale;
+        glm::quat rot;
+        decomposeMatrix(trfm3D->local, pos, rot, scale);
+        
+        glm::quat rotZ = glm::angleAxis(glm::radians(degrees), glm::vec3(0.0f, 0.0f, 1.0f));
+        trfm3D->local = composeMatrix(pos, rotZ * rot, scale);
     }
     return 0;
 }
@@ -606,9 +624,11 @@ static inline int bone_setLocalPos(lua_State* L) {
     return 0;
 }
 
-static inline int bone_getLocalRot(lua_State* L) {
+static inline int bone_rotX(lua_State* L) {
     LuaBone* bone = getBoneFromUserdata(L, 1);
     if (!bone) return 0;
+    
+    float degrees = luaL_checknumber(L, 2);
     
     auto skel3D = getSceneFromLua(L)->nGetComp<rtSkeleton3D>(bone->nodeHandle);
     if (!skel3D) return 0;
@@ -620,17 +640,16 @@ static inline int bone_getLocalRot(lua_State* L) {
     glm::quat rot;
     decomposeMatrix(skel3D->localPose(bone->boneIndex), pos, rot, scale);
     
-    glm::vec3 euler = glm::eulerAngles(rot);
-    pushVec3(L, euler);
-    return 1;
+    glm::quat rotX = glm::angleAxis(glm::radians(degrees), glm::vec3(1.0f, 0.0f, 0.0f));
+    skel3D->localPose(bone->boneIndex) = composeMatrix(pos, rotX * rot, scale);
+    return 0;
 }
 
-static inline int bone_setLocalRot(lua_State* L) {
+static inline int bone_rotY(lua_State* L) {
     LuaBone* bone = getBoneFromUserdata(L, 1);
     if (!bone) return 0;
     
-    glm::vec3* euler = getVec3(L, 2);
-    if (!euler) return luaL_error(L, "setLocalRot expects Vec3");
+    float degrees = luaL_checknumber(L, 2);
     
     auto skel3D = getSceneFromLua(L)->nGetComp<rtSkeleton3D>(bone->nodeHandle);
     if (!skel3D) return 0;
@@ -641,8 +660,30 @@ static inline int bone_setLocalRot(lua_State* L) {
     glm::vec3 pos, scale;
     glm::quat rot;
     decomposeMatrix(skel3D->localPose(bone->boneIndex), pos, rot, scale);
-    glm::quat newRot = glm::quat(*euler);
-    skel3D->localPose(bone->boneIndex) = composeMatrix(pos, newRot, scale);
+    
+    glm::quat rotY = glm::angleAxis(glm::radians(degrees), glm::vec3(0.0f, 1.0f, 0.0f));
+    skel3D->localPose(bone->boneIndex) = composeMatrix(pos, rotY * rot, scale);
+    return 0;
+}
+
+static inline int bone_rotZ(lua_State* L) {
+    LuaBone* bone = getBoneFromUserdata(L, 1);
+    if (!bone) return 0;
+    
+    float degrees = luaL_checknumber(L, 2);
+    
+    auto skel3D = getSceneFromLua(L)->nGetComp<rtSkeleton3D>(bone->nodeHandle);
+    if (!skel3D) return 0;
+    
+    const tinySkeleton* skeleton = skel3D->rSkeleton();
+    if (!skeleton || bone->boneIndex >= skeleton->bones.size()) return 0;
+    
+    glm::vec3 pos, scale;
+    glm::quat rot;
+    decomposeMatrix(skel3D->localPose(bone->boneIndex), pos, rot, scale);
+    
+    glm::quat rotZ = glm::angleAxis(glm::radians(degrees), glm::vec3(0.0f, 0.0f, 1.0f));
+    skel3D->localPose(bone->boneIndex) = composeMatrix(pos, rotZ * rot, scale);
     return 0;
 }
 
@@ -772,25 +813,6 @@ static inline int bone_getBindPos(lua_State* L) {
     decomposeMatrix(skeleton->bones[bone->boneIndex].bindPose, pos, rot, scale);
     
     pushVec3(L, pos);
-    return 1;
-}
-
-static inline int bone_getBindRot(lua_State* L) {
-    LuaBone* bone = getBoneFromUserdata(L, 1);
-    if (!bone) return 0;
-    
-    auto skel3D = getSceneFromLua(L)->nGetComp<rtSkeleton3D>(bone->nodeHandle);
-    if (!skel3D) return 0;
-    
-    const tinySkeleton* skeleton = skel3D->rSkeleton();
-    if (!skeleton || bone->boneIndex >= skeleton->bones.size()) return 0;
-    
-    glm::vec3 pos, scale;
-    glm::quat rot;
-    decomposeMatrix(skeleton->bones[bone->boneIndex].bindPose, pos, rot, scale);
-    
-    glm::vec3 euler = glm::eulerAngles(rot);
-    pushVec3(L, euler);
     return 1;
 }
 
@@ -2035,10 +2057,11 @@ static inline void registerNodeBindings(lua_State* L) {
     LUA_BEGIN_METATABLE("Transform3D");
     LUA_REG_METHOD(transform3d_getPos, "getPos");
     LUA_REG_METHOD(transform3d_setPos, "setPos");
-    LUA_REG_METHOD(transform3d_getRot, "getRot");
-    LUA_REG_METHOD(transform3d_setRot, "setRot");
     LUA_REG_METHOD(transform3d_getQuat, "getQuat");
     LUA_REG_METHOD(transform3d_setQuat, "setQuat");
+    LUA_REG_METHOD(transform3d_rotX, "rotX");
+    LUA_REG_METHOD(transform3d_rotY, "rotY");
+    LUA_REG_METHOD(transform3d_rotZ, "rotZ");
     LUA_REG_METHOD(transform3d_getScl, "getScl");
     LUA_REG_METHOD(transform3d_setScl, "setScl");
     LUA_END_METATABLE("Transform3D");
@@ -2057,16 +2080,16 @@ static inline void registerNodeBindings(lua_State* L) {
     // Local pose (modifiable)
     LUA_REG_METHOD(bone_getLocalPos, "getLocalPos");
     LUA_REG_METHOD(bone_setLocalPos, "setLocalPos");
-    LUA_REG_METHOD(bone_getLocalRot, "getLocalRot");
-    LUA_REG_METHOD(bone_setLocalRot, "setLocalRot");
     LUA_REG_METHOD(bone_getLocalQuat, "getLocalQuat");
     LUA_REG_METHOD(bone_setLocalQuat, "setLocalQuat");
+    LUA_REG_METHOD(bone_rotX, "rotX");
+    LUA_REG_METHOD(bone_rotY, "rotY");
+    LUA_REG_METHOD(bone_rotZ, "rotZ");
     LUA_REG_METHOD(bone_getLocalScl, "getLocalScl");
     LUA_REG_METHOD(bone_setLocalScl, "setLocalScl");
     LUA_REG_METHOD(bone_localPose, "localPose");
     // Bind pose (read-only)
     LUA_REG_METHOD(bone_getBindPos, "getBindPos");
-    LUA_REG_METHOD(bone_getBindRot, "getBindRot");
     LUA_REG_METHOD(bone_getBindQuat, "getBindQuat");
     LUA_REG_METHOD(bone_getBindScl, "getBindScl");
     LUA_REG_METHOD(bone_bindPose, "bindPose");
@@ -2171,7 +2194,7 @@ static inline void registerNodeBindings(lua_State* L) {
     lua_pop(L, 1);
 
     // Global Functions
-    LUA_REG_GLOBAL(lua_kState, "kState");
+    LUA_REG_GLOBAL(lua_KState, "KSTATE");
     LUA_REG_GLOBAL(lua_Handle, "Handle");
     LUA_REG_GLOBAL(lua_print, "print");
 
