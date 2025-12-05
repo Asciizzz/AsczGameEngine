@@ -1,15 +1,7 @@
 #pragma once
 
+#include "tinyLua.hpp"
 #include "tinyLuaDef.hpp"
-
-extern "C" {
-    #include "luacpp/lua.h"
-    #include "luacpp/lualib.h"
-    #include "luacpp/lauxlib.h"
-}
-
-// Update need: rework tinyScript to be independent of this engine context
-// allowing it to be used in other projects more easily.
 
 // Static script definition - shared across all instances
 struct tinyScript {
@@ -17,7 +9,7 @@ struct tinyScript {
 
     tinyScript() = default;
     ~tinyScript();
-    
+
     tinyScript(const tinyScript&) = delete;
     tinyScript& operator=(const tinyScript&) = delete;
 
@@ -28,11 +20,11 @@ struct tinyScript {
 
     void update(void* rtScript, void* scene, tinyHandle nodeHandle, float deltaTime, tinyDebug* runtimeDebug = nullptr) const;
     bool call(const char* functionName, lua_State* runtimeL = nullptr, tinyDebug* runtimeDebug = nullptr) const;
-    
-    // Get internal Lua state for advanced operations (use with caution!)
-    lua_State* luaState() const { return L_; }
 
-    bool valid() const { return compiled_ && L_ != nullptr; }
+    // Get internal Lua state for advanced operations (use with caution!)
+    lua_State* luaState() const { return luaInstance_.state(); }
+
+    bool valid() const { return compiled_ && luaInstance_.valid(); }
     uint32_t version() const { return version_; }
 
     // Compilation debug logs (8-16 lines max, FIFO)
@@ -48,8 +40,8 @@ struct tinyScript {
     void initLocals(tinyVarsMap& outLocals) const;
 
 private:
+    tinyLua::Instance luaInstance_;
     uint32_t version_ = 0;
-    lua_State* L_ = nullptr;
     bool compiled_ = false;
 
     tinyVarsMap defaultVars_;    // Default VARS from script
@@ -59,7 +51,6 @@ private:
 
     std::vector<std::string> varsOrder_;  // Ordered list of var names (sorted by type)
     tinyDebug debug_{16};  // Compilation/static debug logs (16 lines max)
-    void closeLua();
 
     void cacheDefaultVars();
     void cacheDefaultLocals();
