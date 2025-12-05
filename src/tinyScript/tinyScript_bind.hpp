@@ -1,6 +1,11 @@
 #pragma once
 
 #include "rtScene.hpp"
+// Node components
+#include "tinyRT/rtTransform.hpp"
+#include "tinyRT/rtMesh.hpp"
+#include "tinyRT/rtSkeleton.hpp"
+#include "tinyRT/rtScript.hpp"
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/matrix_decompose.hpp>
@@ -238,83 +243,27 @@ static inline int vec4_tostring(lua_State* L) {
 // HANDLE SYSTEM
 // ========================================
 
-// LuaHandle - Unified handle structure with type information
-struct LuaHandle {
-    std::string type = "void";
-    uint32_t index = 0;
-    uint32_t version = 0;
-
-    LuaHandle() = default;
-    LuaHandle(const std::string& t, uint32_t index, uint32_t version) 
-        : type(t), index(index), version(version) {}
-
-    bool operator==(const LuaHandle& other) const noexcept {
-        return type == other.type && index == other.index && version == other.version;
-    }
-    bool operator!=(const LuaHandle& other) const noexcept {
-        return !(*this == other);
-    }
-
-    bool valid() const { return !type.empty() && index != 0; }
-
-    // Convert LuaHandle to tinyHandle based on type string
-    tinyHandle toTinyHandle() const {
-        // if (type == "node") return tinyHandle::make<tinyNodeRT>(index, version); else
-        // if (type == "script") return tinyHandle::make<tinyScript>(index, version); else
-        // if (type == "scene") return tinyHandle::make<rtScene>(index, version); else
-        return tinyHandle::make<void>(index, version);
-    }
-
-    // Create LuaHandle from tinyHandle
-    static LuaHandle fromTinyHandle(const tinyHandle& th) {
-        // if (th.is<tinyNodeRT>()) return LuaHandle("node", th.idx(), th.ver()); else
-        // if (th.is<tinyScript>()) return LuaHandle("script", th.idx(), th.ver()); else
-        // if (th.is<rtScene>()) return LuaHandle("scene", th.idx(), th.ver()); else
-        return LuaHandle("resource", th.idx(), th.ver());
-    }
-};
-
-// Push LuaHandle as full userdata with metatable
-static inline void pushLuaHandle(lua_State* L, const LuaHandle& luaHandle) {
-    LuaHandle* ud = static_cast<LuaHandle*>(lua_newuserdata(L, sizeof(LuaHandle)));
-    new (ud) LuaHandle(luaHandle);  // Placement new to copy construct
+// Push tinyHandle as full userdata with metatable
+static inline void pushHandle(lua_State* L, const tinyHandle& handle) {
+    tinyHandle* ud = static_cast<tinyHandle*>(lua_newuserdata(L, sizeof(tinyHandle)));
+    new (ud) tinyHandle(handle);  // Placement new to copy construct
     luaL_getmetatable(L, "Handle");
     lua_setmetatable(L, -2);
 }
 
-// Get LuaHandle from userdata
-static inline LuaHandle* getLuaHandleFromUserdata(lua_State* L, int index) {
-    return static_cast<LuaHandle*>(luaL_checkudata(L, index, "Handle"));
+// Get tinyHandle from userdata
+static inline tinyHandle* getHandleFromUserdata(lua_State* L, int index) {
+    return static_cast<tinyHandle*>(luaL_checkudata(L, index, "Handle"));
 }
 
 // ========================================
 // HANDLE CONSTRUCTORS & UTILITIES
 // ========================================
 
-// Handle("type") or Handle("type", index, version)
+// Handle() - Create an empty handle
 static inline int lua_Handle(lua_State* L) {
-    int numArgs = lua_gettop(L);
-    
-    if (numArgs < 1) {
-        LuaHandle handle;
-        handle.type = "node";
-        pushLuaHandle(L, handle);
-        return 1;
-    }
-
-    const char* typeStr = luaL_checkstring(L, 1);
-    
-    LuaHandle luaHandle;
-    luaHandle.type = typeStr;
-    
-    if (numArgs >= 2) {
-        luaHandle.index = luaL_checkinteger(L, 2);
-        if (numArgs >= 3) {
-            luaHandle.version = luaL_checkinteger(L, 3);
-        }
-    }
-    
-    pushLuaHandle(L, luaHandle);
+    tinyHandle handle;  // Default empty handle
+    pushHandle(L, handle);
     return 1;
 }
 
@@ -324,55 +273,27 @@ static inline int lua_handleEqual(lua_State* L) {
         return 1;
     }
     
-    LuaHandle* h1 = getLuaHandleFromUserdata(L, 1);
-    LuaHandle* h2 = getLuaHandleFromUserdata(L, 2);
+    tinyHandle* h1 = getHandleFromUserdata(L, 1);
+    tinyHandle* h2 = getHandleFromUserdata(L, 2);
 
     lua_pushboolean(L, h1 && h2 && *h1 == *h2);
     return 1;
 }
 
-// Handle:type() - Get the type string of a handle
-static inline int lua_handleGetType(lua_State* L) {
-    LuaHandle* h = getLuaHandleFromUserdata(L, 1);
-    if (!h) {
-        lua_pushnil(L);
+static inline int lua_handleToString(lua_State* L) {
+    tinyHandle* h = getHandleFromUserdata(L, 1);
+    if (!h || !h->valid()) {
+        lua_pushstring(L, "Handle()");
         return 1;
     }
-    lua_pushstring(L, h->type.c_str());
+    lua_pushfstring(L, "Handle(%d:%d:%d)", h->tID(), h->idx(), h->ver());
     return 1;
 }
 
-// Handle:index() - Get the index of a handle
-static inline int lua_handleGetIndex(lua_State* L) {
-    LuaHandle* h = getLuaHandleFromUserdata(L, 1);
-    if (!h) {
-        lua_pushnil(L);
-        return 1;
-    }
-    lua_pushinteger(L, h->index);
-    return 1;
-}
-
-// Handle:version() - Get the version of a handle
-static inline int lua_handleGetVersion(lua_State* L) {
-    LuaHandle* h = getLuaHandleFromUserdata(L, 1);
-    if (!h) {
-        lua_pushnil(L);
-        return 1;
-    }
-    lua_pushinteger(L, h->version);
-    return 1;
-}
-
-// Handle:valid() - Check if handle is valid
-static inline int lua_handleValid(lua_State* L) {
-    LuaHandle* h = getLuaHandleFromUserdata(L, 1);
-    if (!h) {
-        lua_pushboolean(L, false);
-        return 1;
-    }
-    lua_pushboolean(L, h->valid());
-    return 1;
+static inline int lua_handleGC(lua_State* L) {
+    tinyHandle* h = getHandleFromUserdata(L, 1);
+    if (h) h->~tinyHandle();
+    return 0;
 }
 
 /*
@@ -543,8 +464,6 @@ static inline int lua_kState(lua_State* L) {
     return 1;
 }
 
-/*
-
 // ========================================
 // COMPONENT: TRANSFORM3D
 // ========================================
@@ -557,11 +476,11 @@ static inline int transform3d_getPos(lua_State* L) {
     tinyHandle* handle = getTransform3DHandle(L, 1);
     if (!handle) return 0;
 
-    auto comps = getSceneFromLua(L)->Wrap(*handle);
-    if (comps.trfm3D) {
+    auto trfm3D = getSceneFromLua(L)->nGetComp<rtTransform3D>(*handle);
+    if (trfm3D) {
         glm::vec3 pos, scale;
         glm::quat rot;
-        decomposeMatrix(comps.trfm3D->local, pos, rot, scale);
+        decomposeMatrix(trfm3D->local, pos, rot, scale);
         pushVec3(L, pos);
         return 1;
     }
@@ -575,12 +494,12 @@ static inline int transform3d_setPos(lua_State* L) {
     glm::vec3* newPos = getVec3(L, 2);
     if (!newPos) return luaL_error(L, "setPos expects Vec3");
     
-    auto comps = getSceneFromLua(L)->Wrap(*handle);
-    if (comps.trfm3D) {
+    auto trfm3D = getSceneFromLua(L)->nGetComp<rtTransform3D>(*handle);
+    if (trfm3D) {
         glm::vec3 pos, scale;
         glm::quat rot;
-        decomposeMatrix(comps.trfm3D->local, pos, rot, scale);
-        comps.trfm3D->local = composeMatrix(*newPos, rot, scale);
+        decomposeMatrix(trfm3D->local, pos, rot, scale);
+        trfm3D->local = composeMatrix(*newPos, rot, scale);
     }
     return 0;
 }
@@ -589,12 +508,12 @@ static inline int transform3d_getRot(lua_State* L) {
     tinyHandle* handle = getTransform3DHandle(L, 1);
     if (!handle) return 0;
     
-    auto comps = getSceneFromLua(L)->Wrap(*handle);
-    if (comps.trfm3D) {
+    auto trfm3D = getSceneFromLua(L)->nGetComp<rtTransform3D>(*handle);
+    if (trfm3D) {
         glm::vec3 pos, scale;
         glm::quat rot;
-        decomposeMatrix(comps.trfm3D->local, pos, rot, scale);
-        
+        decomposeMatrix(trfm3D->local, pos, rot, scale);
+
         glm::vec3 euler = glm::eulerAngles(rot);
         pushVec3(L, euler);
         return 1;
@@ -609,13 +528,14 @@ static inline int transform3d_setRot(lua_State* L) {
     glm::vec3* euler = getVec3(L, 2);
     if (!euler) return luaL_error(L, "setRot expects Vec3");
     
-    auto comps = getSceneFromLua(L)->Wrap(*handle);
-    if (comps.trfm3D) {
+    auto trfm3D = getSceneFromLua(L)->nGetComp<rtTransform3D>(*handle);
+    if (trfm3D) {
         glm::vec3 pos, scale;
         glm::quat rot;
-        decomposeMatrix(comps.trfm3D->local, pos, rot, scale);
+        decomposeMatrix(trfm3D->local, pos, rot, scale);
+
         glm::quat newRot = glm::quat(*euler);
-        comps.trfm3D->local = composeMatrix(pos, newRot, scale);
+        trfm3D->local = composeMatrix(pos, newRot, scale);
     }
     return 0;
 }
@@ -624,11 +544,11 @@ static inline int transform3d_getQuat(lua_State* L) {
     tinyHandle* handle = getTransform3DHandle(L, 1);
     if (!handle) return 0;
     
-    auto comps = getSceneFromLua(L)->Wrap(*handle);
-    if (comps.trfm3D) {
+    auto trfm3D = getSceneFromLua(L)->nGetComp<rtTransform3D>(*handle);
+    if (trfm3D) {
         glm::vec3 pos, scale;
         glm::quat rot;
-        decomposeMatrix(comps.trfm3D->local, pos, rot, scale);
+        decomposeMatrix(trfm3D->local, pos, rot, scale);
         pushVec4(L, glm::vec4(rot.x, rot.y, rot.z, rot.w));
         return 1;
     }
@@ -642,13 +562,13 @@ static inline int transform3d_setQuat(lua_State* L) {
     glm::vec4* quatVec = getVec4(L, 2);
     if (!quatVec) return luaL_error(L, "setQuat expects Vec4");
     
-    auto comps = getSceneFromLua(L)->Wrap(*handle);
-    if (comps.trfm3D) {
+    auto trfm3D = getSceneFromLua(L)->nGetComp<rtTransform3D>(*handle);
+    if (trfm3D) {
         glm::vec3 pos, scale;
         glm::quat rot;
-        decomposeMatrix(comps.trfm3D->local, pos, rot, scale);
+        decomposeMatrix(trfm3D->local, pos, rot, scale);
         glm::quat quat(quatVec->w, quatVec->x, quatVec->y, quatVec->z);
-        comps.trfm3D->local = composeMatrix(pos, quat, scale);
+        trfm3D->local = composeMatrix(pos, quat, scale);
     }
     return 0;
 }
@@ -657,11 +577,11 @@ static inline int transform3d_getScl(lua_State* L) {
     tinyHandle* handle = getTransform3DHandle(L, 1);
     if (!handle) return 0;
     
-    auto comps = getSceneFromLua(L)->Wrap(*handle);
-    if (comps.trfm3D) {
+    auto trfm3D = getSceneFromLua(L)->nGetComp<rtTransform3D>(*handle);
+    if (trfm3D) {
         glm::vec3 pos, scale;
         glm::quat rot;
-        decomposeMatrix(comps.trfm3D->local, pos, rot, scale);
+        decomposeMatrix(trfm3D->local, pos, rot, scale);
         pushVec3(L, scale);
         return 1;
     }
@@ -675,12 +595,12 @@ static inline int transform3d_setScl(lua_State* L) {
     glm::vec3* newScale = getVec3(L, 2);
     if (!newScale) return luaL_error(L, "setScl expects Vec3");
     
-    auto comps = getSceneFromLua(L)->Wrap(*handle);
-    if (comps.trfm3D) {
+    auto trfm3D = getSceneFromLua(L)->nGetComp<rtTransform3D>(*handle);
+    if (trfm3D) {
         glm::vec3 pos, scale;
         glm::quat rot;
-        decomposeMatrix(comps.trfm3D->local, pos, rot, scale);
-        comps.trfm3D->local = composeMatrix(pos, rot, *newScale);
+        decomposeMatrix(trfm3D->local, pos, rot, scale);
+        trfm3D->local = composeMatrix(pos, rot, *newScale);
     }
     return 0;
 }
@@ -692,8 +612,8 @@ static inline int node_transform3D(lua_State* L) {
     rtScene* scene = getSceneFromLua(L);
     if (!scene) { lua_pushnil(L); return 1; }
     
-    auto comps = scene->Wrap(*handle);
-    if (!comps.trfm3D) { lua_pushnil(L); return 1; }
+    auto trfm3D = scene->nGetComp<rtTransform3D>(*handle);
+    if (!trfm3D) { lua_pushnil(L); return 1; }
     
     tinyHandle* ud = static_cast<tinyHandle*>(lua_newuserdata(L, sizeof(tinyHandle)));
     *ud = *handle;
@@ -701,6 +621,8 @@ static inline int node_transform3D(lua_State* L) {
     lua_setmetatable(L, -2);
     return 1;
 }
+
+/*
 
 // ========================================
 // COMPONENT: SKELETON3D & BONE
@@ -1198,7 +1120,7 @@ static inline int anim3d_get(lua_State* L) {
     if (comps.anim3D) {
         tinyHandle animHandle = comps.anim3D->getHandle(lua_tostring(L, 2));
         if (animHandle) {
-            pushLuaHandle(L, LuaHandle("animation", animHandle.idx(), animHandle.ver()));
+            pushHandle(L, animHandle);
             return 1;
         }
     }
@@ -1214,7 +1136,7 @@ static inline int anim3d_current(lua_State* L) {
     if (comps.anim3D) {
         tinyHandle animHandle = comps.anim3D->curHandle();
         if (animHandle) {
-            pushLuaHandle(L, LuaHandle("animation", animHandle.idx(), animHandle.ver()));
+            pushHandle(L, animHandle);
             return 1;
         }
     }
@@ -1232,13 +1154,9 @@ static inline int anim3d_play(lua_State* L) {
         if (!comps.anim3D) return 0;
         animHandle = comps.anim3D->getHandle(lua_tostring(L, 2));
     } else {
-        LuaHandle* luaHandle = getLuaHandleFromUserdata(L, 2);
-        if (!luaHandle) return 0;
-        // Accept animation handles
-        if (luaHandle->type != "animation") {
-            return luaL_error(L, "anim3d:play() expects animation handle, got '%s'", luaHandle->type.c_str());
-        }
-        animHandle = luaHandle->toTinyHandle();
+        tinyHandle* handle = getHandleFromUserdata(L, 2);
+        if (!handle) return 0;
+        animHandle = *handle;
     }
     
     bool restart = lua_isboolean(L, 3) ? lua_toboolean(L, 3) : true;
@@ -1378,7 +1296,7 @@ static inline int script_getVar(lua_State* L) {
             else if constexpr (std::is_same_v<T, std::string>) lua_pushstring(L, val.c_str());
             else if constexpr (std::is_same_v<T, tinyHandle>) {
                 // Convert tinyHandle back to LuaHandle
-                pushLuaHandle(L, LuaHandle::fromTinyHandle(val));
+                pushHandle(L, LuaHandle::fromTinyHandle(val));
             }
         }, var);
         return 1;
@@ -1493,7 +1411,7 @@ static inline int node_parentHandle(lua_State* L) {
     
     tinyHandle parentHandle = getSceneFromLua(L)->nodeParent(*handle);
     if (parentHandle) {
-        pushLuaHandle(L, LuaHandle("node", parentHandle.idx(), parentHandle.ver()));
+        pushHandle(L, LuaHandle("node", parentHandle.idx(), parentHandle.ver()));
         return 1;
     }
     lua_pushnil(L);
@@ -1507,7 +1425,7 @@ static inline int node_childrenHandles(lua_State* L) {
     std::vector<tinyHandle> children = getSceneFromLua(L)->nodeChildren(*handle);
     lua_newtable(L);
     for (int i = 0; i < children.size(); i++) {
-        pushLuaHandle(L, LuaHandle("node", children[i].idx(), children[i].ver()));
+        pushHandle(L, LuaHandle("node", children[i].idx(), children[i].ver()));
         lua_rawseti(L, -2, i + 1);
     }
     return 1;
@@ -1548,7 +1466,7 @@ static inline int node_handle(lua_State* L) {
     }
     
     // Return the node's handle as a LuaHandle
-    pushLuaHandle(L, LuaHandle("node", handle->idx(), handle->ver()));
+    pushHandle(L, LuaHandle("node", handle->idx(), handle->ver()));
     return 1;
 }
 
@@ -1589,8 +1507,8 @@ static inline int fs_get(lua_State* L) {
         return 1;
     }
     
-    LuaHandle* luaHandle = getLuaHandleFromUserdata(L, 2);
-    if (!luaHandle || !luaHandle->valid()) {
+    tinyHandle* handle = getHandleFromUserdata(L, 2);
+    if (!handle || !handle->valid()) {
         lua_pushnil(L);
         return 1;
     }
@@ -1601,10 +1519,9 @@ static inline int fs_get(lua_State* L) {
         return 1;
     }
     
-    // Handle different resource types based on handle type
-    // "resource" is a generic type used when we can't determine the exact type
-    if (luaHandle->type == "script" || luaHandle->type == "resource") {
-        tinyHandle th = luaHandle->toTinyHandle();
+    // Get resource from registry - type checking handled by tinyHandle
+    {
+        tinyHandle th = *handle;
 
         // Try to get as script first (most common for generic "resource" type)
         const tinyScript* script = registry->get<tinyScript>(th);
@@ -1621,10 +1538,8 @@ static inline int fs_get(lua_State* L) {
         lua_setmetatable(L, -2);
         return 1;
     }
-    // Add more resource types here as needed (scene, mesh, texture, etc.)
-    else {
-        return luaL_error(L, "FS:get() does not support resource type '%s' yet", luaHandle->type.c_str());
-    }
+    // Note: Type checking is handled by tinyHandle internally
+    // If get<T>() fails, it returns nullptr
 }
 
 // ========================================
@@ -1785,12 +1700,12 @@ static inline int staticscript_call(lua_State* L) {
                         } else {
                             lua_pop(L, 1);
                             
-                            // Try Handle (Quat is now Vec4, so no separate check needed)
+                            // Try Handle
                             luaL_getmetatable(L, "Handle");
                             if (lua_rawequal(L, -1, -2)) {
                                 lua_pop(L, 2);
-                                LuaHandle* sourceHandle = static_cast<LuaHandle*>(lua_touserdata(L, i));
-                                if (sourceHandle) pushLuaHandle(scriptL, *sourceHandle);
+                                tinyHandle* sourceHandle = static_cast<tinyHandle*>(lua_touserdata(L, i));
+                                if (sourceHandle) pushHandle(scriptL, *sourceHandle);
                                 else lua_pushnil(scriptL);
                                 handled = true;
                             } else {
@@ -1943,12 +1858,12 @@ static inline int staticscript_call(lua_State* L) {
                             } else {
                                 lua_pop(scriptL, 1);
                                 
-                                // Try Handle (Quat is now Vec4, no separate check needed)
+                                // Try Handle
                                 luaL_getmetatable(scriptL, "Handle");
                                 if (lua_rawequal(scriptL, -1, -2)) {
                                     lua_pop(scriptL, 2);
-                                    LuaHandle* sourceHandle = static_cast<LuaHandle*>(lua_touserdata(scriptL, absIndex));
-                                    if (sourceHandle) pushLuaHandle(L, *sourceHandle);
+                                    tinyHandle* sourceHandle = static_cast<tinyHandle*>(lua_touserdata(scriptL, absIndex));
+                                    if (sourceHandle) pushHandle(L, *sourceHandle);
                                     else lua_pushnil(L);
                                     handled = true;
                                 } else {
@@ -2142,7 +2057,6 @@ static inline void registerNodeBindings(lua_State* L) {
     LUA_REG_GLOBAL(lua_Vec3, "Vec3");
     LUA_REG_GLOBAL(lua_Vec4, "Vec4");
     
-    /*
     // Transform3D metatable
     LUA_BEGIN_METATABLE("Transform3D");
     LUA_REG_METHOD(transform3d_getPos, "getPos");
@@ -2155,6 +2069,7 @@ static inline void registerNodeBindings(lua_State* L) {
     LUA_REG_METHOD(transform3d_setScl, "setScl");
     LUA_END_METATABLE("Transform3D");
     
+    /*
     // Skeleton3D metatable
     LUA_BEGIN_METATABLE("Skeleton3D");
     LUA_REG_METHOD(skeleton3d_bone, "bone");
@@ -2248,11 +2163,11 @@ static inline void registerNodeBindings(lua_State* L) {
     LUA_BEGIN_METATABLE("StaticScript");
     LUA_REG_METHOD(staticscript_call, "call");
     LUA_END_METATABLE("StaticScript");
-    
-    /*
+
     // Node metatable
     LUA_BEGIN_METATABLE("Node");
     LUA_REG_METHOD(node_transform3D, "transform3D");
+    /*
     LUA_REG_METHOD(node_skeleton3D, "skeleton3D");
     LUA_REG_METHOD(node_anime3D, "anime3D");
     LUA_REG_METHOD(node_script, "script");
@@ -2262,59 +2177,23 @@ static inline void registerNodeBindings(lua_State* L) {
     LUA_REG_METHOD(node_childrenHandles, "childrenHandles");
     LUA_REG_METHOD(node_delete, "delete");
     LUA_REG_METHOD(node_handle, "handle");
-    lua_setfield(L, -2, "__index");
-    lua_pushcfunction(L, [](lua_State* L) -> int {
-        tinyHandle* h = getNodeHandleFromUserdata(L, 1);
-        lua_pushfstring(L, h ? "Node(%d, %d)" : "Node(invalid)", h ? h->index : 0, h ? h->version : 0);
-        return 1;
-    });
-    lua_setfield(L, -2, "__tostring");
-    lua_pushcfunction(L, [](lua_State* L) -> int {
-        tinyHandle* h1 = getNodeHandleFromUserdata(L, 1);
-        tinyHandle* h2 = getNodeHandleFromUserdata(L, 2);
-        lua_pushboolean(L, h1 && h2 && (*h1 == *h2));
-        return 1;
-    });
-    lua_setfield(L, -2, "__eq");
-    lua_pop(L, 1);
+    */
+    LUA_END_METATABLE("Node");
     
     // Scene metatable
-    LUA_BEGIN_METATABLE("Scene");
-    LUA_REG_METHOD(scene_node, "node");
-    LUA_REG_METHOD(scene_addScene, "addScene");
-    LUA_REG_METHOD(scene_delete, "delete");
-    LUA_END_METATABLE("Scene");
-
-    */
+    // LUA_BEGIN_METATABLE("Scene");
+    // LUA_REG_METHOD(scene_node, "node");
+    // LUA_REG_METHOD(scene_addScene, "addScene");
+    // LUA_REG_METHOD(scene_delete, "delete");
+    // LUA_END_METATABLE("Scene");
     
-    // Handle metatable (unified handle system)
+    // Handle metatable (minimal, type-checking handled by tinyHandle internally)
     luaL_newmetatable(L, "Handle");
-    lua_newtable(L); // __index table for methods
-    LUA_REG_METHOD(lua_handleGetType, "type");
-    LUA_REG_METHOD(lua_handleGetIndex, "index");
-    LUA_REG_METHOD(lua_handleGetVersion, "version");
-    LUA_REG_METHOD(lua_handleValid, "valid");
-    lua_setfield(L, -2, "__index");
-    // __eq operator for handle comparison
     lua_pushcfunction(L, lua_handleEqual);
     lua_setfield(L, -2, "__eq");
-    // __tostring for debugging
-    lua_pushcfunction(L, [](lua_State* L) -> int {
-        LuaHandle* h = getLuaHandleFromUserdata(L, 1);
-        if (!h) {
-            lua_pushstring(L, "Handle(invalid)");
-            return 1;
-        }
-        lua_pushfstring(L, "Handle(\"%s\", %d, %d)", h->type.c_str(), h->index, h->version);
-        return 1;
-    });
+    lua_pushcfunction(L, lua_handleToString);
     lua_setfield(L, -2, "__tostring");
-    // __gc for cleanup (string destructor)
-    lua_pushcfunction(L, [](lua_State* L) -> int {
-        LuaHandle* h = getLuaHandleFromUserdata(L, 1);
-        if (h) h->~LuaHandle(); // Call destructor explicitly
-        return 0;
-    });
+    lua_pushcfunction(L, lua_handleGC);
     lua_setfield(L, -2, "__gc");
     lua_pop(L, 1);
 

@@ -93,8 +93,8 @@ namespace {
             bool eq = lua_rawequal(L, -1, -2);
             lua_pop(L, 2);
             if (eq) {
-                if (auto* h = static_cast<LuaHandle*>(lua_touserdata(L, idx)); h && h->valid()) {
-                    out = h->toTinyHandle();
+                if (auto* h = static_cast<tinyHandle*>(lua_touserdata(L, idx))) {
+                    out = *h;
                     return true;
                 }
             }
@@ -373,7 +373,7 @@ void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, floa
                     lua_setfield(L, -2, key.c_str());
                 }
                 else if constexpr (std::is_same_v<T, tinyHandle>) {
-                    pushLuaHandle(L, LuaHandle::fromTinyHandle(val));
+                    pushHandle(L, val);
                     lua_setfield(L, -2, key.c_str());
                 }
             }, value);
