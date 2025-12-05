@@ -40,7 +40,7 @@ struct tinyScript {
 
 private:
     tinyLua::Instance luaInstance_;
-    uint32_t version_ = 0;
+    uint16_t version_ = 0;
     bool compiled_ = false;
 
     // On init and on compile callbacks

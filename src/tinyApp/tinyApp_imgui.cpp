@@ -424,9 +424,8 @@ struct Splitter {
         ImGui::PopStyleColor(3);
     }
 
-private:
     // These values are all relative (0.0 -> 1.0)
-    std::vector<float> positions;     // n
+    std::vector<float> positions;   // n
     std::vector<float> regionSizes; // n + 1
 };
 
@@ -1088,6 +1087,12 @@ static Editor::Tab CreateRtScriptEditorTab(const std::string& title, tinyHandle 
     // Initialize tab-specific state
     tab.setState<tinyHandle>("handle", nHandle);
     tab.setState<tinyType::ID>("type", tinyType::TypeID<rtSCRIPT>());
+    tab.setState<Splitter>("splitter", Splitter());
+
+    // Splitter start at 30 (variables) / 70 (runtime debug)
+    Splitter* split = tab.getState<Splitter>("splitter");
+    split->positions = {0.3f};
+    split->horizontal = false;
 
     tinyFS& fs = projRef->fs();
 
@@ -1131,114 +1136,128 @@ static Editor::Tab CreateRtScriptEditorTab(const std::string& title, tinyHandle 
             return;
         }
 
-        ImVec4 varColor = ImVec4(0.2f, 0.5f, 0.8f, 0.2f);
-        ImGui::PushStyleColor(ImGuiCol_Header, varColor);
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.3f, 0.6f, 0.9f, 0.6f));
+        // Create verticle splitter for: Variables and Runtime Debug
+        Splitter* split = self.getState<Splitter>("splitter");
+        if (!split) return;
 
-        if (ImGui::CollapsingHeader("Variables", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::PushStyleColor(ImGuiCol_ChildBg, varColor);
+        split->init(1);
+        split->horizontal = false;
+        split->directionSize = ImGui::GetContentRegionAvail().x;
+        split->calcRegionSizes();
 
-            ImGui::BeginChild("VariablesContent", ImVec2(0, 0), ImGuiChildFlags_AutoResizeY, 0);
+        // Variables Editor
 
-            tinyVarsMap& vMap = scriptComp->vars;
-            std::vector<std::pair<std::string, tinyVarsMap::mapped_type>> sortedItems(vMap.begin(), vMap.end());
-            std::sort(sortedItems.begin(), sortedItems.end(), [](const auto& a, const auto& b) {
-                auto getOrder = [](const auto& v) -> int {
-                    using T = std::decay_t<decltype(v)>;
-                    if constexpr (std::is_same_v<T, bool>) return 0;
-                    if constexpr (std::is_same_v<T, int>) return 1;
-                    if constexpr (std::is_same_v<T, float>) return 2;
-                    if constexpr (std::is_same_v<T, glm::vec2>) return 3;
-                    if constexpr (std::is_same_v<T, glm::vec3>) return 4;
-                    if constexpr (std::is_same_v<T, glm::vec4>) return 5;
-                    if constexpr (std::is_same_v<T, std::string>) return 6;
-                    if constexpr (std::is_same_v<T, tinyHandle>) return 7;
-                    return 8;
-                };
-                int orderA = std::visit(getOrder, a.second);
-                int orderB = std::visit(getOrder, b.second);
-                if (orderA != orderB) return orderA < orderB;
-                return a.first < b.first;
-            });
-            for (auto& [name, value] : sortedItems) {
-                auto& realValue = vMap[name];
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
+        ImVec2 varEditorSize = ImVec2(split->rSize(0), 0); 
+        ImGui::BeginChild("CodeEditor", varEditorSize, true);
 
-                std::visit([&](auto&& val) {
-                    using T = std::decay_t<decltype(val)>;
-                    if constexpr (std::is_same_v<T, float>) ImGui::DragFloat(name.c_str(), &val, 0.1f); else
-                    if constexpr (std::is_same_v<T, int>)   ImGui::DragInt(  name.c_str(), &val);       else
-                    if constexpr (std::is_same_v<T, bool>)  ImGui::Checkbox( name.c_str(), &val);       else
-                    if constexpr (std::is_same_v<T, glm::vec2>) ImGui::DragFloat2(name.c_str(), &val.x, 0.1f); else
-                    if constexpr (std::is_same_v<T, glm::vec3>) ImGui::DragFloat3(name.c_str(), &val.x, 0.1f); else
-                    if constexpr (std::is_same_v<T, glm::vec4>) ImGui::DragFloat4(name.c_str(), &val.x, 0.1f); else
-                    if constexpr (std::is_same_v<T, std::string>) {
-                        static std::map<std::string, std::string> buffers;
-                        if (buffers.find(name) == buffers.end()) {
-                            buffers[name] = val;
-                        }
-                        char buf[256];
-                        strcpy(buf, buffers[name].c_str());
-                        if (ImGui::InputText(name.c_str(), buf, sizeof(buf))) {
-                            buffers[name] = buf;
-                            val = buf;
-                        }
-                    } else if constexpr (std::is_same_v<T, tinyHandle>) {
-                        ImGui::PushID(name.c_str());
-                        static std::string labelBuffer;
+        tinyVarsMap& vMap = scriptComp->vars;
+        std::vector<std::pair<std::string, tinyVarsMap::mapped_type>> sortedItems(vMap.begin(), vMap.end());
+        std::sort(sortedItems.begin(), sortedItems.end(), [](const auto& a, const auto& b) {
+            auto getOrder = [](const auto& v) -> int {
+                using T = std::decay_t<decltype(v)>;
+                if constexpr (std::is_same_v<T, bool>) return 0;
+                if constexpr (std::is_same_v<T, int>) return 1;
+                if constexpr (std::is_same_v<T, float>) return 2;
+                if constexpr (std::is_same_v<T, glm::vec2>) return 3;
+                if constexpr (std::is_same_v<T, glm::vec3>) return 4;
+                if constexpr (std::is_same_v<T, glm::vec4>) return 5;
+                if constexpr (std::is_same_v<T, std::string>) return 6;
+                if constexpr (std::is_same_v<T, tinyHandle>) return 7;
+                return 8;
+            };
+            int orderA = std::visit(getOrder, a.second);
+            int orderB = std::visit(getOrder, b.second);
+            if (orderA != orderB) return orderA < orderB;
+            return a.first < b.first;
+        });
+        for (auto& [name, value] : sortedItems) {
+            auto& realValue = vMap[name];
 
-                        std::string type = "Unknown";
-                        if (val.is<rtNode>())  type = "Node"; else
-                        if (val.is<rtScene>()) type = "Scene"; else
-                        if (val.is<tinyScript>())  type = "Script";
-
-                        RenderDragField(
-                            [&]() {
-                                std::string info = " [" + type + ", " + std::to_string(val.idx()) + ", " + std::to_string(val.ver()) + "]";
-
-                                labelBuffer = name + info;
-                                return labelBuffer.c_str();
-                            },
-                            name.c_str(),
-                            [&]() {
-                                return ImVec4(0.6f, 0.4f, 0.9f, 1.0f);
-                            },
-                            ImVec4(0.2f, 0.2f, 0.2f, 1.0f),
-                            [&]() { return static_cast<bool>(val); },
-                            [&]() {
-                                if (ImGui::BeginDragDropTarget()) {
-                                    if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PAYLOAD")) {
-                                        Payload* data = (Payload*)payload->Data;
-
-                                        // Scene node
-                                        if (data->is<rtNode>() && val.is<rtNode>()) {
-                                            val = data->handle;
-                                        }
-                                        // // File need a bit more checking
-                                        // else if (data->handle.is<tinyNodeFS>()) {
-                                        //     tinyHandle dHandle = fs.dataHandle(data->handle);
-                                        //     if (val.is(dHandle.tID())) val = dHandle;
-                                        // }
-
-                                        ImGui::EndDragDropTarget();
-                                    }
-                                }
-                            },
-                            []() {  },
-                            [name]() {
-                                ImGui::BeginTooltip();
-                                ImGui::Text("%s", name.c_str());
-                                ImGui::EndTooltip();
-                            }
-                        );
-                        ImGui::PopID();
+            std::visit([&](auto&& val) {
+                using T = std::decay_t<decltype(val)>;
+                if constexpr (std::is_same_v<T, float>) ImGui::DragFloat(name.c_str(), &val, 0.1f); else
+                if constexpr (std::is_same_v<T, int>)   ImGui::DragInt(  name.c_str(), &val);       else
+                if constexpr (std::is_same_v<T, bool>)  ImGui::Checkbox( name.c_str(), &val);       else
+                if constexpr (std::is_same_v<T, glm::vec2>) ImGui::DragFloat2(name.c_str(), &val.x, 0.1f); else
+                if constexpr (std::is_same_v<T, glm::vec3>) ImGui::DragFloat3(name.c_str(), &val.x, 0.1f); else
+                if constexpr (std::is_same_v<T, glm::vec4>) ImGui::DragFloat4(name.c_str(), &val.x, 0.1f); else
+                if constexpr (std::is_same_v<T, std::string>) {
+                    static std::map<std::string, std::string> buffers;
+                    if (buffers.find(name) == buffers.end()) {
+                        buffers[name] = val;
                     }
-                }, realValue);
-            }
-            ImGui::EndChild();
-            ImGui::PopStyleColor();
+                    char buf[256];
+                    strcpy(buf, buffers[name].c_str());
+                    if (ImGui::InputText(name.c_str(), buf, sizeof(buf))) {
+                        buffers[name] = buf;
+                        val = buf;
+                    }
+                } else if constexpr (std::is_same_v<T, tinyHandle>) {
+                    ImGui::PushID(name.c_str());
+                    static std::string labelBuffer;
+
+                    std::string type = "Other";
+                    if (val.is<rtNode>())  type = "Node"; else
+                    if (val.is<rtScene>()) type = "Scene"; else
+                    if (val.is<tinyScript>())  type = "Script";
+
+                    RenderDragField(
+                        [&]() {
+                            std::string info = " [" + type + ", " + std::to_string(val.idx()) + ", " + std::to_string(val.ver()) + "]";
+
+                            labelBuffer = name + info;
+                            return labelBuffer.c_str();
+                        },
+                        name.c_str(),
+                        [&]() {
+                            return ImVec4(0.6f, 0.4f, 0.9f, 1.0f);
+                        },
+                        ImVec4(0.2f, 0.2f, 0.2f, 1.0f),
+                        [&]() { return static_cast<bool>(val); },
+                        [&]() {
+                            if (ImGui::BeginDragDropTarget()) {
+                                if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PAYLOAD")) {
+                                    Payload* data = (Payload*)payload->Data;
+                                    val = data->handle;
+                                    ImGui::EndDragDropTarget();
+                                }
+                            }
+                        },
+                        []() {  },
+                        [name]() {
+                            ImGui::BeginTooltip();
+                            ImGui::Text("%s", name.c_str());
+                            ImGui::EndTooltip();
+                        }
+                    );
+                    ImGui::PopID();
+                }
+            }, realValue);
         }
-        
-        ImGui::PopStyleColor(2);
+
+        ImGui::EndChild();
+        ImGui::PopStyleColor();
+
+        // Runtime Debug Panel
+        ImGui::SameLine();
+        split->render(0, "RtScriptEditorSplitter");
+        ImGui::SameLine();
+
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
+        ImVec2 debugPanelSize = ImVec2(split->rSize(1), 0);
+        ImGui::BeginChild("RuntimeDebug", debugPanelSize, true);
+
+        ImGui::TextColored(ImVec4(0.3f, 0.6f, 0.9f, 1.0f), "Runtime Debug");
+        ImGui::SameLine();
+        if (ImGui::Button("Clear")) scriptComp->debug.clear();
+
+        ImGui::Separator();
+        for (const auto& line : scriptComp->debug.logs()) {
+            ImGui::TextColored(ImVec4(line.color[0], line.color[1], line.color[2], 1.0f), "%s", line.c_str());
+        }
+        ImGui::EndChild();
+        ImGui::PopStyleColor();
     };
 
     return tab;
@@ -1589,7 +1608,32 @@ static void RenderFileNodeHierarchy() {
             const tinyNodeFS* node = fs.fNode(h);
             if (!node || node->isFolder()) return;
 
-            State::selected = h;
+            tinyHandle dHandle = fs.dataHandle(h);
+
+            // Open a new script editor tab if not already open
+            if (dHandle.is<tinyScript>()) {
+                // bool alreadyOpen = false;
+                int openTabIndex = -1;
+                // for (auto& tab : Editor::tabs) {
+                for (size_t i = 0; i < Editor::tabs.size(); ++i) {
+                    Editor::Tab& tab = Editor::tabs[i];
+                    tinyHandle* tabHandle = tab.getState<tinyHandle>("handle");
+                    tinyType::ID* tabType = tab.getState<tinyType::ID>("type");
+                    if (tabHandle && tabType && *tabHandle == h && *tabType == tinyType::TypeID<tinyScript>()) {
+                        openTabIndex = static_cast<int>(i);
+                        break;
+                    }
+                }
+                if (openTabIndex == -1) {
+                    Editor::addTab(CreateScriptEditorTab(node->name, h));
+                } else {
+                    Editor::selectTab(openTabIndex);
+                }
+
+                // There is not a lot of reason to select script file when the editor already opens it
+            } else {
+                State::selected = h;
+            }
         },
         // RClick
         [&](tinyHandle h) {
