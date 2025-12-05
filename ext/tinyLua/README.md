@@ -96,5 +96,5 @@ This keeps `tinyLua` generic while `tinyScript` adds engine-specific features.
 
 ## Files
 
-- `tinyLuaDef.hpp` - Shared types (tinyVar, tinyDebug, tinyText)
+- `tinyVariable.hpp` - Shared types (tinyVar, tinyDebug, tinyText)
 - `tinyLua.hpp` - Core wrapper functions

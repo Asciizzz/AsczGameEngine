@@ -1,7 +1,7 @@
 #pragma once
 
 #include "tinyLua.hpp"
-#include "tinyLuaDef.hpp"
+#include "tinyVariable.hpp"
 
 // Static script definition - shared across all instances
 struct tinyScript {
@@ -18,8 +18,7 @@ struct tinyScript {
 
     bool compile();
 
-    void update(void* rtScript, void* scene, tinyHandle nodeHandle, float deltaTime, tinyDebug* runtimeDebug = nullptr) const;
-    bool call(const char* functionName, lua_State* runtimeL = nullptr, tinyDebug* runtimeDebug = nullptr) const;
+    void update(void* rtScript, void* scene, tinyHandle nodeHandle, float deltaTime) const;
 
     // Get internal Lua state for advanced operations (use with caution!)
     lua_State* luaState() const { return luaInstance_.state(); }
@@ -43,6 +42,10 @@ private:
     tinyLua::Instance luaInstance_;
     uint32_t version_ = 0;
     bool compiled_ = false;
+
+    // On init and on compile callbacks
+    tinyLua::OnInitFunc onInit_ = nullptr;
+    tinyLua::OnCompileFunc onCompile_ = nullptr;
 
     tinyVarsMap defaultVars_;    // Default VARS from script
     tinyVarsMap defaultLocals_;  // Default LOCALS from script

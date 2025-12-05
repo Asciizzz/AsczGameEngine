@@ -6,6 +6,9 @@
 #include "tinyRT/rtSkeleton.hpp"
 #include "tinyRT/rtScript.hpp"
 
+// Others
+#include "tinyScript/tinyScript.hpp"
+
 using namespace tinyRT;
 
 void Scene::init(const SceneRes& res) noexcept {
@@ -235,6 +238,24 @@ void Scene::update(FrameStart frameStart) noexcept {
                 skel3D->update();
             }
 
+            else if (rtSCRIPT* scriptComp = rt_.get<rtSCRIPT>(compHandle)) {
+                tinyHandle scriptHandle = scriptComp->scriptHandle; // Get script definition
+
+                if (tinyScript* scriptDef = fsr().get<tinyScript>(scriptHandle)) {
+
+                    if (scriptDef->version() != scriptComp->cacheVersion) {
+                        // Script updated, re-init vars and locals
+                        scriptDef->initVars(scriptComp->vars);
+                        scriptDef->initLocals(scriptComp->locals);
+                        scriptComp->cacheVersion = scriptDef->version();
+
+                        printf("[tinyRT::Scene] Script on Node '%s' re-initialized due to version mismatch.\n", node->cname());
+                    }
+
+                    scriptDef->update(scriptComp, this, nHandle, dt);
+                }
+            }
+
 
             // Fund debug:
             if (node->name != "Debug") continue;
@@ -304,7 +325,7 @@ tinyHandle Scene::instantiate(tinyHandle sceneHandle, tinyHandle parent) noexcep
 
         if (const rtSCRIPT* fromScript = fromScene->nGetComp<rtSCRIPT>(fromHandle)) {
             rtSCRIPT* toScript = nWriteComp<rtSCRIPT>(toHandle);
-            toScript->copy(fromScript);
+            *toScript = *fromScript; // Lightweight, can copy directly
         }
 
         // Recurse into children

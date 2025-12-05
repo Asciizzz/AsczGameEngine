@@ -1140,7 +1140,7 @@ static Editor::Tab CreateRtScriptEditorTab(const std::string& title, tinyHandle 
 
             ImGui::BeginChild("VariablesContent", ImVec2(0, 0), ImGuiChildFlags_AutoResizeY, 0);
 
-            tinyVarsMap& vMap = scriptComp->vars();
+            tinyVarsMap& vMap = scriptComp->vars;
             std::vector<std::pair<std::string, tinyVarsMap::mapped_type>> sortedItems(vMap.begin(), vMap.end());
             std::sort(sortedItems.begin(), sortedItems.end(), [](const auto& a, const auto& b) {
                 auto getOrder = [](const auto& v) -> int {
@@ -1985,7 +1985,7 @@ static void RenderSCRIPT(const tinyFS& fs, rtScene* scene, tinyHandle nHandle) {
 
     rtNode* node = scene->node(nHandle);
 
-    tinyHandle scriptHandle = scriptComp->scriptHandle();
+    tinyHandle scriptHandle = scriptComp->scriptHandle;
     tinyHandle scriptFHandle = fs.rDataToFile(scriptHandle);
 
     const tinyScript* scriptPtr = fs.rGet<tinyScript>(scriptHandle);
@@ -2009,10 +2009,10 @@ static void RenderSCRIPT(const tinyFS& fs, rtScene* scene, tinyHandle nHandle) {
 
                     scriptPtr = fs.rGet<tinyScript>(dHandle);
                     if (scriptPtr) {
-                        scriptComp->set(dHandle);
+                        scriptComp->scriptHandle = dHandle;
 
-                        scriptPtr->initVars(scriptComp->vars());
-                        scriptPtr->initLocals(scriptComp->locals());
+                        scriptPtr->initVars(scriptComp->vars);
+                        scriptPtr->initLocals(scriptComp->locals);
                     }
 
                     ImGui::EndDragDropTarget();

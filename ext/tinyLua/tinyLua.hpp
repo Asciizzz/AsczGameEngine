@@ -28,11 +28,8 @@ public:
     Instance& operator=(const Instance&) = delete;
     
     Instance(Instance&& other) noexcept 
-        : L_(other.L_)
-        , bindFunc_(std::move(other.bindFunc_))
-        , onInit_(std::move(other.onInit_))
-        , onCompile_(std::move(other.onCompile_))
-        , onCall_(std::move(other.onCall_)) {
+    : L_(other.L_)
+    , bindFunc_(std::move(other.bindFunc_)) {
         other.L_ = nullptr;
     }
     
@@ -41,9 +38,6 @@ public:
             close();
             L_ = other.L_;
             bindFunc_ = std::move(other.bindFunc_);
-            onInit_ = std::move(other.onInit_);
-            onCompile_ = std::move(other.onCompile_);
-            onCall_ = std::move(other.onCall_);
             other.L_ = nullptr;
         }
         return *this;
@@ -54,18 +48,13 @@ public:
         bindFunc_ = func;
     }
     
-    // Set callbacks
-    void onInit(OnInitFunc func) { onInit_ = func; }
-    void onCompile(OnCompileFunc func) { onCompile_ = func; }
-    void onCall(OnCallFunc func) { onCall_ = func; }
-    
     // Initialize state
-    bool init() {
+    bool init(OnInitFunc onInit = nullptr) {
         close();
         
         L_ = luaL_newstate();
         if (!L_) {
-            if (onInit_) onInit_(false);
+            if (onInit) onInit(false);
             return false;
         }
         
@@ -74,40 +63,40 @@ public:
         if (bindFunc_) {
             bindFunc_(L_);
         }
-        
-        if (onInit_) onInit_(true);
+
+        if (onInit) onInit(true);
         return true;
     }
     
     // Compile code
-    bool compile(const std::string& code) {
+    bool compile(const std::string& code, OnCompileFunc onCompile = nullptr) {
         if (!L_) {
-            if (onCompile_) onCompile_(false, "Lua state not initialized");
+            if (onCompile) onCompile(false, "Lua state not initialized");
             return false;
         }
         
         if (luaL_loadstring(L_, code.c_str()) != LUA_OK) {
             std::string error = std::string("Compilation error: ") + lua_tostring(L_, -1);
             lua_pop(L_, 1);
-            if (onCompile_) onCompile_(false, error);
+            if (onCompile) onCompile(false, error);
             return false;
         }
         
         if (lua_pcall(L_, 0, 0, 0) != LUA_OK) {
             std::string error = std::string("Execution error: ") + lua_tostring(L_, -1);
             lua_pop(L_, 1);
-            if (onCompile_) onCompile_(false, error);
+            if (onCompile) onCompile(false, error);
             return false;
         }
-        
-        if (onCompile_) onCompile_(true, "Compilation successful");
+
+        if (onCompile) onCompile(true, "Compilation successful");
         return true;
     }
     
     // Call a function
-    bool call(const char* functionName) const {
+    bool call(const char* functionName, OnCallFunc onCall = nullptr) const {
         if (!L_) {
-            if (onCall_) onCall_(false, "Lua state not initialized");
+            if (onCall) onCall(false, "Lua state not initialized");
             return false;
         }
         
@@ -116,18 +105,18 @@ public:
         if (!lua_isfunction(L_, -1)) {
             lua_pop(L_, 1);
             std::string error = std::string("Function '") + functionName + "' not found";
-            if (onCall_) onCall_(false, error);
+            if (onCall) onCall(false, error);
             return false;
         }
         
         if (lua_pcall(L_, 0, 0, 0) != LUA_OK) {
             std::string error = std::string("Runtime error in '") + functionName + "': " + lua_tostring(L_, -1);
             lua_pop(L_, 1);
-            if (onCall_) onCall_(false, error);
+            if (onCall) onCall(false, error);
             return false;
         }
-        
-        if (onCall_) onCall_(true, "");
+
+        if (onCall) onCall(true, "");
         return true;
     }
     
@@ -147,9 +136,9 @@ private:
     lua_State* L_ = nullptr;
     BindFunc bindFunc_;
 
-    OnInitFunc onInit_;
-    OnCompileFunc onCompile_;
-    OnCallFunc onCall_;
+    // OnInitFunc onInit_;
+    // OnCompileFunc onCompile_;
+    // OnCallFunc onCall_;
 };
 
 } // namespace tinyLua

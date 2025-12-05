@@ -1,6 +1,6 @@
 #include "tinyScript.hpp"
 #include "tinyScript_bind.hpp"
-#include "tinyRT/tinyRT_Script.hpp"
+#include "tinyRT/rtScript.hpp"
 
 #include <iostream>
 #include <algorithm>
@@ -130,6 +130,8 @@ tinyScript::tinyScript(tinyScript&& other) noexcept
     : code(std::move(other.code))
     , version_(other.version_)
     , luaInstance_(std::move(other.luaInstance_))
+    , onInit_(std::move(other.onInit_))
+    , onCompile_(std::move(other.onCompile_))
     , compiled_(other.compiled_)
     , defaultVars_(std::move(other.defaultVars_))
     , defaultLocals_(std::move(other.defaultLocals_))
@@ -144,6 +146,8 @@ tinyScript& tinyScript::operator=(tinyScript&& other) noexcept {
         code = std::move(other.code);
         version_ = other.version_;
         luaInstance_ = std::move(other.luaInstance_);
+        onInit_ = std::move(other.onInit_);
+        onCompile_ = std::move(other.onCompile_);
         compiled_ = other.compiled_;
         
         defaultVars_ = std::move(other.defaultVars_);
@@ -167,23 +171,19 @@ bool tinyScript::compile() {
     });
     
     // Set up compilation callback to log errors
-    luaInstance_.onCompile([this](bool success, const std::string& errorMsg) {
+    onCompile_ = [this](bool success, const std::string& errorMsg) {
         if (!success) debug_.log(errorMsg, 1.0f, 0.0f, 0.0f);
         else debug_.log("Compilation successful", 0.0f, 1.0f, 0.0f);
-    });
-
-    luaInstance_.onCall([this](bool success, const std::string& errorMsg) {
-        if (!success) debug_.log(errorMsg, 1.0f, 0.0f, 0.0f);
-    });
+    };
     
     // Initialize Lua instance
-    if (!luaInstance_.init()) {
+    if (!luaInstance_.init(onInit_)) {
         debug_.log("Failed to create Lua state", 1.0f, 0.0f, 0.0f);
         return false;
     }
 
     // Compile code
-    if (!luaInstance_.compile(code)) {
+    if (!luaInstance_.compile(code, onCompile_)) {
         return false;
     }
 
@@ -193,35 +193,6 @@ bool tinyScript::compile() {
     cacheDefaultVars();
     cacheDefaultLocals();
 
-    return true;
-}
-
-bool tinyScript::call(const char* functionName, lua_State* runtimeL, tinyDebug* runtimeDebug) const {
-    if (!valid()) return false;
-    
-    lua_State* targetL = runtimeL ? runtimeL : luaInstance_.state();
-
-    lua_getglobal(targetL, functionName);
-    
-    if (!lua_isfunction(targetL, -1)) {
-        lua_pop(targetL, 1);
-        if (runtimeDebug) {
-            std::string error = std::string("Function '") + functionName + "' not found";
-            runtimeDebug->log(error, 1.0f, 0.5f, 0.0f); // Orange for warning
-        }
-        return false;
-    }
-
-    // Call the function (0 args, 0 returns for now)
-    if (lua_pcall(targetL, 0, 0, 0) != LUA_OK) {
-        if (runtimeDebug) {
-            std::string error = std::string("Runtime error in '") + functionName + "': " + lua_tostring(targetL, -1);
-            runtimeDebug->log(error, 1.0f, 0.0f, 0.0f); // Red for error
-        }
-        lua_pop(targetL, 1);
-        return false;
-    }
-    
     return true;
 }
 
@@ -351,9 +322,12 @@ void tinyScript::cacheDefaultLocals() {
     cacheDefaultTable("LOCALS", defaultLocals_);
 }
 
-void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, float deltaTime, tinyDebug* runtimeDebug) const {
+void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, float deltaTime) const {
     if (!valid()) return;
-    
+
+    auto* rt = static_cast<rtSCRIPT*>(rtScript);
+    if (!rt) return;
+
     lua_State* L = luaInstance_.state();
     
     // Store rtScript pointer in Lua globals for print() function
@@ -361,9 +335,8 @@ void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, floa
     lua_setglobal(L, "__rtScript");
 
     // Get vars and locals from rtScript
-    auto* rt = static_cast<tinyRT::Script*>(rtScript);
-    auto& vars = rt->vMap();
-    auto& locals = rt->lMap();
+    auto& vars = rt->vars;
+    auto& locals = rt->locals;
 
     // Helper lambda to push variables into a Lua table
     auto pushToTable = [&](const tinyVarsMap& tableMap) {
@@ -421,7 +394,9 @@ void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, floa
 
     // Call update function
     // call("update", nullptr, runtimeDebug);
-    luaInstance_.call("update");
+    luaInstance_.call("update", [&](bool success, const std::string& errorMsg) {
+        if (!success) { rt->debug.log(errorMsg, 1.0f, 0.0f, 0.0f); }
+    });
 
     // Pull values back from Lua using helper
     pullMapFromLua(L, "VARS", vars);
