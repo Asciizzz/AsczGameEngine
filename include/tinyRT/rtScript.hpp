@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tinyScriptDef.hpp"
+#include "tinyLuaDef.hpp"
 
 namespace tinyRT {
 

@@ -8,18 +8,6 @@
 #include <fstream>
 #include <sstream>
 
-// ==================== tinyText Implementation ====================
-
-std::string tinyText::readFrom(const std::string& filePath) noexcept {
-    std::ifstream fileStream(filePath);
-    if (!fileStream) return "";
-
-    // Correct way to read entire file into string
-    std::string content((std::istreambuf_iterator<char>(fileStream)),
-                        (std::istreambuf_iterator<char>()));
-    return content;
-}
-
 // ==================== tinyScript Implementation ====================
 
 tinyScript::~tinyScript() {
@@ -32,16 +20,25 @@ void tinyScript::closeLua() {
     lua_close(L_);
     L_ = nullptr;
     compiled_ = false;
+
     defaultVars_.clear();
+    defaultLocals_.clear();
+    globals_.clear();
+
     varsOrder_.clear();
 }
 
 tinyScript::tinyScript(tinyScript&& other) noexcept
     : code(std::move(other.code))
+    // State
     , version_(other.version_)
     , L_(other.L_)
     , compiled_(other.compiled_)
+    // Caches
     , defaultVars_(std::move(other.defaultVars_))
+    , defaultLocals_(std::move(other.defaultLocals_))
+    , globals_(std::move(other.globals_))
+    // Other
     , varsOrder_(std::move(other.varsOrder_))
     , debug_(std::move(other.debug_)) {
     other.L_ = nullptr;
@@ -55,7 +52,11 @@ tinyScript& tinyScript::operator=(tinyScript&& other) noexcept {
         version_ = other.version_;
         L_ = other.L_;
         compiled_ = other.compiled_;
+        
         defaultVars_ = std::move(other.defaultVars_);
+        defaultLocals_ = std::move(other.defaultLocals_);
+        globals_ = std::move(other.globals_);
+
         varsOrder_ = std::move(other.varsOrder_);
         debug_ = std::move(other.debug_);
 
@@ -263,7 +264,7 @@ void tinyScript::cacheDefaultTable(const char* tableName, tinyVarsMap& outMap) {
 
 void tinyScript::cacheDefaultVars() {
     cacheDefaultTable("VARS", defaultVars_);
-    
+
     // Build varsOrder_ - sort by type hash, then alphabetically within each type
     varsOrder_.clear();
     std::vector<std::pair<std::string, size_t>> orderedVars;

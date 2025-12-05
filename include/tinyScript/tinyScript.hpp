@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tinyScriptDef.hpp"
+#include "tinyLuaDef.hpp"
 
 extern "C" {
     #include "luacpp/lua.h"
@@ -8,13 +8,8 @@ extern "C" {
     #include "luacpp/lauxlib.h"
 }
 
-// Simple text file structure
-struct tinyText {
-    std::string str;
-    const char* c_str() const { return str.c_str(); }
-
-    static std::string readFrom(const std::string& filePath) noexcept;
-};
+// Update need: rework tinyScript to be independent of this engine context
+// allowing it to be used in other projects more easily.
 
 // Static script definition - shared across all instances
 struct tinyScript {
@@ -59,6 +54,9 @@ private:
 
     tinyVarsMap defaultVars_;    // Default VARS from script
     tinyVarsMap defaultLocals_;  // Default LOCALS from script
+
+    tinyVarsMap globals_;        // Global variables (tied to the script itself, not instances)
+
     std::vector<std::string> varsOrder_;  // Ordered list of var names (sorted by type)
     tinyDebug debug_{16};  // Compilation/static debug logs (16 lines max)
     void closeLua();

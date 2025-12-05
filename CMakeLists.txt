@@ -27,48 +27,48 @@ endif()
 
 file(GLOB_RECURSE SRC_FILES
     # ImGui source files
-    ext/imgui/imgui.cpp
-    ext/imgui/imgui_demo.cpp
-    ext/imgui/imgui_draw.cpp
-    ext/imgui/imgui_tables.cpp
-    ext/imgui/imgui_widgets.cpp
-    ext/imgui/backends/imgui_impl_sdl2.cpp
-    ext/imgui/backends/imgui_impl_vulkan.cpp
-    ext/imgui/TextEditor.cpp
+    ext/tinyUI/imgui/imgui.cpp
+    ext/tinyUI/imgui/imgui_demo.cpp
+    ext/tinyUI/imgui/imgui_draw.cpp
+    ext/tinyUI/imgui/imgui_tables.cpp
+    ext/tinyUI/imgui/imgui_widgets.cpp
+    ext/tinyUI/imgui/backends/imgui_impl_sdl2.cpp
+    ext/tinyUI/imgui/backends/imgui_impl_vulkan.cpp
+    ext/tinyUI/imgui/TextEditor.cpp
 
     # Lua source files (excluding lua.c and luac.c which contain main functions)
-    ext/luacpp/lapi.c
-    ext/luacpp/lauxlib.c
-    ext/luacpp/lbaselib.c
-    ext/luacpp/lcode.c
-    ext/luacpp/lcorolib.c
-    ext/luacpp/lctype.c
-    ext/luacpp/ldblib.c
-    ext/luacpp/ldebug.c
-    ext/luacpp/ldo.c
-    ext/luacpp/ldump.c
-    ext/luacpp/lfunc.c
-    ext/luacpp/lgc.c
-    ext/luacpp/linit.c
-    ext/luacpp/liolib.c
-    ext/luacpp/llex.c
-    ext/luacpp/lmathlib.c
-    ext/luacpp/lmem.c
-    ext/luacpp/loadlib.c
-    ext/luacpp/lobject.c
-    ext/luacpp/lopcodes.c
-    ext/luacpp/loslib.c
-    ext/luacpp/lparser.c
-    ext/luacpp/lstate.c
-    ext/luacpp/lstring.c
-    ext/luacpp/lstrlib.c
-    ext/luacpp/ltable.c
-    ext/luacpp/ltablib.c
-    ext/luacpp/ltm.c
-    ext/luacpp/lundump.c
-    ext/luacpp/lutf8lib.c
-    ext/luacpp/lvm.c
-    ext/luacpp/lzio.c
+    ext/tinyLua/luacpp/lapi.c
+    ext/tinyLua/luacpp/lauxlib.c
+    ext/tinyLua/luacpp/lbaselib.c
+    ext/tinyLua/luacpp/lcode.c
+    ext/tinyLua/luacpp/lcorolib.c
+    ext/tinyLua/luacpp/lctype.c
+    ext/tinyLua/luacpp/ldblib.c
+    ext/tinyLua/luacpp/ldebug.c
+    ext/tinyLua/luacpp/ldo.c
+    ext/tinyLua/luacpp/ldump.c
+    ext/tinyLua/luacpp/lfunc.c
+    ext/tinyLua/luacpp/lgc.c
+    ext/tinyLua/luacpp/linit.c
+    ext/tinyLua/luacpp/liolib.c
+    ext/tinyLua/luacpp/llex.c
+    ext/tinyLua/luacpp/lmathlib.c
+    ext/tinyLua/luacpp/lmem.c
+    ext/tinyLua/luacpp/loadlib.c
+    ext/tinyLua/luacpp/lobject.c
+    ext/tinyLua/luacpp/lopcodes.c
+    ext/tinyLua/luacpp/loslib.c
+    ext/tinyLua/luacpp/lparser.c
+    ext/tinyLua/luacpp/lstate.c
+    ext/tinyLua/luacpp/lstring.c
+    ext/tinyLua/luacpp/lstrlib.c
+    ext/tinyLua/luacpp/ltable.c
+    ext/tinyLua/luacpp/ltablib.c
+    ext/tinyLua/luacpp/ltm.c
+    ext/tinyLua/luacpp/lundump.c
+    ext/tinyLua/luacpp/lutf8lib.c
+    ext/tinyLua/luacpp/lvm.c
+    ext/tinyLua/luacpp/lzio.c
 
     # Engine specific files
 
@@ -131,8 +131,10 @@ target_include_directories(AsczGame PRIVATE
     ${CMAKE_SOURCE_DIR}/ext/json
     ${CMAKE_SOURCE_DIR}/ext/tiny3d
     ${CMAKE_SOURCE_DIR}/ext/Helpers
-    ${CMAKE_SOURCE_DIR}/ext/imgui
-    ${CMAKE_SOURCE_DIR}/ext/luacpp
+    ${CMAKE_SOURCE_DIR}/ext/tinyUI
+    ${CMAKE_SOURCE_DIR}/ext/tinyUI/imgui
+    ${CMAKE_SOURCE_DIR}/ext/tinyLua
+    ${CMAKE_SOURCE_DIR}/ext/tinyLua/luacpp
     ${CMAKE_SOURCE_DIR}/ext/tinyLib
 
     ${CMAKE_SOURCE_DIR}/include
