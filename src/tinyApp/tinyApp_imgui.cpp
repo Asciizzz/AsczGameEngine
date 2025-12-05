@@ -386,6 +386,8 @@ struct Splitter {
     void render(size_t index, const std::string& id = "Splitter") {
         if (index >= positions.size()) return;
 
+        if (!horizontal) ImGui::SameLine();
+
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.4f, 0.4f, 0.4f, 0.6f));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.5f, 0.5f, 0.5f, 0.8f));
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
@@ -398,8 +400,9 @@ struct Splitter {
         if (ImGui::IsItemActive()) {
             float delta = horizontal ? ImGui::GetIO().MouseDelta.y : ImGui::GetIO().MouseDelta.x;
 
-            float lowerLimit = (index == 0) ? 0.0f : positions[index - 1] + 0.05f;
-            float upperLimit = (index == positions.size() - 1) ? 1.0f : positions[index + 1] - 0.05f;
+            constexpr float minEdgeMargin = 0.02f; // Minimum 2% from edges
+            float lowerLimit = (index == 0) ? minEdgeMargin : std::max(positions[index - 1] + 0.05f, minEdgeMargin);
+            float upperLimit = (index == positions.size() - 1) ? (1.0f - minEdgeMargin) : std::min(positions[index + 1] - 0.05f, 1.0f - minEdgeMargin);
 
             positions[index] += delta / directionSize;
             positions[index] = std::clamp(positions[index], lowerLimit, upperLimit);
@@ -417,6 +420,8 @@ struct Splitter {
         }
 
         ImGui::PopStyleColor(3);
+
+        if (!horizontal) ImGui::SameLine();
     }
 
     // These values are all relative (0.0 -> 1.0)
@@ -438,7 +443,6 @@ static Editor::Tab CreateScriptEditorTab(const std::string& title, tinyHandle fH
     tab.setState<tinyType::ID>("type", tinyType::TypeID<tinyScript>());
     tab.setState<Splitter>("splitter", Splitter());
     tab.setState<tinyHandle>("lastScriptHandle", tinyHandle());
-    tab.setState<bool>("horizontal", false);
     
     // Define select function - called when tab becomes active
     tab.selectFunc = [](Editor::Tab& self) {
@@ -474,16 +478,6 @@ static Editor::Tab CreateScriptEditorTab(const std::string& title, tinyHandle fH
         
         if (ImGui::MenuItem("Compile")) {
             script->compile();
-        }
-        
-        ImGui::Separator();
-        
-        bool* horizontal = self.getState<bool>("horizontal");
-        if (horizontal) {
-            const char* layoutLabel = *horizontal ? "Switch to Vertical" : "Switch to Horizontal";
-            if (ImGui::MenuItem(layoutLabel)) {
-                *horizontal = !*horizontal;
-            }
         }
         
         ImGui::Separator();
@@ -550,17 +544,14 @@ static Editor::Tab CreateScriptEditorTab(const std::string& title, tinyHandle fH
         Splitter* split = self.getState<Splitter>("splitter");
         if (!split) return;
         
-        bool* horizontal = self.getState<bool>("horizontal");
-        if (!horizontal) return;
-        
         split->init(2);
-        split->horizontal = *horizontal;
-        split->directionSize = *horizontal ? ImGui::GetContentRegionAvail().y : ImGui::GetContentRegionAvail().x;
+        split->horizontal = false;
+        split->directionSize = ImGui::GetContentRegionAvail().x;
         split->calcRegionSizes();
         
         // Code editor
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
-        ImVec2 codeEditorSize = *horizontal ? ImVec2(0, split->rSize(0)) : ImVec2(split->rSize(0), 0);
+        ImVec2 codeEditorSize = ImVec2(split->rSize(0), 0);
         ImGui::BeginChild("CodeEditor", codeEditorSize, true);
         
         tinyDebug& debug = script->debug();
@@ -573,15 +564,11 @@ static Editor::Tab CreateScriptEditorTab(const std::string& title, tinyHandle fH
         ImGui::EndChild();
         ImGui::PopStyleColor();
         
-        if (!*horizontal) ImGui::SameLine();
-        
         split->render(0);
-        
-        if (!*horizontal) ImGui::SameLine();
         
         // GLOBALS Editor
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
-        ImVec2 globalsEditorSize = *horizontal ? ImVec2(0, split->rSize(1)) : ImVec2(split->rSize(1), 0);
+        ImVec2 globalsEditorSize = ImVec2(split->rSize(1), 0);
         ImGui::BeginChild("GlobalsEditor", globalsEditorSize, true);
         
         ImGui::TextColored(ImVec4(0.9f, 0.7f, 0.2f, 1.0f), "GLOBALS");
@@ -675,16 +662,12 @@ static Editor::Tab CreateScriptEditorTab(const std::string& title, tinyHandle fH
         ImGui::EndChild();
         ImGui::PopStyleColor();
         
-        if (!*horizontal) ImGui::SameLine();
-        
         split->render(1);
-        
-        if (!*horizontal) ImGui::SameLine();
         
         // Debug console
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
-        ImVec2 debugConsoleSize = *horizontal ? ImVec2(0, split->rSize(2)) : ImVec2(split->rSize(2), 0);
-        ImGui::BeginChild("DebugTerminal", debugConsoleSize, true);
+        ImVec2 debugConsoleSize = ImVec2(split->rSize(2), 0);
+        ImGui::BeginChild("DebugTerminal", debugConsoleSize, true, ImGuiWindowFlags_HorizontalScrollbar);
         
         ImGui::TextColored(ImVec4(0.6f, 0.6f, 1.0f, 1.0f), "Debug Console");
         ImGui::SameLine();
