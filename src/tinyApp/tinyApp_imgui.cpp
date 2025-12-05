@@ -1091,7 +1091,8 @@ static Editor::Tab CreateRtScriptEditorTab(const std::string& title, tinyHandle 
 
     // Splitter start at 30 (variables) / 70 (runtime debug)
     Splitter* split = tab.getState<Splitter>("splitter");
-    split->positions = {0.3f};
+    split->init(1);
+    split->positions[0] = 0.3f;
     split->horizontal = false;
 
     tinyFS& fs = projRef->fs();
@@ -1246,16 +1247,20 @@ static Editor::Tab CreateRtScriptEditorTab(const std::string& title, tinyHandle 
 
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
         ImVec2 debugPanelSize = ImVec2(split->rSize(1), 0);
-        ImGui::BeginChild("RuntimeDebug", debugPanelSize, true);
+        ImGui::BeginChild("RuntimeDebug", debugPanelSize, true, ImGuiWindowFlags_HorizontalScrollbar);
 
         ImGui::TextColored(ImVec4(0.3f, 0.6f, 0.9f, 1.0f), "Runtime Debug");
         ImGui::SameLine();
         if (ImGui::Button("Clear")) scriptComp->debug.clear();
 
         ImGui::Separator();
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, ImGui::GetStyle().ItemSpacing.y));
         for (const auto& line : scriptComp->debug.logs()) {
-            ImGui::TextColored(ImVec4(line.color[0], line.color[1], line.color[2], 1.0f), "%s", line.c_str());
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(line.color[0], line.color[1], line.color[2], 1.0f));
+            ImGui::TextUnformatted(line.c_str());
+            ImGui::PopStyleColor();
         }
+        ImGui::PopStyleVar();
         ImGui::EndChild();
         ImGui::PopStyleColor();
     };
