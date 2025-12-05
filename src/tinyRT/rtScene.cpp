@@ -248,8 +248,6 @@ void Scene::update(FrameStart frameStart) noexcept {
                         scriptDef->initVars(scriptComp->vars);
                         scriptDef->initLocals(scriptComp->locals);
                         scriptComp->cacheVersion = scriptDef->version();
-
-                        printf("[tinyRT::Scene] Script on Node '%s' re-initialized due to version mismatch.\n", node->cname());
                     }
 
                     scriptDef->update(scriptComp, this, nHandle, dt);
