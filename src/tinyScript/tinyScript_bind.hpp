@@ -368,9 +368,9 @@ static inline SDL_Scancode getScancodeFromName(const std::string& keyName) {
     return (it != keyMap.end()) ? it->second : SDL_SCANCODE_UNKNOWN;
 }
 
-static inline int lua_KState(lua_State* L) {
+static inline int lua_kstate(lua_State* L) {
     if (!lua_isstring(L, 1))
-        return luaL_error(L, "KState expects string");
+        return luaL_error(L, "kstate expects string");
     
     std::string keyName = lua_tostring(L, 1);
     std::transform(keyName.begin(), keyName.end(), keyName.begin(), ::tolower);
@@ -1373,6 +1373,8 @@ static inline int node_script(lua_State* L) {
     return 1;
 }
 
+*/
+
 // ========================================
 // NODE COMPONENT: HIERARCHY
 // ========================================
@@ -1380,21 +1382,30 @@ static inline int node_script(lua_State* L) {
 static inline int node_parent(lua_State* L) {
     tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
     if (!handle) return 0;
+
+    rtNode* node = getSceneFromLua(L)->node(*handle);
     
-    tinyHandle parentHandle = getSceneFromLua(L)->nodeParent(*handle);
-    if (parentHandle) {
-        pushNode(L, parentHandle);
+    // Invalid node
+    if (!node) {
+        lua_pushnil(L);
         return 1;
     }
-    lua_pushnil(L);
+
+    pushNode(L, node->parent);
     return 1;
 }
 
 static inline int node_children(lua_State* L) {
     tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
     if (!handle) return 0;
-    
-    std::vector<tinyHandle> children = getSceneFromLua(L)->nodeChildren(*handle);
+
+    rtNode* node = getSceneFromLua(L)->node(*handle);
+    if (!node) {
+        lua_pushnil(L);
+        return 1;
+    }
+
+    std::vector<tinyHandle> children = node->children;
     lua_newtable(L);
     for (int i = 0; i < children.size(); i++) {
         pushNode(L, children[i]);
@@ -1406,13 +1417,14 @@ static inline int node_children(lua_State* L) {
 static inline int node_parentHandle(lua_State* L) {
     tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
     if (!handle) return 0;
-    
-    tinyHandle parentHandle = getSceneFromLua(L)->nodeParent(*handle);
-    if (parentHandle) {
-        pushHandle(L, LuaHandle("node", parentHandle.idx(), parentHandle.ver()));
+
+    rtNode* node = getSceneFromLua(L)->node(*handle);
+    if (!node) {
+        lua_pushnil(L);
         return 1;
     }
-    lua_pushnil(L);
+
+    pushHandle(L, node->parent);
     return 1;
 }
 
@@ -1420,10 +1432,16 @@ static inline int node_childrenHandles(lua_State* L) {
     tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
     if (!handle) return 0;
     
-    std::vector<tinyHandle> children = getSceneFromLua(L)->nodeChildren(*handle);
+    rtNode* node = getSceneFromLua(L)->node(*handle);
+    if (!node) {
+        lua_pushnil(L);
+        return 1;
+    }
+
+    std::vector<tinyHandle> children = node->children;
     lua_newtable(L);
     for (int i = 0; i < children.size(); i++) {
-        pushHandle(L, LuaHandle("node", children[i].idx(), children[i].ver()));
+        pushHandle(L, children[i]);
         lua_rawseti(L, -2, i + 1);
     }
     return 1;
@@ -1450,8 +1468,8 @@ static inline int node_delete(lua_State* L) {
         return 1;
     }
     
-    bool success = scene->removeNode(*handle, recursive);
-    lua_pushboolean(L, success);
+    scene->nErase(*handle, recursive);
+    lua_pushboolean(L, true);
     return 1;
 }
 
@@ -1464,11 +1482,9 @@ static inline int node_handle(lua_State* L) {
     }
     
     // Return the node's handle as a LuaHandle
-    pushHandle(L, LuaHandle("node", handle->idx(), handle->ver()));
+    pushHandle(L, *handle);
     return 1;
 }
-
-*/
 
 // ========================================
 // FS (FILESYSTEM REGISTRY) OBJECT
@@ -1495,7 +1511,7 @@ static inline void pushFS(lua_State* L) {
     lua_setmetatable(L, -2);
 }
 
-// fs:get(handle) - Get resource from filesystem registry
+// FS:get(handle) - Get resource from filesystem registry
 static inline int fs_get(lua_State* L) {
     // Argument 1: self (FS object)
     // Argument 2: handle to resource
@@ -2164,18 +2180,18 @@ static inline void registerNodeBindings(lua_State* L) {
 
     // Node metatable
     LUA_BEGIN_METATABLE("Node");
-    LUA_REG_METHOD(node_transform3D, "Transform3D");
-    LUA_REG_METHOD(node_skeleton3D, "Skeleton3D");
+    LUA_REG_METHOD(node_transform3D, "transform3D");
+    LUA_REG_METHOD(node_skeleton3D, "skeleton3D");
     /*
     LUA_REG_METHOD(node_anime3D, "anime3D");
     LUA_REG_METHOD(node_script, "script");
+    */
     LUA_REG_METHOD(node_parent, "parent");
     LUA_REG_METHOD(node_children, "children");
     LUA_REG_METHOD(node_parentHandle, "parentHandle");
     LUA_REG_METHOD(node_childrenHandles, "childrenHandles");
     LUA_REG_METHOD(node_delete, "delete");
     LUA_REG_METHOD(node_handle, "handle");
-    */
     LUA_END_METATABLE("Node");
     
     // Scene metatable
@@ -2194,8 +2210,8 @@ static inline void registerNodeBindings(lua_State* L) {
     lua_pop(L, 1);
 
     // Global Functions
-    LUA_REG_GLOBAL(lua_KState, "KSTATE");
     LUA_REG_GLOBAL(lua_Handle, "Handle");
+    LUA_REG_GLOBAL(lua_kstate, "kstate");
     LUA_REG_GLOBAL(lua_print, "print");
 
     // Quaternion Utility Functions

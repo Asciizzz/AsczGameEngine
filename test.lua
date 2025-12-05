@@ -1,5 +1,3 @@
--- GLOBALS are shared across ALL instances of this script
--- Perfect for constants, shared counters, or script linking
 GLOBALS = {
     PI = 3.14159,
     instanceCounter = 0,
@@ -13,23 +11,20 @@ VARS = {
 
 
 function update()
-    -- Example: Use GLOBALS - changes affect ALL script instances
-    GLOBALS.instanceCounter = GLOBALS.instanceCounter + 1
-    
     -- Use the shared constant
     -- local rotationSpeed = GLOBALS.PI * 10.0
-    local trfm3D = NODE:Transform3D()
+    local trfm3D = NODE:transform3D()
     if trfm3D then
         trfm3D:rotY(DELTATIME * 20.0)
     end
 
     -- end
 
-    local skele3D = NODE:Skeleton3D()
+    local skele3D = NODE:skeleton3D()
     if skele3D then
 
-        local kA_press = KSTATE("A")
-        local kD_press = KSTATE("D")
+        local kA_press = kstate("A")
+        local kD_press = kstate("D")
 
         -- Spin the root
         local neckBone = skele3D:bone(VARS.neckIndex)

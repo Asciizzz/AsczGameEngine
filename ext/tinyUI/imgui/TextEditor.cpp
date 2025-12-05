@@ -3130,7 +3130,9 @@ const TextEditor::LanguageDefinition& TextEditor::LanguageDefinition::Lua()
 			"coroutine", "table", "io", "os", "string", "utf8", "bit32", "math", "debug", "package",
 
 			// Custom identifiers for our engine
-			"VARS", "DELTATIME", "NODE", "SCENE", "FS"
+			"VARS", "LOCALS", "GLOBALS",
+			"NODE", "SCENE", "FS",
+			"DELTATIME"
 		};
 		for (auto& k : identifiers)
 		{
@@ -3138,11 +3140,13 @@ const TextEditor::LanguageDefinition& TextEditor::LanguageDefinition::Lua()
 
 			#define SET_IF_ELSE(key, decl) if (std::string(k) == key) id.mDeclaration = decl; else
 
-			SET_IF_ELSE("VARS", "Runtime script variables")
-			SET_IF_ELSE("DELTATIME", "Time since last frame (seconds)")
+			SET_IF_ELSE("VARS", "Runtime script variables (tied to object instance)")
+			SET_IF_ELSE("LOCALS", "Local script variables (tied to object instance)")
+			SET_IF_ELSE("GLOBALS", "Global script variables (tied to the script itself)")
 			SET_IF_ELSE("NODE", "Current node")
 			SET_IF_ELSE("SCENE", "Current scene")
 			SET_IF_ELSE("FS", "File system access")
+			SET_IF_ELSE("DELTATIME", "Time since last frame (seconds)")
 			SET_IF_ELSE("print", "Outputs text to the console")
 			SET_IF_ELSE("table", "Table library")
 			SET_IF_ELSE("string", "String library")

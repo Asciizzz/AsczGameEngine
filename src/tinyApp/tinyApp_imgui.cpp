@@ -2164,7 +2164,7 @@ static void RenderSCRIPT(const tinyFS& fs, rtScene* scene, tinyHandle nHandle) {
 
     if (!scriptPtr) return; // No valid script assigned
 
-    if (ImGui::Button("Open in Editor", ImVec2(-1, 0))) {
+    if (ImGui::Button("Open RtScript in Editor", ImVec2(-1, 0))) {
         std::string title = node->name;
         title += " [" + std::to_string(nHandle.idx()) + ", " + std::to_string(nHandle.ver()) + "] Script";
 
@@ -2356,7 +2356,7 @@ static void RenderFileInspector(tinyProject* project) {
 
         // A button to open editor (overrides the editorSelection)
 
-        if (ImGui::Button("Open in Editor", ImVec2(-1, 0))) {
+        if (ImGui::Button("Open Script in Editor", ImVec2(-1, 0))) {
             Editor::addTab(CreateScriptEditorTab(node->name, handle));
         }
     } else if (dHandle.is<tinyTexture>()) {
