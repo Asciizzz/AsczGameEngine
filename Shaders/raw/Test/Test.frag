@@ -50,7 +50,7 @@ void main() {
     float lDot = dot(normalize(fragNrml), normalize(lightDir));
     lDot = clamp(lDot, 0.0, 1.0);
 
-    lDot = mix(0.8, 1.0, lDot);
+    lDot = mix(0.95, 1.0, lDot);
 
     Material mat = materials[pConst.data0.w];
 

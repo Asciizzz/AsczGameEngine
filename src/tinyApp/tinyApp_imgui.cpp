@@ -685,13 +685,14 @@ static Editor::Tab CreateScriptEditorTab(const std::string& title, tinyHandle fH
     return tab;
 }
 
-static Editor::Tab CreateRtSkeletonEditorTab(const std::string& title, tinyHandle nHandle) {
+static Editor::Tab CreateRtSkeletonEditorTab(const std::string& title, tinyHandle nHandle, tinyHandle sHandle) {
     Editor::Tab tab;
     tab.title = title;
     tab.color = ImVec4(0.6f, 0.3f, 0.7f, 0.4f); // Purple color for skeletons
     
     // Initialize tab-specific state
     tab.setState<tinyHandle>("handle", nHandle);
+    tab.setState<tinyHandle>("sceneHandle", sHandle);
     tab.setState<tinyType::ID>("type", tinyType::TypeID<rtSKELE3D>());
     tab.setState<Splitter>("splitter", Splitter());
     tab.setState<int>("selectedBoneIndex", -1);
@@ -703,10 +704,14 @@ static Editor::Tab CreateRtSkeletonEditorTab(const std::string& title, tinyHandl
     // Define context menu for skeleton tab
     tab.contextMenuFunc = [](Editor::Tab& self) {
         tinyHandle* nHandlePtr = self.getState<tinyHandle>("handle");
-        if (!nHandlePtr) return;
+        tinyHandle* sHandlePtr = self.getState<tinyHandle>("sceneHandle");
+        if (!nHandlePtr || !sHandlePtr) return;
         tinyHandle nHandle = *nHandlePtr;
+        tinyHandle sHandle = *sHandlePtr;
         
-        rtScene* scene = sceneRef;
+        rtScene* scene = projRef->scene(sHandle);
+        if (!scene) return;
+        
         rtSKELE3D* skel3D = scene->nGetComp<rtSKELE3D>(nHandle);
         if (!skel3D) return;
         
@@ -732,10 +737,14 @@ static Editor::Tab CreateRtSkeletonEditorTab(const std::string& title, tinyHandl
     // Define hover tooltip for skeleton tab
     tab.hoverFunc = [](Editor::Tab& self) {
         tinyHandle* nHandlePtr = self.getState<tinyHandle>("handle");
-        if (!nHandlePtr) return;
+        tinyHandle* sHandlePtr = self.getState<tinyHandle>("sceneHandle");
+        if (!nHandlePtr || !sHandlePtr) return;
         tinyHandle nHandle = *nHandlePtr;
+        tinyHandle sHandle = *sHandlePtr;
         
-        rtScene* scene = sceneRef;
+        rtScene* scene = projRef->scene(sHandle);
+        if (!scene) return;
+        
         rtSKELE3D* skel3D = scene->nGetComp<rtSKELE3D>(nHandle);
         if (!skel3D) return;
         
@@ -758,10 +767,17 @@ static Editor::Tab CreateRtSkeletonEditorTab(const std::string& title, tinyHandl
     // Define the custom render function for skeleton editing
     tab.renderFunc = [&](Editor::Tab& self) {
         tinyHandle* nHandlePtr = self.getState<tinyHandle>("handle");
-        if (!nHandlePtr) return;
+        tinyHandle* sHandlePtr = self.getState<tinyHandle>("sceneHandle");
+        if (!nHandlePtr || !sHandlePtr) return;
         tinyHandle nHandle = *nHandlePtr;
+        tinyHandle sHandle = *sHandlePtr;
         
-        rtScene* scene = sceneRef;
+        rtScene* scene = projRef->scene(sHandle);
+        if (!scene) {
+            ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Scene Removed");
+            return;
+        }
+        
         rtSKELE3D* skel3D = scene->nGetComp<rtSKELE3D>(nHandle);
         if (!skel3D) return;
         
@@ -909,13 +925,14 @@ static Editor::Tab CreateRtSkeletonEditorTab(const std::string& title, tinyHandl
     return tab;
 }
 
-static Editor::Tab CreateRtMorphTargetEditorTab(const std::string& title, tinyHandle nHandle) {
+static Editor::Tab CreateRtMorphTargetEditorTab(const std::string& title, tinyHandle nHandle, tinyHandle sHandle) {
     Editor::Tab tab;
     tab.title = title;
     tab.color = ImVec4(0.8f, 0.5f, 0.3f, 0.4f); // Orange color for morph editor
     
     // Initialize tab-specific state
     tab.setState<tinyHandle>("handle", nHandle);
+    tab.setState<tinyHandle>("sceneHandle", sHandle);
     tab.setState<tinyType::ID>("type", tinyType::TypeID<rtMESHRD3D>());
     tab.setState<Splitter>("splitter", Splitter());
     tab.setState<std::string>("searchFilter", std::string());
@@ -931,10 +948,14 @@ static Editor::Tab CreateRtMorphTargetEditorTab(const std::string& title, tinyHa
     // Define context menu
     tab.contextMenuFunc = [](Editor::Tab& self) {
         tinyHandle* nHandlePtr = self.getState<tinyHandle>("handle");
-        if (!nHandlePtr) return;
+        tinyHandle* sHandlePtr = self.getState<tinyHandle>("sceneHandle");
+        if (!nHandlePtr || !sHandlePtr) return;
         tinyHandle nHandle = *nHandlePtr;
+        tinyHandle sHandle = *sHandlePtr;
         
-        rtScene* scene = sceneRef;
+        rtScene* scene = projRef->scene(sHandle);
+        if (!scene) return;
+        
         rtMESHRD3D* meshRD = scene->nGetComp<rtMESHRD3D>(nHandle);
         if (!meshRD) return;
         
@@ -950,10 +971,14 @@ static Editor::Tab CreateRtMorphTargetEditorTab(const std::string& title, tinyHa
     // Define hover tooltip
     tab.hoverFunc = [](Editor::Tab& self) {
         tinyHandle* nHandlePtr = self.getState<tinyHandle>("handle");
-        if (!nHandlePtr) return;
+        tinyHandle* sHandlePtr = self.getState<tinyHandle>("sceneHandle");
+        if (!nHandlePtr || !sHandlePtr) return;
         tinyHandle nHandle = *nHandlePtr;
+        tinyHandle sHandle = *sHandlePtr;
         
-        rtScene* scene = sceneRef;
+        rtScene* scene = projRef->scene(sHandle);
+        if (!scene) return;
+        
         rtMESHRD3D* meshRD = scene->nGetComp<rtMESHRD3D>(nHandle);
         if (!meshRD) return;
         
@@ -968,10 +993,17 @@ static Editor::Tab CreateRtMorphTargetEditorTab(const std::string& title, tinyHa
     // Define render function
     tab.renderFunc = [](Editor::Tab& self) {
         tinyHandle* nHandlePtr = self.getState<tinyHandle>("handle");
-        if (!nHandlePtr) return;
+        tinyHandle* sHandlePtr = self.getState<tinyHandle>("sceneHandle");
+        if (!nHandlePtr || !sHandlePtr) return;
         tinyHandle nHandle = *nHandlePtr;
+        tinyHandle sHandle = *sHandlePtr;
         
-        rtScene* scene = sceneRef;
+        rtScene* scene = projRef->scene(sHandle);
+        if (!scene) {
+            ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Scene Removed");
+            return;
+        }
+        
         rtMESHRD3D* meshRD = scene->nGetComp<rtMESHRD3D>(nHandle);
         if (!meshRD) {
             ImGui::Text("Mesh Render component not found");
@@ -1159,13 +1191,14 @@ static Editor::Tab CreateRtMorphTargetEditorTab(const std::string& title, tinyHa
     return tab;
 }
 
-static Editor::Tab CreateRtScriptEditorTab(const std::string& title, tinyHandle nHandle) {
+static Editor::Tab CreateRtScriptEditorTab(const std::string& title, tinyHandle nHandle, tinyHandle sHandle) {
     Editor::Tab tab;
     tab.title = title;
     tab.color = ImVec4(0.3f, 0.5f, 0.8f, 0.4f); // Blue color for script components
     
     // Initialize tab-specific state
     tab.setState<tinyHandle>("handle", nHandle);
+    tab.setState<tinyHandle>("sceneHandle", sHandle);
     tab.setState<tinyType::ID>("type", tinyType::TypeID<rtSCRIPT>());
     tab.setState<Splitter>("splitter", Splitter());
 
@@ -1180,10 +1213,14 @@ static Editor::Tab CreateRtScriptEditorTab(const std::string& title, tinyHandle 
     // Define context menu for script component tab
     tab.contextMenuFunc = [](Editor::Tab& self) {
         tinyHandle* nHandlePtr = self.getState<tinyHandle>("handle");
-        if (!nHandlePtr) return;
+        tinyHandle* sHandlePtr = self.getState<tinyHandle>("sceneHandle");
+        if (!nHandlePtr || !sHandlePtr) return;
         tinyHandle nHandle = *nHandlePtr;
+        tinyHandle sHandle = *sHandlePtr;
 
-        rtScene* scene = sceneRef;
+        rtScene* scene = projRef->scene(sHandle);
+        if (!scene) return;
+        
         rtSCRIPT* scriptComp = scene->nGetComp<rtSCRIPT>(nHandle);
         if (!scriptComp) return;
     };
@@ -1191,10 +1228,14 @@ static Editor::Tab CreateRtScriptEditorTab(const std::string& title, tinyHandle 
     // Define hover tooltip for script component tab
     tab.hoverFunc = [](Editor::Tab& self) {
         tinyHandle* nHandlePtr = self.getState<tinyHandle>("handle");
-        if (!nHandlePtr) return;
+        tinyHandle* sHandlePtr = self.getState<tinyHandle>("sceneHandle");
+        if (!nHandlePtr || !sHandlePtr) return;
         tinyHandle nHandle = *nHandlePtr;
+        tinyHandle sHandle = *sHandlePtr;
 
-        rtScene* scene = sceneRef;
+        rtScene* scene = projRef->scene(sHandle);
+        if (!scene) return;
+        
         rtSCRIPT* scriptComp = scene->nGetComp<rtSCRIPT>(nHandle);
         if (!scriptComp) return;
         
@@ -1207,10 +1248,17 @@ static Editor::Tab CreateRtScriptEditorTab(const std::string& title, tinyHandle 
     // Define the custom render function for script component
     tab.renderFunc = [](Editor::Tab& self) {
         tinyHandle* nHandlePtr = self.getState<tinyHandle>("handle");
-        if (!nHandlePtr) return;
+        tinyHandle* sHandlePtr = self.getState<tinyHandle>("sceneHandle");
+        if (!nHandlePtr || !sHandlePtr) return;
         tinyHandle nHandle = *nHandlePtr;
+        tinyHandle sHandle = *sHandlePtr;
         
-        rtScene* scene = sceneRef;
+        rtScene* scene = projRef->scene(sHandle);
+        if (!scene) {
+            ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Scene Removed");
+            return;
+        }
+        
         rtSCRIPT* scriptComp = scene->nGetComp<rtSCRIPT>(nHandle);
         if (!scriptComp) {
             ImGui::Text("Script component not found");
@@ -2031,7 +2079,7 @@ static void RenderMESHRD3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle)
             // Create and open morph editor tab
             rtNode* node = scene->node(nHandle);
             std::string tabTitle = "Morph: " + (node ? node->name : "Unknown");
-            Editor::Tab morphTab = CreateRtMorphTargetEditorTab(tabTitle, nHandle);
+            Editor::Tab morphTab = CreateRtMorphTargetEditorTab(tabTitle, nHandle, State::sceneHandle);
             Editor::addTab(morphTab);
         }
         
@@ -2104,7 +2152,7 @@ static void RenderSKEL3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle) {
     if (ImGui::Button("Open Runtime Skeleton Editor", ImVec2(-1, 0))) {
         std::string handle = "[" + std::to_string(nHandle.idx()) + ", " + std::to_string(nHandle.ver()) + "]";
         std::string title = scene->nName(nHandle) + " " + handle + " - Skeleton";
-        Editor::addTab(CreateRtSkeletonEditorTab(title, nHandle));
+        Editor::addTab(CreateRtSkeletonEditorTab(title, nHandle, State::sceneHandle));
     }
 }
 
@@ -2168,7 +2216,7 @@ static void RenderSCRIPT(const tinyFS& fs, rtScene* scene, tinyHandle nHandle) {
         std::string title = node->name;
         title += " [" + std::to_string(nHandle.idx()) + ", " + std::to_string(nHandle.ver()) + "] Script";
 
-        Editor::addTab(CreateRtScriptEditorTab(title, nHandle));
+        Editor::addTab(CreateRtScriptEditorTab(title, nHandle, State::sceneHandle));
     }
 }
 
