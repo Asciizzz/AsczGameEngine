@@ -1,11 +1,6 @@
 #pragma once
 
 #include "rtScene.hpp"
-// Node components
-#include "tinyRT/rtTransform.hpp"
-#include "tinyRT/rtMesh.hpp"
-#include "tinyRT/rtSkeleton.hpp"
-#include "tinyRT/rtScript.hpp"
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/matrix_decompose.hpp>

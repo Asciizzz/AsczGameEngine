@@ -5,6 +5,12 @@
 #include "tinyCamera.hpp"
 #include "tinyDrawable.hpp"
 
+// Components
+#include "tinyRT/rtTransform.hpp"
+#include "tinyRT/rtMesh.hpp"
+#include "tinyRT/rtSkeleton.hpp"
+#include "tinyRT/rtScript.hpp"
+
 namespace tinyRT {
 
 struct SceneRes {

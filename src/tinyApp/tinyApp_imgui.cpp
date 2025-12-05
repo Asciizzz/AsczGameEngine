@@ -14,11 +14,6 @@
 #include <any>
 #include <functional>
 
-#include "tinyRT/rtTransform.hpp"
-#include "tinyRT/rtMesh.hpp"
-#include "tinyRT/rtSkeleton.hpp"
-#include "tinyRT/rtScript.hpp"
-
 using namespace tinyVk;
 
 // State state tracking

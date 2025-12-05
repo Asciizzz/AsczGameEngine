@@ -1,11 +1,5 @@
 #include "tinyRT/rtScene.hpp"
 
-// Components
-#include "tinyRT/rtTransform.hpp"
-#include "tinyRT/rtMesh.hpp"
-#include "tinyRT/rtSkeleton.hpp"
-#include "tinyRT/rtScript.hpp"
-
 // Others
 #include "tinyScript/tinyScript.hpp"
 
