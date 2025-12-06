@@ -1276,68 +1276,314 @@ static inline tinyHandle* getScriptHandle(lua_State* L, int index) {
     return static_cast<tinyHandle*>(luaL_checkudata(L, index, "Script"));
 }
 
-static inline int script_getVar(lua_State* L) {
-    tinyHandle* handle = getScriptHandle(L, 1);
-    if (!handle || !lua_isstring(L, 2)) return 0;
+// Helper function to push tinyVar to Lua stack
+static inline void pushTinyVar(lua_State* L, const tinyVar& var) {
+    std::visit([L](auto&& val) {
+        using T = std::decay_t<decltype(val)>;
+        if constexpr (std::is_same_v<T, float>) {
+            lua_pushnumber(L, val);
+        }
+        else if constexpr (std::is_same_v<T, int>) {
+            lua_pushinteger(L, val);
+        }
+        else if constexpr (std::is_same_v<T, bool>) {
+            lua_pushboolean(L, val);
+        }
+        else if constexpr (std::is_same_v<T, glm::vec2>) {
+            pushVec2(L, val);
+        }
+        else if constexpr (std::is_same_v<T, glm::vec3>) {
+            pushVec3(L, val);
+        }
+        else if constexpr (std::is_same_v<T, glm::vec4>) {
+            pushVec4(L, val);
+        }
+        else if constexpr (std::is_same_v<T, std::string>) {
+            lua_pushstring(L, val.c_str());
+        }
+        else if constexpr (std::is_same_v<T, tinyHandle>) {
+            pushHandle(L, val);
+        }
+        else if constexpr (std::is_same_v<T, std::vector<float>>) {
+            lua_newtable(L);
+            luaL_getmetatable(L, "Array");
+            lua_setmetatable(L, -2);
+            lua_pushstring(L, "float");
+            lua_setfield(L, -2, "__array_type");
+            for (size_t i = 0; i < val.size(); i++) {
+                lua_pushnumber(L, val[i]);
+                lua_rawseti(L, -2, i + 1);
+            }
+        }
+        else if constexpr (std::is_same_v<T, std::vector<int>>) {
+            lua_newtable(L);
+            luaL_getmetatable(L, "Array");
+            lua_setmetatable(L, -2);
+            lua_pushstring(L, "int");
+            lua_setfield(L, -2, "__array_type");
+            for (size_t i = 0; i < val.size(); i++) {
+                lua_pushinteger(L, val[i]);
+                lua_rawseti(L, -2, i + 1);
+            }
+        }
+        else if constexpr (std::is_same_v<T, std::vector<bool>>) {
+            lua_newtable(L);
+            luaL_getmetatable(L, "Array");
+            lua_setmetatable(L, -2);
+            lua_pushstring(L, "bool");
+            lua_setfield(L, -2, "__array_type");
+            for (size_t i = 0; i < val.size(); i++) {
+                lua_pushboolean(L, val[i]);
+                lua_rawseti(L, -2, i + 1);
+            }
+        }
+        else if constexpr (std::is_same_v<T, std::vector<glm::vec2>>) {
+            lua_newtable(L);
+            luaL_getmetatable(L, "Array");
+            lua_setmetatable(L, -2);
+            lua_pushstring(L, "vec2");
+            lua_setfield(L, -2, "__array_type");
+            for (size_t i = 0; i < val.size(); i++) {
+                pushVec2(L, val[i]);
+                lua_rawseti(L, -2, i + 1);
+            }
+        }
+        else if constexpr (std::is_same_v<T, std::vector<glm::vec3>>) {
+            lua_newtable(L);
+            luaL_getmetatable(L, "Array");
+            lua_setmetatable(L, -2);
+            lua_pushstring(L, "vec3");
+            lua_setfield(L, -2, "__array_type");
+            for (size_t i = 0; i < val.size(); i++) {
+                pushVec3(L, val[i]);
+                lua_rawseti(L, -2, i + 1);
+            }
+        }
+        else if constexpr (std::is_same_v<T, std::vector<glm::vec4>>) {
+            lua_newtable(L);
+            luaL_getmetatable(L, "Array");
+            lua_setmetatable(L, -2);
+            lua_pushstring(L, "vec4");
+            lua_setfield(L, -2, "__array_type");
+            for (size_t i = 0; i < val.size(); i++) {
+                pushVec4(L, val[i]);
+                lua_rawseti(L, -2, i + 1);
+            }
+        }
+        else if constexpr (std::is_same_v<T, std::vector<std::string>>) {
+            lua_newtable(L);
+            luaL_getmetatable(L, "Array");
+            lua_setmetatable(L, -2);
+            lua_pushstring(L, "string");
+            lua_setfield(L, -2, "__array_type");
+            for (size_t i = 0; i < val.size(); i++) {
+                lua_pushstring(L, val[i].c_str());
+                lua_rawseti(L, -2, i + 1);
+            }
+        }
+        else if constexpr (std::is_same_v<T, std::vector<tinyHandle>>) {
+            lua_newtable(L);
+            luaL_getmetatable(L, "Array");
+            lua_setmetatable(L, -2);
+            lua_pushstring(L, "handle");
+            lua_setfield(L, -2, "__array_type");
+            for (size_t i = 0; i < val.size(); i++) {
+                pushHandle(L, val[i]);
+                lua_rawseti(L, -2, i + 1);
+            }
+        }
+    }, var);
+}
+
+// Helper function to set tinyVar from Lua stack
+static inline void setTinyVar(lua_State* L, int idx, tinyVar& var) {
+    std::visit([L, idx](auto&& val) {
+        using T = std::decay_t<decltype(val)>;
+        if constexpr (std::is_same_v<T, float>) {
+            if (lua_isnumber(L, idx)) val = static_cast<float>(lua_tonumber(L, idx));
+        }
+        else if constexpr (std::is_same_v<T, int>) {
+            if (lua_isinteger(L, idx)) val = static_cast<int>(lua_tointeger(L, idx));
+        }
+        else if constexpr (std::is_same_v<T, bool>) {
+            if (lua_isboolean(L, idx)) val = static_cast<bool>(lua_toboolean(L, idx));
+        }
+        else if constexpr (std::is_same_v<T, glm::vec2>) {
+            if (lua_isuserdata(L, idx)) {
+                if (glm::vec2* vec = getVec2(L, idx)) val = *vec;
+            }
+        }
+        else if constexpr (std::is_same_v<T, glm::vec3>) {
+            if (lua_isuserdata(L, idx)) {
+                if (glm::vec3* vec = getVec3(L, idx)) val = *vec;
+            }
+        }
+        else if constexpr (std::is_same_v<T, glm::vec4>) {
+            if (lua_isuserdata(L, idx)) {
+                if (glm::vec4* vec = getVec4(L, idx)) val = *vec;
+            }
+        }
+        else if constexpr (std::is_same_v<T, std::string>) {
+            if (lua_isstring(L, idx)) val = std::string(lua_tostring(L, idx));
+        }
+        else if constexpr (std::is_same_v<T, tinyHandle>) {
+            if (tinyHandle* h = getHandleFromUserdata(L, idx)) val = *h;
+        }
+        else if constexpr (std::is_same_v<T, std::vector<float>> ||
+                          std::is_same_v<T, std::vector<int>> ||
+                          std::is_same_v<T, std::vector<bool>> ||
+                          std::is_same_v<T, std::vector<glm::vec2>> ||
+                          std::is_same_v<T, std::vector<glm::vec3>> ||
+                          std::is_same_v<T, std::vector<glm::vec4>> ||
+                          std::is_same_v<T, std::vector<std::string>> ||
+                          std::is_same_v<T, std::vector<tinyHandle>>) {
+            if (lua_istable(L, idx)) {
+                using ElementT = typename T::value_type;
+                val.clear();
+                size_t len = lua_rawlen(L, idx);
+                val.reserve(len);
+                for (size_t i = 1; i <= len; i++) {
+                    lua_rawgeti(L, idx, i);
+                    ElementT elem;
+                    if constexpr (std::is_same_v<ElementT, float>) {
+                        if (lua_isnumber(L, -1)) elem = static_cast<float>(lua_tonumber(L, -1));
+                    }
+                    else if constexpr (std::is_same_v<ElementT, int>) {
+                        if (lua_isinteger(L, -1)) elem = static_cast<int>(lua_tointeger(L, -1));
+                    }
+                    else if constexpr (std::is_same_v<ElementT, bool>) {
+                        if (lua_isboolean(L, -1)) elem = static_cast<bool>(lua_toboolean(L, -1));
+                    }
+                    else if constexpr (std::is_same_v<ElementT, glm::vec2>) {
+                        if (glm::vec2* vec = getVec2(L, -1)) elem = *vec;
+                    }
+                    else if constexpr (std::is_same_v<ElementT, glm::vec3>) {
+                        if (glm::vec3* vec = getVec3(L, -1)) elem = *vec;
+                    }
+                    else if constexpr (std::is_same_v<ElementT, glm::vec4>) {
+                        if (glm::vec4* vec = getVec4(L, -1)) elem = *vec;
+                    }
+                    else if constexpr (std::is_same_v<ElementT, std::string>) {
+                        if (lua_isstring(L, -1)) elem = std::string(lua_tostring(L, -1));
+                    }
+                    else if constexpr (std::is_same_v<ElementT, tinyHandle>) {
+                        if (tinyHandle* h = getHandleFromUserdata(L, -1)) elem = *h;
+                    }
+                    val.push_back(elem);
+                    lua_pop(L, 1);
+                }
+            }
+        }
+    }, var);
+}
+
+// Metatable for ScriptVars proxy table - __index
+static inline int scriptvars_index(lua_State* L) {
+    // Table is at index 1, key is at index 2
+    
+    if (!lua_isstring(L, 2)) {
+        lua_pushnil(L);
+        return 1;
+    }
+    
+    // Get the metatable
+    lua_getmetatable(L, 1);
+    if (!lua_istable(L, -1)) {
+        lua_pop(L, 1);
+        lua_pushnil(L);
+        return 1;
+    }
+    
+    // Get the stored handle from metatable
+    lua_getfield(L, -1, "__handle");
+    tinyHandle* handle = static_cast<tinyHandle*>(lua_touserdata(L, -1));
+    lua_pop(L, 2);  // Pop handle and metatable
+    
+    if (!handle) {
+        lua_pushnil(L);
+        return 1;
+    }
     
     auto script = getSceneFromLua(L)->nGetComp<rtScript>(*handle);
     const char* varName = lua_tostring(L, 2);
     
     if (script && script->vars.find(varName) != script->vars.end()) {
-        const tinyVar& var = script->vars[varName];
-        std::visit([L](auto&& val) {
-            using T = std::decay_t<decltype(val)>;
-            if constexpr (std::is_same_v<T, float>) lua_pushnumber(L, val);
-            else if constexpr (std::is_same_v<T, int>) lua_pushinteger(L, val);
-            else if constexpr (std::is_same_v<T, bool>) lua_pushboolean(L, val);
-            else if constexpr (std::is_same_v<T, glm::vec2>) pushVec2(L, val);
-            else if constexpr (std::is_same_v<T, glm::vec3>) pushVec3(L, val);
-            else if constexpr (std::is_same_v<T, glm::vec4>) pushVec4(L, val);
-            else if constexpr (std::is_same_v<T, std::string>) lua_pushstring(L, val.c_str());
-            else if constexpr (std::is_same_v<T, tinyHandle>) { pushHandle(L, val); }
-        }, var);
+        pushTinyVar(L, script->vars[varName]);
         return 1;
     }
+    
     lua_pushnil(L);
     return 1;
 }
 
-static inline int script_setVar(lua_State* L) {
-    tinyHandle* handle = getScriptHandle(L, 1);
-    if (!handle || !lua_isstring(L, 2)) return 0;
+// Metatable for ScriptVars proxy table - __newindex
+static inline int scriptvars_newindex(lua_State* L) {
+    // Table is at index 1, key at index 2, value at index 3
+    
+    if (!lua_isstring(L, 2)) {
+        return 0;
+    }
+    
+    // Get the metatable
+    lua_getmetatable(L, 1);
+    if (!lua_istable(L, -1)) {
+        lua_pop(L, 1);
+        return 0;
+    }
+    
+    // Get the stored handle from metatable
+    lua_getfield(L, -1, "__handle");
+    tinyHandle* handle = static_cast<tinyHandle*>(lua_touserdata(L, -1));
+    lua_pop(L, 2);  // Pop handle and metatable
+    
+    if (!handle) {
+        return 0;
+    }
     
     auto rscript = getSceneFromLua(L)->nGetComp<rtScript>(*handle);
     const char* varName = lua_tostring(L, 2);
     
     if (rscript && rscript->vars.find(varName) != rscript->vars.end()) {
-        tinyVar& var = rscript->vars[varName];
-        std::visit([L](auto&& val) {
-            using T = std::decay_t<decltype(val)>;
-            if constexpr (std::is_same_v<T, float>) val = static_cast<float>(lua_tonumber(L, 3));
-            else if constexpr (std::is_same_v<T, int>) val = static_cast<int>(lua_tointeger(L, 3));
-            else if constexpr (std::is_same_v<T, bool>) val = static_cast<bool>(lua_toboolean(L, 3));
-            else if constexpr (std::is_same_v<T, glm::vec2>) {
-                if (lua_isuserdata(L, 3)) {
-                    if (glm::vec2* vec = getVec2(L, 3)) val = *vec;
-                }
-            }
-            else if constexpr (std::is_same_v<T, glm::vec3>) {
-                if (lua_isuserdata(L, 3)) {
-                    if (glm::vec3* vec = getVec3(L, 3)) val = *vec;
-                }
-            }
-            else if constexpr (std::is_same_v<T, glm::vec4>) {
-                if (lua_isuserdata(L, 3)) {
-                    if (glm::vec4* vec = getVec4(L, 3)) val = *vec;
-                }
-            }
-            else if constexpr (std::is_same_v<T, std::string>) val = std::string(lua_tostring(L, 3));
-            else if constexpr (std::is_same_v<T, tinyHandle>) {
-                if (tinyHandle* h = getHandleFromUserdata(L, 3)) val = *h;
-            }
-        }, var);
+        setTinyVar(L, 3, rscript->vars[varName]);
     }
+    
     return 0;
+}
+
+// Script:vars() - Returns a table proxy for direct access to rtScript.vars
+static inline int script_vars(lua_State* L) {
+    tinyHandle* handle = getScriptHandle(L, 1);
+    if (!handle) {
+        lua_pushnil(L);
+        return 1;
+    }
+
+    auto rscript = getSceneFromLua(L)->nGetComp<rtScript>(*handle);
+    if (!rscript) {
+        lua_pushnil(L);
+        return 1;
+    }
+
+    // Create a new table
+    lua_newtable(L);
+    
+    // Create and set metatable
+    lua_newtable(L);  // metatable
+    
+    // Store the node handle in the metatable
+    tinyHandle* ud = static_cast<tinyHandle*>(lua_newuserdata(L, sizeof(tinyHandle)));
+    *ud = *handle;
+    lua_setfield(L, -2, "__handle");
+    
+    // Set metamethods
+    lua_pushcfunction(L, scriptvars_index);
+    lua_setfield(L, -2, "__index");
+    lua_pushcfunction(L, scriptvars_newindex);
+    lua_setfield(L, -2, "__newindex");
+    
+    lua_setmetatable(L, -2);
+    
+    return 1;
 }
 
 static inline int node_script(lua_State* L) {
@@ -2305,8 +2551,7 @@ static inline void registerNodeBindings(lua_State* L) {
 
     // Script metatable
     LUA_BEGIN_METATABLE("Script");
-    LUA_REG_METHOD(script_getVar, "getVar");
-    LUA_REG_METHOD(script_setVar, "setVar");
+    LUA_REG_METHOD(script_vars, "vars");
     LUA_END_METATABLE("Script");
 
     // FS metatable (filesystem registry accessor)

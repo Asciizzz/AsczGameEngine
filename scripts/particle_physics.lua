@@ -2,39 +2,55 @@
 -- Attach this to the container NODE (parent of all particles)
 -- Simulates physically accurate sphere collisions and boundary constraints
 
-function vars()
-    return {
-        -- Bounding box (world space)
-        boxMin = {x = -5.0, y = 0.0, z = -5.0},
-        boxMax = {x = 5.0, y = 10.0, z = 5.0},
-        
-        -- Particle properties
-        particleRadius = 0.2,        -- Radius of each spherical particle
-        particleMass = 1.0,          -- Mass of each particle (kg)
-        
-        -- Physics parameters
-        gravity = {x = 0.0, y = -9.81, z = 0.0},  -- Gravity vector (m/s²)
-        damping = 0.995,             -- Velocity damping (0-1, 1 = no damping) - frame-rate independent
-        restitution = 0.7,           -- Bounciness for wall collisions (0-1)
-        friction = 0.95,             -- Surface friction (0-1, 1 = no friction)
-        
-        -- Collision properties
-        particleRestitution = 0.8,   -- Bounciness for particle-particle collisions
-        collisionDamping = 0.99,     -- Energy loss in collisions
-        
-        -- Simulation settings
-        substeps = 4,                -- Physics substeps per frame (higher = more stable)
-        enabled = true               -- Enable/disable simulation
-    }
-end
+VARS = {
+    -- Bounding box (world space)
+    boxMin = Vec3(-5.0, 0.0, -5.0),
+    boxMax = Vec3(5.0, 10.0, 5.0),
+    
+    -- Particle properties
+    particleRadius = 0.2,        -- Radius of each spherical particle
+    particleMass = 1.0,          -- Mass of each particle (kg)
+    
+    -- Physics parameters
+    gravity = Vec3(0.0, -9.81, 0.0),  -- Gravity vector (m/s²)
+    damping = 0.995,             -- Velocity damping (0-1, 1 = no damping) - frame-rate independent
+    restitution = 0.7,           -- Bounciness for wall collisions (0-1)
+    friction = 0.95,             -- Surface friction (0-1, 1 = no friction)
+    
+    -- Collision properties
+    particleRestitution = 0.8,   -- Bounciness for particle-particle collisions
+    collisionDamping = 0.99,     -- Energy loss in collisions
+    
+    -- Simulation settings
+    substeps = 4,                -- Physics substeps per frame (higher = more stable)
+    enabled = true               -- Enable/disable simulation
+}
 
 function update()
     if not VARS.enabled then
         return
     end
     
-    -- Get all particle children
-    local particles = NODE:children()
+    -- Get all child nodes
+    local children = NODE:children()
+    if #children == 0 then
+        return
+    end
+    
+    -- Filter children that have particle scripts attached
+    local particles = {}
+    for i = 1, #children do
+        local child = children[i]
+        local script = child:script()
+        if script then
+            -- Store both the node and its script vars accessor
+            table.insert(particles, {
+                node = child,
+                vars = script:vars()
+            })
+        end
+    end
+    
     if #particles == 0 then
         return
     end
@@ -46,108 +62,89 @@ function update()
     for step = 1, VARS.substeps do
         -- ========== PHASE 1: Apply Forces & Update Velocities ==========
         for i = 1, #particles do
-            local particle = particles[i]
+            local p = particles[i]
+            local vel = p.vars.vel
             
-            -- Get particle's velocity from its script
-            local velX = particle:getVar("velX") or 0.0
-            local velY = particle:getVar("velY") or 0.0
-            local velZ = particle:getVar("velZ") or 0.0
-            
-            -- Apply gravity
-            velY = velY + VARS.gravity.y * substepDt
-            
-            -- Store updated velocity (damping applied later, per frame not per substep)
-            particle:setVar("velX", velX)
-            particle:setVar("velY", velY)
-            particle:setVar("velZ", velZ)
+            if vel then
+                -- Apply gravity
+                vel.y = vel.y + VARS.gravity.y * substepDt
+            end
         end
         
         -- ========== PHASE 2: Update Positions ==========
         for i = 1, #particles do
-            local particle = particles[i]
-            local t3d = particle:transform3D()
-            if not t3d then goto continue_phase2 end
+            local p = particles[i]
+            local t3d = p.node:transform3D()
+            local vel = p.vars.vel
             
-            local pos = t3d:getPos()
-            
-            local velX = particle:getVar("velX") or 0.0
-            local velY = particle:getVar("velY") or 0.0
-            local velZ = particle:getVar("velZ") or 0.0
-            
-            -- Integrate position
-            pos.x = pos.x + velX * substepDt
-            pos.y = pos.y + velY * substepDt
-            pos.z = pos.z + velZ * substepDt
-            
-            t3d:setPos(pos)
-            
-            ::continue_phase2::
+            if t3d and vel then
+                local pos = t3d:getPos()
+                
+                -- Integrate position
+                pos.x = pos.x + vel.x * substepDt
+                pos.y = pos.y + vel.y * substepDt
+                pos.z = pos.z + vel.z * substepDt
+                
+                t3d:setPos(pos)
+            end
         end
         
         -- ========== PHASE 3: Boundary Constraints ==========
         for i = 1, #particles do
-            local particle = particles[i]
-            local t3d = particle:transform3D()
-            if not t3d then goto continue_phase3 end
+            local p = particles[i]
+            local t3d = p.node:transform3D()
+            local vel = p.vars.vel
             
-            local pos = t3d:getPos()
-            
-            local velX = particle:getVar("velX") or 0.0
-            local velY = particle:getVar("velY") or 0.0
-            local velZ = particle:getVar("velZ") or 0.0
-            
-            local radius = VARS.particleRadius
-            local posChanged = false
-            
-            -- X boundaries
-            if pos.x - radius < VARS.boxMin.x then
-                pos.x = VARS.boxMin.x + radius
-                velX = math.abs(velX) * VARS.restitution
-                velZ = velZ * VARS.friction
-                posChanged = true
-            elseif pos.x + radius > VARS.boxMax.x then
-                pos.x = VARS.boxMax.x - radius
-                velX = -math.abs(velX) * VARS.restitution
-                velZ = velZ * VARS.friction
-                posChanged = true
+            if t3d and vel then
+                local pos = t3d:getPos()
+                local radius = VARS.particleRadius
+                local posChanged = false
+                
+                -- X boundaries
+                if pos.x - radius < VARS.boxMin.x then
+                    pos.x = VARS.boxMin.x + radius
+                    vel.x = math.abs(vel.x) * VARS.restitution
+                    vel.z = vel.z * VARS.friction
+                    posChanged = true
+                elseif pos.x + radius > VARS.boxMax.x then
+                    pos.x = VARS.boxMax.x - radius
+                    vel.x = -math.abs(vel.x) * VARS.restitution
+                    vel.z = vel.z * VARS.friction
+                    posChanged = true
+                end
+                
+                -- Y boundaries
+                if pos.y - radius < VARS.boxMin.y then
+                    pos.y = VARS.boxMin.y + radius
+                    vel.y = math.abs(vel.y) * VARS.restitution
+                    vel.x = vel.x * VARS.friction
+                    vel.z = vel.z * VARS.friction
+                    posChanged = true
+                elseif pos.y + radius > VARS.boxMax.y then
+                    pos.y = VARS.boxMax.y - radius
+                    vel.y = -math.abs(vel.y) * VARS.restitution
+                    vel.x = vel.x * VARS.friction
+                    vel.z = vel.z * VARS.friction
+                    posChanged = true
+                end
+                
+                -- Z boundaries
+                if pos.z - radius < VARS.boxMin.z then
+                    pos.z = VARS.boxMin.z + radius
+                    vel.z = math.abs(vel.z) * VARS.restitution
+                    vel.x = vel.x * VARS.friction
+                    posChanged = true
+                elseif pos.z + radius > VARS.boxMax.z then
+                    pos.z = VARS.boxMax.z - radius
+                    vel.z = -math.abs(vel.z) * VARS.restitution
+                    vel.x = vel.x * VARS.friction
+                    posChanged = true
+                end
+                
+                if posChanged then
+                    t3d:setPos(pos)
+                end
             end
-            
-            -- Y boundaries
-            if pos.y - radius < VARS.boxMin.y then
-                pos.y = VARS.boxMin.y + radius
-                velY = math.abs(velY) * VARS.restitution
-                velX = velX * VARS.friction
-                velZ = velZ * VARS.friction
-                posChanged = true
-            elseif pos.y + radius > VARS.boxMax.y then
-                pos.y = VARS.boxMax.y - radius
-                velY = -math.abs(velY) * VARS.restitution
-                velX = velX * VARS.friction
-                velZ = velZ * VARS.friction
-                posChanged = true
-            end
-            
-            -- Z boundaries
-            if pos.z - radius < VARS.boxMin.z then
-                pos.z = VARS.boxMin.z + radius
-                velZ = math.abs(velZ) * VARS.restitution
-                velX = velX * VARS.friction
-                posChanged = true
-            elseif pos.z + radius > VARS.boxMax.z then
-                pos.z = VARS.boxMax.z - radius
-                velZ = -math.abs(velZ) * VARS.restitution
-                velX = velX * VARS.friction
-                posChanged = true
-            end
-            
-            if posChanged then
-                t3d:setPos(pos)
-                particle:setVar("velX", velX)
-                particle:setVar("velY", velY)
-                particle:setVar("velZ", velZ)
-            end
-            
-            ::continue_phase3::
         end
         
         -- ========== PHASE 4: Particle-Particle Collisions ==========
@@ -156,9 +153,14 @@ function update()
                 local p1 = particles[i]
                 local p2 = particles[j]
                 
-                local t3d1 = p1:transform3D()
-                local t3d2 = p2:transform3D()
-                if not t3d1 or not t3d2 then goto continue_collision end
+                local t3d1 = p1.node:transform3D()
+                local t3d2 = p2.node:transform3D()
+                local vel1 = p1.vars.vel
+                local vel2 = p2.vars.vel
+                
+                if not (t3d1 and t3d2 and vel1 and vel2) then
+                    goto continue_collision
+                end
                 
                 local pos1 = t3d1:getPos()
                 local pos2 = t3d2:getPos()
@@ -202,19 +204,10 @@ function update()
                     t3d1:setPos(pos1)
                     t3d2:setPos(pos2)
                     
-                    -- Get velocities
-                    local v1x = p1:getVar("velX") or 0.0
-                    local v1y = p1:getVar("velY") or 0.0
-                    local v1z = p1:getVar("velZ") or 0.0
-                    
-                    local v2x = p2:getVar("velX") or 0.0
-                    local v2y = p2:getVar("velY") or 0.0
-                    local v2z = p2:getVar("velZ") or 0.0
-                    
                     -- Relative velocity
-                    local dvx = v2x - v1x
-                    local dvy = v2y - v1y
-                    local dvz = v2z - v1z
+                    local dvx = vel2.x - vel1.x
+                    local dvy = vel2.y - vel1.y
+                    local dvz = vel2.z - vel1.z
                     
                     -- Velocity along collision normal
                     local dvn = dvx * nx + dvy * ny + dvz * nz
@@ -230,22 +223,13 @@ function update()
                         local impY = ny * impulse * VARS.collisionDamping
                         local impZ = nz * impulse * VARS.collisionDamping
                         
-                        v1x = v1x - impX
-                        v1y = v1y - impY
-                        v1z = v1z - impZ
+                        vel1.x = vel1.x - impX
+                        vel1.y = vel1.y - impY
+                        vel1.z = vel1.z - impZ
                         
-                        v2x = v2x + impX
-                        v2y = v2y + impY
-                        v2z = v2z + impZ
-                        
-                        -- Update velocities
-                        p1:setVar("velX", v1x)
-                        p1:setVar("velY", v1y)
-                        p1:setVar("velZ", v1z)
-                        
-                        p2:setVar("velX", v2x)
-                        p2:setVar("velY", v2y)
-                        p2:setVar("velZ", v2z)
+                        vel2.x = vel2.x + impX
+                        vel2.y = vel2.y + impY
+                        vel2.z = vel2.z + impZ
                         
                         -- Calculate angular velocity from collision (tangential impulse)
                         -- Get tangential velocity (perpendicular to collision normal)
@@ -264,22 +248,20 @@ function update()
                             -- Create spin axis perpendicular to collision normal and tangential direction
                             local spinScale = tangentialSpeed / VARS.particleRadius * 0.5
                             
-                            -- Apply angular velocity to both particles (opposite spins)
-                            local ang1x = (p1:getVar("angVelX") or 0.0) + ny * tangentialZ - nz * tangentialY * spinScale
-                            local ang1y = (p1:getVar("angVelY") or 0.0) + nz * tangentialX - nx * tangentialZ * spinScale
-                            local ang1z = (p1:getVar("angVelZ") or 0.0) + nx * tangentialY - ny * tangentialX * spinScale
+                            -- Get angular velocities
+                            local angVel1 = p1.vars.angVel
+                            local angVel2 = p2.vars.angVel
                             
-                            local ang2x = (p2:getVar("angVelX") or 0.0) - ny * tangentialZ + nz * tangentialY * spinScale
-                            local ang2y = (p2:getVar("angVelY") or 0.0) - nz * tangentialX + nx * tangentialZ * spinScale
-                            local ang2z = (p2:getVar("angVelZ") or 0.0) - nx * tangentialY + ny * tangentialX * spinScale
-                            
-                            p1:setVar("angVelX", ang1x)
-                            p1:setVar("angVelY", ang1y)
-                            p1:setVar("angVelZ", ang1z)
-                            
-                            p2:setVar("angVelX", ang2x)
-                            p2:setVar("angVelY", ang2y)
-                            p2:setVar("angVelZ", ang2z)
+                            if angVel1 and angVel2 then
+                                -- Apply angular velocity to both particles (opposite spins)
+                                angVel1.x = angVel1.x + (ny * tangentialZ - nz * tangentialY) * spinScale
+                                angVel1.y = angVel1.y + (nz * tangentialX - nx * tangentialZ) * spinScale
+                                angVel1.z = angVel1.z + (nx * tangentialY - ny * tangentialX) * spinScale
+                                
+                                angVel2.x = angVel2.x - (ny * tangentialZ - nz * tangentialY) * spinScale
+                                angVel2.y = angVel2.y - (nz * tangentialX - nx * tangentialZ) * spinScale
+                                angVel2.z = angVel2.z - (nx * tangentialY - ny * tangentialX) * spinScale
+                            end
                         end
                     end -- end if dvn < 0
                 end -- end if distSq < minDistSq
@@ -295,33 +277,22 @@ function update()
     local angularDampingFactor = math.pow(0.98, DELTATIME * 60.0) -- Slightly more damping for angular
     
     for i = 1, #particles do
-        local particle = particles[i]
+        local p = particles[i]
+        local vel = p.vars.vel
+        local angVel = p.vars.angVel
         
         -- Linear velocity damping
-        local velX = particle:getVar("velX") or 0.0
-        local velY = particle:getVar("velY") or 0.0
-        local velZ = particle:getVar("velZ") or 0.0
-        
-        velX = velX * dampingFactor
-        velY = velY * dampingFactor
-        velZ = velZ * dampingFactor
-        
-        particle:setVar("velX", velX)
-        particle:setVar("velY", velY)
-        particle:setVar("velZ", velZ)
+        if vel then
+            vel.x = vel.x * dampingFactor
+            vel.y = vel.y * dampingFactor
+            vel.z = vel.z * dampingFactor
+        end
         
         -- Angular velocity damping
-        local angVelX = particle:getVar("angVelX") or 0.0
-        local angVelY = particle:getVar("angVelY") or 0.0
-        local angVelZ = particle:getVar("angVelZ") or 0.0
-        
-        angVelX = angVelX * angularDampingFactor
-        angVelY = angVelY * angularDampingFactor
-        angVelZ = angVelZ * angularDampingFactor
-        
-        particle:setVar("angVelX", angVelX)
-        particle:setVar("angVelY", angVelY)
-        particle:setVar("angVelZ", angVelZ)
+        if angVel then
+            angVel.x = angVel.x * angularDampingFactor
+            angVel.y = angVel.y * angularDampingFactor
+            angVel.z = angVel.z * angularDampingFactor
+        end
     end
 end
--- end function update
