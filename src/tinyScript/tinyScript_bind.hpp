@@ -2036,38 +2036,24 @@ static inline void registerNodeBindings(lua_State* L) {
 
     // Vec2 metatable
     luaL_newmetatable(L, "Vec2");
-    lua_pushcfunction(L, vec2_index);
-    lua_setfield(L, -2, "__index");
-    lua_pushcfunction(L, vec2_newindex);
-    lua_setfield(L, -2, "__newindex");
-    lua_pushcfunction(L, vec2_tostring);
-    lua_setfield(L, -2, "__tostring");
+    lua_pushcfunction(L, vec2_index);    lua_setfield(L, -2, "__index");
+    lua_pushcfunction(L, vec2_newindex); lua_setfield(L, -2, "__newindex");
+    lua_pushcfunction(L, vec2_tostring); lua_setfield(L, -2, "__tostring");
     lua_pop(L, 1);
     
     // Vec3 metatable
     luaL_newmetatable(L, "Vec3");
-    lua_pushcfunction(L, vec3_index);
-    lua_setfield(L, -2, "__index");
-    lua_pushcfunction(L, vec3_newindex);
-    lua_setfield(L, -2, "__newindex");
-    lua_pushcfunction(L, vec3_tostring);
-    lua_setfield(L, -2, "__tostring");
+    lua_pushcfunction(L, vec3_index);    lua_setfield(L, -2, "__index");
+    lua_pushcfunction(L, vec3_newindex); lua_setfield(L, -2, "__newindex");
+    lua_pushcfunction(L, vec3_tostring); lua_setfield(L, -2, "__tostring");
     lua_pop(L, 1);
     
     // Vec4 metatable
     luaL_newmetatable(L, "Vec4");
-    lua_pushcfunction(L, vec4_index);
-    lua_setfield(L, -2, "__index");
-    lua_pushcfunction(L, vec4_newindex);
-    lua_setfield(L, -2, "__newindex");
-    lua_pushcfunction(L, vec4_tostring);
-    lua_setfield(L, -2, "__tostring");
+    lua_pushcfunction(L, vec4_index);    lua_setfield(L, -2, "__index");
+    lua_pushcfunction(L, vec4_newindex); lua_setfield(L, -2, "__newindex");
+    lua_pushcfunction(L, vec4_tostring); lua_setfield(L, -2, "__tostring");
     lua_pop(L, 1);
-    
-    // Register vector constructors as global functions
-    LUA_REG_GLOBAL(lua_Vec2, "Vec2");
-    LUA_REG_GLOBAL(lua_Vec3, "Vec3");
-    LUA_REG_GLOBAL(lua_Vec4, "Vec4");
     
     // Transform3D metatable
     LUA_BEGIN_METATABLE("Transform3D");
@@ -2210,6 +2196,9 @@ static inline void registerNodeBindings(lua_State* L) {
     lua_pop(L, 1);
 
     // Global Functions
+    LUA_REG_GLOBAL(lua_Vec2, "Vec2");
+    LUA_REG_GLOBAL(lua_Vec3, "Vec3");
+    LUA_REG_GLOBAL(lua_Vec4, "Vec4");
     LUA_REG_GLOBAL(lua_Handle, "Handle");
     LUA_REG_GLOBAL(lua_kstate, "kstate");
     LUA_REG_GLOBAL(lua_print, "print");

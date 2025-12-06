@@ -564,7 +564,7 @@ static Editor::Tab CreateScriptEditorTab(const std::string& title, tinyHandle fH
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
         ImVec2 globalsEditorSize = ImVec2(split->rSize(0), 0);
         ImGui::BeginChild("GlobalsEditor", globalsEditorSize, true);
-        
+
         ImGui::TextColored(ImVec4(0.9f, 0.7f, 0.2f, 1.0f), "GLOBALS");
         ImGui::Separator();
         
