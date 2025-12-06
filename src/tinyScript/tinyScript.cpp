@@ -102,6 +102,86 @@ namespace {
         return false;
     }
 
+    // Helper to get array type from metadata
+    const char* getArrayType(lua_State* L, int idx) {
+        if (!lua_istable(L, idx)) return nullptr;
+        
+        lua_getfield(L, idx, "__array_type");
+        if (lua_isstring(L, -1)) {
+            const char* type = lua_tostring(L, -1);
+            lua_pop(L, 1);
+            return type;
+        }
+        lua_pop(L, 1);
+        return nullptr;
+    }
+
+    // Array reading helpers
+    template<typename T>
+    bool readLuaArray(lua_State* L, int idx, std::vector<T>& out, const char* expectedType) {
+        if (!lua_istable(L, idx)) return false;
+        
+        // Check type metadata
+        const char* arrayType = getArrayType(L, idx);
+        if (arrayType && strcmp(arrayType, expectedType) != 0) {
+            return false;  // Type mismatch
+        }
+        
+        out.clear();
+        size_t len = lua_rawlen(L, idx);
+        out.reserve(len);
+        
+        for (size_t i = 1; i <= len; i++) {
+            lua_rawgeti(L, idx, i);
+            T value;
+            if (readLuaValue(L, -1, value)) {
+                out.push_back(value);
+            }
+            lua_pop(L, 1);
+        }
+        return true;
+    }
+
+    template<>
+    bool readLuaValue<std::vector<float>>(lua_State* L, int idx, std::vector<float>& out) {
+        return readLuaArray(L, idx, out, "float");
+    }
+
+    template<>
+    bool readLuaValue<std::vector<int>>(lua_State* L, int idx, std::vector<int>& out) {
+        return readLuaArray(L, idx, out, "int");
+    }
+
+    template<>
+    bool readLuaValue<std::vector<bool>>(lua_State* L, int idx, std::vector<bool>& out) {
+        return readLuaArray(L, idx, out, "bool");
+    }
+
+    template<>
+    bool readLuaValue<std::vector<glm::vec2>>(lua_State* L, int idx, std::vector<glm::vec2>& out) {
+        return readLuaArray(L, idx, out, "vec2");
+    }
+
+    template<>
+    bool readLuaValue<std::vector<glm::vec3>>(lua_State* L, int idx, std::vector<glm::vec3>& out) {
+        return readLuaArray(L, idx, out, "vec3");
+    }
+
+    template<>
+    bool readLuaValue<std::vector<glm::vec4>>(lua_State* L, int idx, std::vector<glm::vec4>& out) {
+        return readLuaArray(L, idx, out, "vec4");
+    }
+
+    template<>
+    bool readLuaValue<std::vector<std::string>>(lua_State* L, int idx, std::vector<std::string>& out) {
+        return readLuaArray(L, idx, out, "string");
+    }
+
+    template<>
+    bool readLuaValue<std::vector<tinyHandle>>(lua_State* L, int idx, std::vector<tinyHandle>& out) {
+        return readLuaArray(L, idx, out, "handle");
+    }
+
     // Helper to pull a map from Lua global table
     void pullMapFromLua(lua_State* L, const char* globalName, tinyVarsMap& vars) {
         lua_getglobal(L, globalName);
@@ -263,6 +343,14 @@ void tinyScript::cacheDefaultTable(const char* tableName, tinyVarsMap& outMap) {
             glm::vec3 vec3Val;
             glm::vec4 vec4Val;
             tinyHandle handleVal;
+            std::vector<int> intArrVal;
+            std::vector<float> floatArrVal;
+            std::vector<bool> boolArrVal;
+            std::vector<glm::vec2> vec2ArrVal;
+            std::vector<glm::vec3> vec3ArrVal;
+            std::vector<glm::vec4> vec4ArrVal;
+            std::vector<std::string> strArrVal;
+            std::vector<tinyHandle> handleArrVal;
             
             if (readLuaValue(L, -1, intVal)) {
                 outMap[key] = intVal;
@@ -280,6 +368,22 @@ void tinyScript::cacheDefaultTable(const char* tableName, tinyVarsMap& outMap) {
                 outMap[key] = handleVal;
             } else if (readLuaValue(L, -1, strVal)) {
                 outMap[key] = strVal;
+            } else if (readLuaValue(L, -1, intArrVal)) {
+                outMap[key] = intArrVal;
+            } else if (readLuaValue(L, -1, floatArrVal)) {
+                outMap[key] = floatArrVal;
+            } else if (readLuaValue(L, -1, boolArrVal)) {
+                outMap[key] = boolArrVal;
+            } else if (readLuaValue(L, -1, vec2ArrVal)) {
+                outMap[key] = vec2ArrVal;
+            } else if (readLuaValue(L, -1, vec3ArrVal)) {
+                outMap[key] = vec3ArrVal;
+            } else if (readLuaValue(L, -1, vec4ArrVal)) {
+                outMap[key] = vec4ArrVal;
+            } else if (readLuaValue(L, -1, strArrVal)) {
+                outMap[key] = strArrVal;
+            } else if (readLuaValue(L, -1, handleArrVal)) {
+                outMap[key] = handleArrVal;
             }
         }
         
@@ -379,6 +483,103 @@ void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, floa
                 }
                 else if constexpr (std::is_same_v<T, tinyHandle>) {
                     pushHandle(L, val);
+                    lua_setfield(L, -2, key.c_str());
+                }
+                // Array types
+                else if constexpr (std::is_same_v<T, std::vector<float>>) {
+                    lua_newtable(L);
+                    luaL_getmetatable(L, "Array");
+                    lua_setmetatable(L, -2);
+                    lua_pushstring(L, "float");
+                    lua_setfield(L, -2, "__array_type");
+                    for (size_t i = 0; i < val.size(); i++) {
+                        lua_pushnumber(L, val[i]);
+                        lua_rawseti(L, -2, i + 1);
+                    }
+                    lua_setfield(L, -2, key.c_str());
+                }
+                else if constexpr (std::is_same_v<T, std::vector<int>>) {
+                    lua_newtable(L);
+                    luaL_getmetatable(L, "Array");
+                    lua_setmetatable(L, -2);
+                    lua_pushstring(L, "int");
+                    lua_setfield(L, -2, "__array_type");
+                    for (size_t i = 0; i < val.size(); i++) {
+                        lua_pushinteger(L, val[i]);
+                        lua_rawseti(L, -2, i + 1);
+                    }
+                    lua_setfield(L, -2, key.c_str());
+                }
+                else if constexpr (std::is_same_v<T, std::vector<bool>>) {
+                    lua_newtable(L);
+                    luaL_getmetatable(L, "Array");
+                    lua_setmetatable(L, -2);
+                    lua_pushstring(L, "bool");
+                    lua_setfield(L, -2, "__array_type");
+                    for (size_t i = 0; i < val.size(); i++) {
+                        lua_pushboolean(L, val[i]);
+                        lua_rawseti(L, -2, i + 1);
+                    }
+                    lua_setfield(L, -2, key.c_str());
+                }
+                else if constexpr (std::is_same_v<T, std::vector<glm::vec2>>) {
+                    lua_newtable(L);
+                    luaL_getmetatable(L, "Array");
+                    lua_setmetatable(L, -2);
+                    lua_pushstring(L, "vec2");
+                    lua_setfield(L, -2, "__array_type");
+                    for (size_t i = 0; i < val.size(); i++) {
+                        pushVec2(L, val[i]);
+                        lua_rawseti(L, -2, i + 1);
+                    }
+                    lua_setfield(L, -2, key.c_str());
+                }
+                else if constexpr (std::is_same_v<T, std::vector<glm::vec3>>) {
+                    lua_newtable(L);
+                    luaL_getmetatable(L, "Array");
+                    lua_setmetatable(L, -2);
+                    lua_pushstring(L, "vec3");
+                    lua_setfield(L, -2, "__array_type");
+                    for (size_t i = 0; i < val.size(); i++) {
+                        pushVec3(L, val[i]);
+                        lua_rawseti(L, -2, i + 1);
+                    }
+                    lua_setfield(L, -2, key.c_str());
+                }
+                else if constexpr (std::is_same_v<T, std::vector<glm::vec4>>) {
+                    lua_newtable(L);
+                    luaL_getmetatable(L, "Array");
+                    lua_setmetatable(L, -2);
+                    lua_pushstring(L, "vec4");
+                    lua_setfield(L, -2, "__array_type");
+                    for (size_t i = 0; i < val.size(); i++) {
+                        pushVec4(L, val[i]);
+                        lua_rawseti(L, -2, i + 1);
+                    }
+                    lua_setfield(L, -2, key.c_str());
+                }
+                else if constexpr (std::is_same_v<T, std::vector<std::string>>) {
+                    lua_newtable(L);
+                    luaL_getmetatable(L, "Array");
+                    lua_setmetatable(L, -2);
+                    lua_pushstring(L, "string");
+                    lua_setfield(L, -2, "__array_type");
+                    for (size_t i = 0; i < val.size(); i++) {
+                        lua_pushstring(L, val[i].c_str());
+                        lua_rawseti(L, -2, i + 1);
+                    }
+                    lua_setfield(L, -2, key.c_str());
+                }
+                else if constexpr (std::is_same_v<T, std::vector<tinyHandle>>) {
+                    lua_newtable(L);
+                    luaL_getmetatable(L, "Array");
+                    lua_setmetatable(L, -2);
+                    lua_pushstring(L, "handle");
+                    lua_setfield(L, -2, "__array_type");
+                    for (size_t i = 0; i < val.size(); i++) {
+                        pushHandle(L, val[i]);
+                        lua_rawseti(L, -2, i + 1);
+                    }
                     lua_setfield(L, -2, key.c_str());
                 }
             }, value);

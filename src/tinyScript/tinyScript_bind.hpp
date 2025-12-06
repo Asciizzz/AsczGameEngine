@@ -2010,6 +2010,162 @@ static inline int lua_print(lua_State* L) {
     return 0;
 }
 
+// ========================================
+// ARRAY TYPES
+// ========================================
+
+// Helper to create typed array
+static inline void createTypedArray(lua_State* L, const char* typeName, int firstArgIndex) {
+    lua_newtable(L);
+    luaL_getmetatable(L, "Array");
+    lua_setmetatable(L, -2);
+    lua_pushstring(L, typeName);
+    lua_setfield(L, -2, "__array_type");
+    
+    int nArgs = lua_gettop(L) - firstArgIndex + 1;
+    for (int i = 0; i < nArgs; i++) {
+        lua_pushvalue(L, firstArgIndex + i);
+        lua_rawseti(L, -2, i + 1);
+    }
+}
+
+// Array static constructors (for Array:int(), Array:float(), etc.)
+static inline int array_static_float(lua_State* L) {
+    createTypedArray(L, "float", 2);  // Skip 'self' (Array table)
+    return 1;
+}
+
+static inline int array_static_int(lua_State* L) {
+    createTypedArray(L, "int", 2);
+    return 1;
+}
+
+static inline int array_static_bool(lua_State* L) {
+    createTypedArray(L, "bool", 2);
+    return 1;
+}
+
+static inline int array_static_vec2(lua_State* L) {
+    createTypedArray(L, "vec2", 2);
+    return 1;
+}
+
+static inline int array_static_vec3(lua_State* L) {
+    createTypedArray(L, "vec3", 2);
+    return 1;
+}
+
+static inline int array_static_vec4(lua_State* L) {
+    createTypedArray(L, "vec4", 2);
+    return 1;
+}
+
+static inline int array_static_string(lua_State* L) {
+    createTypedArray(L, "string", 2);
+    return 1;
+}
+
+static inline int array_static_handle(lua_State* L) {
+    createTypedArray(L, "handle", 2);
+    return 1;
+}
+
+// Array utility: array:push(value)
+static inline int array_push(lua_State* L) {
+    if (!lua_istable(L, 1)) return luaL_error(L, "push() requires table");
+    
+    size_t len = lua_rawlen(L, 1);
+    lua_pushvalue(L, 2);  // Copy value
+    lua_rawseti(L, 1, len + 1);  // array[len+1] = value
+    return 0;
+}
+
+// Array utility: array:pop() -> value
+static inline int array_pop(lua_State* L) {
+    if (!lua_istable(L, 1)) return luaL_error(L, "pop() requires table");
+    
+    size_t len = lua_rawlen(L, 1);
+    if (len == 0) {
+        lua_pushnil(L);
+        return 1;
+    }
+    
+    lua_rawgeti(L, 1, len);  // Get last element
+    lua_pushnil(L);
+    lua_rawseti(L, 1, len);  // Remove last element
+    return 1;
+}
+
+// Array utility: array:size() -> int
+static inline int array_size(lua_State* L) {
+    if (!lua_istable(L, 1)) return luaL_error(L, "size() requires table");
+    lua_pushinteger(L, lua_rawlen(L, 1));
+    return 1;
+}
+
+// Array utility: array:clear()
+static inline int array_clear(lua_State* L) {
+    if (!lua_istable(L, 1)) return luaL_error(L, "clear() requires table");
+    
+    size_t len = lua_rawlen(L, 1);
+    for (size_t i = 1; i <= len; i++) {
+        lua_pushnil(L);
+        lua_rawseti(L, 1, i);
+    }
+    return 0;
+}
+
+// Array utility: array:remove(index) -> value
+static inline int array_remove(lua_State* L) {
+    if (!lua_istable(L, 1)) return luaL_error(L, "remove() requires table");
+    if (!lua_isinteger(L, 2)) return luaL_error(L, "remove() requires integer index");
+    
+    int index = lua_tointeger(L, 2);
+    size_t len = lua_rawlen(L, 1);
+    
+    if (index < 1 || index > (int)len) {
+        lua_pushnil(L);
+        return 1;
+    }
+    
+    lua_rawgeti(L, 1, index);  // Get element at index
+    
+    // Shift elements down
+    for (int i = index; i < (int)len; i++) {
+        lua_rawgeti(L, 1, i + 1);
+        lua_rawseti(L, 1, i);
+    }
+    
+    lua_pushnil(L);
+    lua_rawseti(L, 1, len);  // Clear last element
+    
+    return 1;
+}
+
+// Array utility: array:insert(index, value)
+static inline int array_insert(lua_State* L) {
+    if (!lua_istable(L, 1)) return luaL_error(L, "insert() requires table");
+    if (!lua_isinteger(L, 2)) return luaL_error(L, "insert() requires integer index");
+    
+    int index = lua_tointeger(L, 2);
+    size_t len = lua_rawlen(L, 1);
+    
+    if (index < 1 || index > (int)len + 1) {
+        return luaL_error(L, "insert() index out of bounds");
+    }
+    
+    // Shift elements up
+    for (int i = (int)len; i >= index; i--) {
+        lua_rawgeti(L, 1, i);
+        lua_rawseti(L, 1, i + 1);
+    }
+    
+    lua_pushvalue(L, 3);  // Copy value
+    lua_rawseti(L, 1, index);  // Set array[index] = value
+    
+    return 0;
+}
+
 
 // ========================================
 // REGISTRATION FUNCTION
@@ -2033,6 +2189,18 @@ static inline int lua_print(lua_State* L) {
     lua_pop(L, 1)
 
 static inline void registerNodeBindings(lua_State* L) {
+
+    // Array metatable
+    luaL_newmetatable(L, "Array");
+    lua_newtable(L);  // __index table for methods
+    LUA_REG_METHOD(array_push, "push");
+    LUA_REG_METHOD(array_pop, "pop");
+    LUA_REG_METHOD(array_size, "size");
+    LUA_REG_METHOD(array_clear, "clear");
+    LUA_REG_METHOD(array_remove, "remove");
+    LUA_REG_METHOD(array_insert, "insert");
+    lua_setfield(L, -2, "__index");
+    lua_pop(L, 1);
 
     // Vec2 metatable
     luaL_newmetatable(L, "Vec2");
@@ -2202,6 +2370,18 @@ static inline void registerNodeBindings(lua_State* L) {
     LUA_REG_GLOBAL(lua_Handle, "Handle");
     LUA_REG_GLOBAL(lua_kstate, "kstate");
     LUA_REG_GLOBAL(lua_print, "print");
+    
+    // Array table with static constructors
+    lua_newtable(L);
+    lua_pushcfunction(L, array_static_float);  lua_setfield(L, -2, "float");
+    lua_pushcfunction(L, array_static_int);    lua_setfield(L, -2, "int");
+    lua_pushcfunction(L, array_static_bool);   lua_setfield(L, -2, "bool");
+    lua_pushcfunction(L, array_static_vec2);   lua_setfield(L, -2, "vec2");
+    lua_pushcfunction(L, array_static_vec3);   lua_setfield(L, -2, "vec3");
+    lua_pushcfunction(L, array_static_vec4);   lua_setfield(L, -2, "vec4");
+    lua_pushcfunction(L, array_static_string); lua_setfield(L, -2, "string");
+    lua_pushcfunction(L, array_static_handle); lua_setfield(L, -2, "handle");
+    lua_setglobal(L, "Array");
 
     // Quaternion Utility Functions
     LUA_REG_GLOBAL(lua_quat_slerp, "quat_slerp");

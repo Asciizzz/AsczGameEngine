@@ -581,7 +581,16 @@ static Editor::Tab CreateScriptEditorTab(const std::string& title, tinyHandle fH
                 if constexpr (std::is_same_v<T, glm::vec4>) return 5;
                 if constexpr (std::is_same_v<T, std::string>) return 6;
                 if constexpr (std::is_same_v<T, tinyHandle>) return 7;
-                return 8;
+                // Array types
+                if constexpr (std::is_same_v<T, std::vector<bool>>) return 10;
+                if constexpr (std::is_same_v<T, std::vector<int>>) return 11;
+                if constexpr (std::is_same_v<T, std::vector<float>>) return 12;
+                if constexpr (std::is_same_v<T, std::vector<glm::vec2>>) return 13;
+                if constexpr (std::is_same_v<T, std::vector<glm::vec3>>) return 14;
+                if constexpr (std::is_same_v<T, std::vector<glm::vec4>>) return 15;
+                if constexpr (std::is_same_v<T, std::vector<std::string>>) return 16;
+                if constexpr (std::is_same_v<T, std::vector<tinyHandle>>) return 17;
+                return 100;
             };
             int orderA = std::visit(getOrder, a.second);
             int orderB = std::visit(getOrder, b.second);
@@ -600,7 +609,124 @@ static Editor::Tab CreateScriptEditorTab(const std::string& title, tinyHandle fH
                 if constexpr (std::is_same_v<T, glm::vec2>) ImGui::DragFloat2(name.c_str(), &val.x, 0.1f); else
                 if constexpr (std::is_same_v<T, glm::vec3>) ImGui::DragFloat3(name.c_str(), &val.x, 0.1f); else
                 if constexpr (std::is_same_v<T, glm::vec4>) ImGui::DragFloat4(name.c_str(), &val.x, 0.1f); else
-                if constexpr (std::is_same_v<T, std::string>) {
+                // Array types (same as VARS editor)
+                if constexpr (std::is_same_v<T, std::vector<float>>) {
+                    if (ImGui::TreeNode(name.c_str(), "%s [%zu floats]", name.c_str(), val.size())) {
+                        for (size_t i = 0; i < val.size(); i++) {
+                            ImGui::PushID(static_cast<int>(i));
+                            ImGui::DragFloat(("##" + std::to_string(i)).c_str(), &val[i], 0.1f);
+                            ImGui::SameLine(); ImGui::Text("[%zu]", i);
+                            ImGui::PopID();
+                        }
+                        if (ImGui::Button("Add")) val.push_back(0.0f);
+                        ImGui::SameLine();
+                        if (ImGui::Button("Remove") && !val.empty()) val.pop_back();
+                        ImGui::TreePop();
+                    }
+                } else if constexpr (std::is_same_v<T, std::vector<int>>) {
+                    if (ImGui::TreeNode(name.c_str(), "%s [%zu ints]", name.c_str(), val.size())) {
+                        for (size_t i = 0; i < val.size(); i++) {
+                            ImGui::PushID(static_cast<int>(i));
+                            ImGui::DragInt(("##" + std::to_string(i)).c_str(), &val[i]);
+                            ImGui::SameLine(); ImGui::Text("[%zu]", i);
+                            ImGui::PopID();
+                        }
+                        if (ImGui::Button("Add")) val.push_back(0);
+                        ImGui::SameLine();
+                        if (ImGui::Button("Remove") && !val.empty()) val.pop_back();
+                        ImGui::TreePop();
+                    }
+                } else if constexpr (std::is_same_v<T, std::vector<bool>>) {
+                    if (ImGui::TreeNode(name.c_str(), "%s [%zu bools]", name.c_str(), val.size())) {
+                        for (size_t i = 0; i < val.size(); i++) {
+                            bool temp = val[i];
+                            ImGui::PushID(static_cast<int>(i));
+                            if (ImGui::Checkbox(("##" + std::to_string(i)).c_str(), &temp)) val[i] = temp;
+                            ImGui::SameLine(); ImGui::Text("[%zu]", i);
+                            ImGui::PopID();
+                        }
+                        if (ImGui::Button("Add")) val.push_back(false);
+                        ImGui::SameLine();
+                        if (ImGui::Button("Remove") && !val.empty()) val.pop_back();
+                        ImGui::TreePop();
+                    }
+                } else if constexpr (std::is_same_v<T, std::vector<glm::vec2>>) {
+                    if (ImGui::TreeNode(name.c_str(), "%s [%zu vec2s]", name.c_str(), val.size())) {
+                        for (size_t i = 0; i < val.size(); i++) {
+                            ImGui::PushID(static_cast<int>(i));
+                            ImGui::DragFloat2(("##" + std::to_string(i)).c_str(), &val[i].x, 0.1f);
+                            ImGui::SameLine(); ImGui::Text("[%zu]", i);
+                            ImGui::PopID();
+                        }
+                        if (ImGui::Button("Add")) val.push_back(glm::vec2(0.0f));
+                        ImGui::SameLine();
+                        if (ImGui::Button("Remove") && !val.empty()) val.pop_back();
+                        ImGui::TreePop();
+                    }
+                } else if constexpr (std::is_same_v<T, std::vector<glm::vec3>>) {
+                    if (ImGui::TreeNode(name.c_str(), "%s [%zu vec3s]", name.c_str(), val.size())) {
+                        for (size_t i = 0; i < val.size(); i++) {
+                            ImGui::PushID(static_cast<int>(i));
+                            ImGui::DragFloat3(("##" + std::to_string(i)).c_str(), &val[i].x, 0.1f);
+                            ImGui::SameLine(); ImGui::Text("[%zu]", i);
+                            ImGui::PopID();
+                        }
+                        if (ImGui::Button("Add")) val.push_back(glm::vec3(0.0f));
+                        ImGui::SameLine();
+                        if (ImGui::Button("Remove") && !val.empty()) val.pop_back();
+                        ImGui::TreePop();
+                    }
+                } else if constexpr (std::is_same_v<T, std::vector<glm::vec4>>) {
+                    if (ImGui::TreeNode(name.c_str(), "%s [%zu vec4s]", name.c_str(), val.size())) {
+                        for (size_t i = 0; i < val.size(); i++) {
+                            ImGui::PushID(static_cast<int>(i));
+                            ImGui::DragFloat4(("##" + std::to_string(i)).c_str(), &val[i].x, 0.1f);
+                            ImGui::SameLine(); ImGui::Text("[%zu]", i);
+                            ImGui::PopID();
+                        }
+                        if (ImGui::Button("Add")) val.push_back(glm::vec4(0.0f));
+                        ImGui::SameLine();
+                        if (ImGui::Button("Remove") && !val.empty()) val.pop_back();
+                        ImGui::TreePop();
+                    }
+                } else if constexpr (std::is_same_v<T, std::vector<std::string>>) {
+                    if (ImGui::TreeNode(name.c_str(), "%s [%zu strings]", name.c_str(), val.size())) {
+                        static std::map<std::string, std::vector<std::string>> arrayBuffers;
+                        auto key = name + "_global_array";
+                        if (arrayBuffers.find(key) == arrayBuffers.end() || arrayBuffers[key].size() != val.size()) {
+                            arrayBuffers[key] = val;
+                        }
+                        for (size_t i = 0; i < val.size(); i++) {
+                            ImGui::PushID(static_cast<int>(i));
+                            char buf[256];
+                            strcpy(buf, arrayBuffers[key][i].c_str());
+                            if (ImGui::InputText(("##" + std::to_string(i)).c_str(), buf, sizeof(buf))) {
+                                arrayBuffers[key][i] = buf;
+                                val[i] = buf;
+                            }
+                            ImGui::SameLine(); ImGui::Text("[%zu]", i);
+                            ImGui::PopID();
+                        }
+                        if (ImGui::Button("Add")) { val.push_back(""); arrayBuffers[key].push_back(""); }
+                        ImGui::SameLine();
+                        if (ImGui::Button("Remove") && !val.empty()) { val.pop_back(); arrayBuffers[key].pop_back(); }
+                        ImGui::TreePop();
+                    }
+                } else if constexpr (std::is_same_v<T, std::vector<tinyHandle>>) {
+                    if (ImGui::TreeNode(name.c_str(), "%s [%zu handles]", name.c_str(), val.size())) {
+                        for (size_t i = 0; i < val.size(); i++) {
+                            ImGui::PushID(static_cast<int>(i));
+                            std::string type = val[i].is<rtNode>() ? "Node" : val[i].is<rtScene>() ? "Scene" : "Other";
+                            std::string info = "[" + type + ", " + std::to_string(val[i].idx()) + ", " + std::to_string(val[i].ver()) + "]";
+                            ImGui::Text("[%zu] %s", i, info.c_str());
+                            ImGui::PopID();
+                        }
+                        if (ImGui::Button("Add")) val.push_back(tinyHandle());
+                        ImGui::SameLine();
+                        if (ImGui::Button("Remove") && !val.empty()) val.pop_back();
+                        ImGui::TreePop();
+                    }
+                } else if constexpr (std::is_same_v<T, std::string>) {
                     static std::map<std::string, std::string> buffers;
                     if (buffers.find(name) == buffers.end()) {
                         buffers[name] = val;
@@ -1304,7 +1430,16 @@ static Editor::Tab CreateRtScriptEditorTab(const std::string& title, tinyHandle 
                 if constexpr (std::is_same_v<T, glm::vec4>) return 5;
                 if constexpr (std::is_same_v<T, std::string>) return 6;
                 if constexpr (std::is_same_v<T, tinyHandle>) return 7;
-                return 8;
+                // Array types
+                if constexpr (std::is_same_v<T, std::vector<bool>>) return 10;
+                if constexpr (std::is_same_v<T, std::vector<int>>) return 11;
+                if constexpr (std::is_same_v<T, std::vector<float>>) return 12;
+                if constexpr (std::is_same_v<T, std::vector<glm::vec2>>) return 13;
+                if constexpr (std::is_same_v<T, std::vector<glm::vec3>>) return 14;
+                if constexpr (std::is_same_v<T, std::vector<glm::vec4>>) return 15;
+                if constexpr (std::is_same_v<T, std::vector<std::string>>) return 16;
+                if constexpr (std::is_same_v<T, std::vector<tinyHandle>>) return 17;
+                return 100;
             };
             int orderA = std::visit(getOrder, a.second);
             int orderB = std::visit(getOrder, b.second);
@@ -1322,7 +1457,124 @@ static Editor::Tab CreateRtScriptEditorTab(const std::string& title, tinyHandle 
                 if constexpr (std::is_same_v<T, glm::vec2>) ImGui::DragFloat2(name.c_str(), &val.x, 0.1f); else
                 if constexpr (std::is_same_v<T, glm::vec3>) ImGui::DragFloat3(name.c_str(), &val.x, 0.1f); else
                 if constexpr (std::is_same_v<T, glm::vec4>) ImGui::DragFloat4(name.c_str(), &val.x, 0.1f); else
-                if constexpr (std::is_same_v<T, std::string>) {
+                // Array types
+                if constexpr (std::is_same_v<T, std::vector<float>>) {
+                    if (ImGui::TreeNode(name.c_str(), "%s [%zu floats]", name.c_str(), val.size())) {
+                        for (size_t i = 0; i < val.size(); i++) {
+                            ImGui::PushID(static_cast<int>(i));
+                            ImGui::DragFloat(("##" + std::to_string(i)).c_str(), &val[i], 0.1f);
+                            ImGui::SameLine(); ImGui::Text("[%zu]", i);
+                            ImGui::PopID();
+                        }
+                        if (ImGui::Button("Add")) val.push_back(0.0f);
+                        ImGui::SameLine();
+                        if (ImGui::Button("Remove") && !val.empty()) val.pop_back();
+                        ImGui::TreePop();
+                    }
+                } else if constexpr (std::is_same_v<T, std::vector<int>>) {
+                    if (ImGui::TreeNode(name.c_str(), "%s [%zu ints]", name.c_str(), val.size())) {
+                        for (size_t i = 0; i < val.size(); i++) {
+                            ImGui::PushID(static_cast<int>(i));
+                            ImGui::DragInt(("##" + std::to_string(i)).c_str(), &val[i]);
+                            ImGui::SameLine(); ImGui::Text("[%zu]", i);
+                            ImGui::PopID();
+                        }
+                        if (ImGui::Button("Add")) val.push_back(0);
+                        ImGui::SameLine();
+                        if (ImGui::Button("Remove") && !val.empty()) val.pop_back();
+                        ImGui::TreePop();
+                    }
+                } else if constexpr (std::is_same_v<T, std::vector<bool>>) {
+                    if (ImGui::TreeNode(name.c_str(), "%s [%zu bools]", name.c_str(), val.size())) {
+                        for (size_t i = 0; i < val.size(); i++) {
+                            bool temp = val[i];
+                            ImGui::PushID(static_cast<int>(i));
+                            if (ImGui::Checkbox(("##" + std::to_string(i)).c_str(), &temp)) val[i] = temp;
+                            ImGui::SameLine(); ImGui::Text("[%zu]", i);
+                            ImGui::PopID();
+                        }
+                        if (ImGui::Button("Add")) val.push_back(false);
+                        ImGui::SameLine();
+                        if (ImGui::Button("Remove") && !val.empty()) val.pop_back();
+                        ImGui::TreePop();
+                    }
+                } else if constexpr (std::is_same_v<T, std::vector<glm::vec2>>) {
+                    if (ImGui::TreeNode(name.c_str(), "%s [%zu vec2s]", name.c_str(), val.size())) {
+                        for (size_t i = 0; i < val.size(); i++) {
+                            ImGui::PushID(static_cast<int>(i));
+                            ImGui::DragFloat2(("##" + std::to_string(i)).c_str(), &val[i].x, 0.1f);
+                            ImGui::SameLine(); ImGui::Text("[%zu]", i);
+                            ImGui::PopID();
+                        }
+                        if (ImGui::Button("Add")) val.push_back(glm::vec2(0.0f));
+                        ImGui::SameLine();
+                        if (ImGui::Button("Remove") && !val.empty()) val.pop_back();
+                        ImGui::TreePop();
+                    }
+                } else if constexpr (std::is_same_v<T, std::vector<glm::vec3>>) {
+                    if (ImGui::TreeNode(name.c_str(), "%s [%zu vec3s]", name.c_str(), val.size())) {
+                        for (size_t i = 0; i < val.size(); i++) {
+                            ImGui::PushID(static_cast<int>(i));
+                            ImGui::DragFloat3(("##" + std::to_string(i)).c_str(), &val[i].x, 0.1f);
+                            ImGui::SameLine(); ImGui::Text("[%zu]", i);
+                            ImGui::PopID();
+                        }
+                        if (ImGui::Button("Add")) val.push_back(glm::vec3(0.0f));
+                        ImGui::SameLine();
+                        if (ImGui::Button("Remove") && !val.empty()) val.pop_back();
+                        ImGui::TreePop();
+                    }
+                } else if constexpr (std::is_same_v<T, std::vector<glm::vec4>>) {
+                    if (ImGui::TreeNode(name.c_str(), "%s [%zu vec4s]", name.c_str(), val.size())) {
+                        for (size_t i = 0; i < val.size(); i++) {
+                            ImGui::PushID(static_cast<int>(i));
+                            ImGui::DragFloat4(("##" + std::to_string(i)).c_str(), &val[i].x, 0.1f);
+                            ImGui::SameLine(); ImGui::Text("[%zu]", i);
+                            ImGui::PopID();
+                        }
+                        if (ImGui::Button("Add")) val.push_back(glm::vec4(0.0f));
+                        ImGui::SameLine();
+                        if (ImGui::Button("Remove") && !val.empty()) val.pop_back();
+                        ImGui::TreePop();
+                    }
+                } else if constexpr (std::is_same_v<T, std::vector<std::string>>) {
+                    if (ImGui::TreeNode(name.c_str(), "%s [%zu strings]", name.c_str(), val.size())) {
+                        static std::map<std::string, std::vector<std::string>> arrayBuffers;
+                        auto key = name + "_array";
+                        if (arrayBuffers.find(key) == arrayBuffers.end() || arrayBuffers[key].size() != val.size()) {
+                            arrayBuffers[key] = val;
+                        }
+                        for (size_t i = 0; i < val.size(); i++) {
+                            ImGui::PushID(static_cast<int>(i));
+                            char buf[256];
+                            strcpy(buf, arrayBuffers[key][i].c_str());
+                            if (ImGui::InputText(("##" + std::to_string(i)).c_str(), buf, sizeof(buf))) {
+                                arrayBuffers[key][i] = buf;
+                                val[i] = buf;
+                            }
+                            ImGui::SameLine(); ImGui::Text("[%zu]", i);
+                            ImGui::PopID();
+                        }
+                        if (ImGui::Button("Add")) { val.push_back(""); arrayBuffers[key].push_back(""); }
+                        ImGui::SameLine();
+                        if (ImGui::Button("Remove") && !val.empty()) { val.pop_back(); arrayBuffers[key].pop_back(); }
+                        ImGui::TreePop();
+                    }
+                } else if constexpr (std::is_same_v<T, std::vector<tinyHandle>>) {
+                    if (ImGui::TreeNode(name.c_str(), "%s [%zu handles]", name.c_str(), val.size())) {
+                        for (size_t i = 0; i < val.size(); i++) {
+                            ImGui::PushID(static_cast<int>(i));
+                            std::string type = val[i].is<rtNode>() ? "Node" : val[i].is<rtScene>() ? "Scene" : "Other";
+                            std::string info = "[" + type + ", " + std::to_string(val[i].idx()) + ", " + std::to_string(val[i].ver()) + "]";
+                            ImGui::Text("[%zu] %s", i, info.c_str());
+                            ImGui::PopID();
+                        }
+                        if (ImGui::Button("Add")) val.push_back(tinyHandle());
+                        ImGui::SameLine();
+                        if (ImGui::Button("Remove") && !val.empty()) val.pop_back();
+                        ImGui::TreePop();
+                    }
+                } else if constexpr (std::is_same_v<T, std::string>) {
                     static std::map<std::string, std::string> buffers;
                     if (buffers.find(name) == buffers.end()) {
                         buffers[name] = val;
