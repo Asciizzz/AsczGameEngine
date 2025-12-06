@@ -602,10 +602,9 @@ void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, floa
     pushFS(L); lua_setglobal(L, "FS");
 
     // Call update function
-    // call("update", nullptr, runtimeDebug);
     luaInstance_.call("update", [&](bool success, const std::string& errorMsg) {
         if (!success) { rt->debug.log(errorMsg, 1.0f, 0.0f, 0.0f); }
-    });
+    }, false); // update() is optional
 
     // Pull values back from Lua using helper
     pullMapFromLua(L, "VARS", vars);

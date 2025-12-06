@@ -1266,6 +1266,8 @@ static inline int node_anime3D(lua_State* L) {
     return 1;
 }
 
+*/
+
 // ========================================
 // COMPONENT: SCRIPT
 // ========================================
@@ -1278,11 +1280,11 @@ static inline int script_getVar(lua_State* L) {
     tinyHandle* handle = getScriptHandle(L, 1);
     if (!handle || !lua_isstring(L, 2)) return 0;
     
-    auto comps = getSceneFromLua(L)->Wrap(*handle);
+    auto script = getSceneFromLua(L)->nGetComp<rtScript>(*handle);
     const char* varName = lua_tostring(L, 2);
     
-    if (comps.script && comps.script->vHas(varName)) {
-        const tinyVar& var = comps.script->vMap().at(varName);
+    if (script && script->vars.find(varName) != script->vars.end()) {
+        const tinyVar& var = script->vars[varName];
         std::visit([L](auto&& val) {
             using T = std::decay_t<decltype(val)>;
             if constexpr (std::is_same_v<T, float>) lua_pushnumber(L, val);
@@ -1292,10 +1294,7 @@ static inline int script_getVar(lua_State* L) {
             else if constexpr (std::is_same_v<T, glm::vec3>) pushVec3(L, val);
             else if constexpr (std::is_same_v<T, glm::vec4>) pushVec4(L, val);
             else if constexpr (std::is_same_v<T, std::string>) lua_pushstring(L, val.c_str());
-            else if constexpr (std::is_same_v<T, tinyHandle>) {
-                // Convert tinyHandle back to LuaHandle
-                pushHandle(L, LuaHandle::fromTinyHandle(val));
-            }
+            else if constexpr (std::is_same_v<T, tinyHandle>) { pushHandle(L, val); }
         }, var);
         return 1;
     }
@@ -1307,11 +1306,11 @@ static inline int script_setVar(lua_State* L) {
     tinyHandle* handle = getScriptHandle(L, 1);
     if (!handle || !lua_isstring(L, 2)) return 0;
     
-    auto comps = getSceneFromLua(L)->Wrap(*handle);
+    auto rscript = getSceneFromLua(L)->nGetComp<rtScript>(*handle);
     const char* varName = lua_tostring(L, 2);
     
-    if (comps.script && comps.script->vHas(varName)) {
-        tinyVar& var = comps.script->vMap().at(varName);
+    if (rscript && rscript->vars.find(varName) != rscript->vars.end()) {
+        tinyVar& var = rscript->vars[varName];
         std::visit([L](auto&& val) {
             using T = std::decay_t<decltype(val)>;
             if constexpr (std::is_same_v<T, float>) val = static_cast<float>(lua_tonumber(L, 3));
@@ -1319,40 +1318,22 @@ static inline int script_setVar(lua_State* L) {
             else if constexpr (std::is_same_v<T, bool>) val = static_cast<bool>(lua_toboolean(L, 3));
             else if constexpr (std::is_same_v<T, glm::vec2>) {
                 if (lua_isuserdata(L, 3)) {
-                    glm::vec2* vec = getVec2(L, 3);
-                    if (vec) val = *vec;
+                    if (glm::vec2* vec = getVec2(L, 3)) val = *vec;
                 }
             }
             else if constexpr (std::is_same_v<T, glm::vec3>) {
                 if (lua_isuserdata(L, 3)) {
-                    glm::vec3* vec = getVec3(L, 3);
-                    if (vec) val = *vec;
+                    if (glm::vec3* vec = getVec3(L, 3)) val = *vec;
                 }
             }
             else if constexpr (std::is_same_v<T, glm::vec4>) {
                 if (lua_isuserdata(L, 3)) {
-                    glm::vec4* vec = getVec4(L, 3);
-                    if (vec) val = *vec;
+                    if (glm::vec4* vec = getVec4(L, 3)) val = *vec;
                 }
             }
             else if constexpr (std::is_same_v<T, std::string>) val = std::string(lua_tostring(L, 3));
             else if constexpr (std::is_same_v<T, tinyHandle>) {
-                // The handle userdata comes from the calling Lua state (L)
-                // We need to safely extract it without throwing errors
-                if (lua_isuserdata(L, 3)) {
-                    // Try to get it as a LuaHandle by checking metatable
-                    if (lua_getmetatable(L, 3)) {
-                        luaL_getmetatable(L, "Handle");
-                        if (lua_rawequal(L, -1, -2)) {
-                            // Valid Handle userdata, safe to cast
-                            LuaHandle* luaHandle = static_cast<LuaHandle*>(lua_touserdata(L, 3));
-                            if (luaHandle) {
-                                val = luaHandle->toTinyHandle();
-                            }
-                        }
-                        lua_pop(L, 2);  // Pop both metatables
-                    }
-                }
+                if (tinyHandle* h = getHandleFromUserdata(L, 3)) val = *h;
             }
         }, var);
     }
@@ -1362,10 +1343,10 @@ static inline int script_setVar(lua_State* L) {
 static inline int node_script(lua_State* L) {
     tinyHandle* handle = getNodeHandleFromUserdata(L, 1);
     if (!handle) { lua_pushnil(L); return 1; }
-    
-    auto comps = getSceneFromLua(L)->Wrap(*handle);
-    if (!comps.script) { lua_pushnil(L); return 1; }
-    
+
+    auto rscript = getSceneFromLua(L)->nGetComp<rtScript>(*handle);
+    if (!rscript) { lua_pushnil(L); return 1; }
+
     tinyHandle* ud = static_cast<tinyHandle*>(lua_newuserdata(L, sizeof(tinyHandle)));
     *ud = *handle;
     luaL_getmetatable(L, "Script");
@@ -1373,7 +1354,6 @@ static inline int node_script(lua_State* L) {
     return 1;
 }
 
-*/
 
 // ========================================
 // NODE COMPONENT: HIERARCHY
@@ -1439,7 +1419,14 @@ static inline int node_childrenHandles(lua_State* L) {
     }
 
     std::vector<tinyHandle> children = node->children;
+    
+    // Create Array:handle() with metatable
     lua_newtable(L);
+    luaL_getmetatable(L, "Array");
+    lua_setmetatable(L, -2);
+    lua_pushstring(L, "handle");
+    lua_setfield(L, -2, "__array_type");
+    
     for (int i = 0; i < children.size(); i++) {
         pushHandle(L, children[i]);
         lua_rawseti(L, -2, i + 1);
@@ -2313,14 +2300,14 @@ static inline void registerNodeBindings(lua_State* L) {
     LUA_REG_METHOD(anim3d_pause, "pause");
     LUA_REG_METHOD(anim3d_resume, "resume");
     LUA_END_METATABLE("Anim3D");
-    
+
+    */
+
     // Script metatable
     LUA_BEGIN_METATABLE("Script");
     LUA_REG_METHOD(script_getVar, "getVar");
     LUA_REG_METHOD(script_setVar, "setVar");
     LUA_END_METATABLE("Script");
-
-    */
 
     // FS metatable (filesystem registry accessor)
     LUA_BEGIN_METATABLE("FS");
@@ -2336,10 +2323,8 @@ static inline void registerNodeBindings(lua_State* L) {
     LUA_BEGIN_METATABLE("Node");
     LUA_REG_METHOD(node_transform3D, "transform3D");
     LUA_REG_METHOD(node_skeleton3D, "skeleton3D");
-    /*
-    LUA_REG_METHOD(node_anime3D, "anime3D");
+    // LUA_REG_METHOD(node_anime3D, "anime3D");
     LUA_REG_METHOD(node_script, "script");
-    */
     LUA_REG_METHOD(node_parent, "parent");
     LUA_REG_METHOD(node_children, "children");
     LUA_REG_METHOD(node_parentHandle, "parentHandle");

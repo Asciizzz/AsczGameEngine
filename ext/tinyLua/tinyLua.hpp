@@ -94,7 +94,7 @@ public:
     }
     
     // Call a function
-    bool call(const char* functionName, OnCallFunc onCall = nullptr) const {
+    bool call(const char* functionName, OnCallFunc onCall = nullptr, bool required = true) {
         if (!L_) {
             if (onCall) onCall(false, "Lua state not initialized");
             return false;
@@ -104,8 +104,16 @@ public:
         
         if (!lua_isfunction(L_, -1)) {
             lua_pop(L_, 1);
-            std::string error = std::string("Function '") + functionName + "' not found";
-            if (onCall) onCall(false, error);
+
+            /*Only report error if function is required
+                Some functions like update() are optional
+                Some component only have scripts for the sake of storing variables
+            */
+            if (required) {
+                std::string error = std::string("Function '") + functionName + "' not found";
+                if (onCall) onCall(false, error);
+            }
+
             return false;
         }
         
