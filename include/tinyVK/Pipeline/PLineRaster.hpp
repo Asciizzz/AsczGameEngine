@@ -38,62 +38,6 @@ struct RasterCfg {
     // Shader paths
     std::string vrtxPath;
     std::string fragPath;
-
-    // // Shader configuration
-    // RasterCfg& withShaders(const std::string& vertexPath, const std::string& fragmentPath) {
-    //     vrtxPath = vertexPath;
-    //     fragPath = fragmentPath;
-    //     return *this;
-    // }
-
-    // // Direct vertex input configuration from named inputs
-    // RasterCfg& withVertexInput(const std::vector<VkVertexInputBindingDescription>& inputBindings,
-    //                            const std::vector<VkVertexInputAttributeDescription>& inputAttributes) {
-    //     bindings = inputBindings;
-    //     attributes = inputAttributes;
-    //     return *this;
-    // }
-
-    // // Depth testing
-    // RasterCfg& withDepthTest(bool enable, VkCompareOp compareOp = VK_COMPARE_OP_LESS) {
-    //     depthTestEnable = enable ? VK_TRUE : VK_FALSE;
-    //     depthCompareOp = compareOp;
-    //     return *this;
-    // }
-
-    // RasterCfg& withDepthWrite(bool enable) {
-    //     depthWriteEnable = enable ? VK_TRUE : VK_FALSE;
-    //     return *this;
-    // }
-
-    // // Culling
-    // RasterCfg& withCulling(CullMode mode) {
-    //     cullMode = static_cast<VkCullModeFlags>(mode);
-    //     return *this;
-    // }
-
-    // // Blending
-    // RasterCfg& withBlending(BlendMode mode);
-
-    // // Polygon mode
-    // RasterCfg& withPolygonMode(VkPolygonMode mode) {
-    //     polygonMode = mode;
-    //     return *this;
-    // }
-
-    // // Push constants
-    // RasterCfg& withPushConstants(VkShaderStageFlags stages, uint32_t offset, uint32_t size) {
-    //     pushConstantRanges.push_back({stages, offset, size});
-    //     return *this;
-    // }
-
-    // // Descriptor set layouts (internal - used by pipeline system)
-    // RasterCfg& withDescriptorLayouts(const std::vector<VkDescriptorSetLayout>& layouts) {
-    //     setLayouts = layouts;
-    //     return *this;
-    // }
-
-
 };
 
 class PLineRaster {

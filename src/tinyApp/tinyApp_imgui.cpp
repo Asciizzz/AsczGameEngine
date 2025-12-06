@@ -1852,6 +1852,11 @@ static void RenderSceneNodeHierarchy() {
 
             bool canDelete = h != sceneRef->rootHandle();
             if (ImGui::MenuItem("Erase", nullptr, false, canDelete)) sceneRef->nErase(h);
+            
+            std::vector<tinyHandle> children = node->children;
+            if (ImGui::MenuItem("Clear", nullptr, false, !children.empty())) {
+                for (const auto& child : children) sceneRef->nErase(child);
+            }
         },
         // DbClick - Do nothing for now
         [scene](tinyHandle h) {

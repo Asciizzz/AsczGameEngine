@@ -57,6 +57,16 @@ struct tinyModel {
         int metalIndx = -1;
         int emisIndx = -1;
         glm::vec4 baseColor = glm::vec4(1.0f); // Default white
+        
+        // Alpha rendering mode:
+        // 0 = OPAQUE (default, uses alpha test/discard)
+        // 1 = BLEND (transparent, uses alpha blending)
+        // 2 = MASK (alpha cutoff at 0.5)
+        uint32_t alphaMode = 0;
+        
+        bool isTransparent() const { return alphaMode == 1; }
+        bool isOpaque() const { return alphaMode == 0; }
+        bool isAlphaMask() const { return alphaMode == 2; }
     };
 
     struct Mesh {

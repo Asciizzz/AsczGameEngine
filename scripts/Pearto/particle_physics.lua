@@ -241,6 +241,12 @@ function update()
     -- Calculate substep time
     local substepDt = DELTATIME / VARS.substeps
     
+    -- Build spatial grid once per frame (not per substep) for better performance
+    local grid = nil
+    if VARS.useGrid then
+        grid = buildSpatialGrid(particles)
+    end
+    
     -- Run multiple substeps for stability
     for step = 1, VARS.substeps do
         -- ========== PHASE 1: Apply Forces & Update Velocities ==========
@@ -337,9 +343,8 @@ function update()
         end
         
         -- ========== PHASE 4: Particle-Particle Collisions (Spatial Grid Optimized) ==========
-        if VARS.useGrid then
-            -- Build spatial grid
-            local grid = buildSpatialGrid(particles)
+        if VARS.useGrid and grid then
+            -- Use pre-built grid from outside substep loop
             local radiusSquared = VARS.particleRadius * VARS.particleRadius * 4.0
             
             -- Process each non-empty cell
@@ -391,25 +396,27 @@ function update()
                             local neighborCell = grid[neighborIdx]
                             local neighborSize = neighborCell:size()
                             
-                            -- Check collisions between current cell and neighbor cell
-                            for i = 1, cellSize do
-                                local idx1 = cell[i]
-                                local p1 = particles[idx1]
-                                
-                                for j = 1, neighborSize do
-                                    local idx2 = neighborCell[j]
-                                    local p2 = particles[idx2]
+                            -- Skip empty neighbor cells
+                            if neighborSize > 0 then
+                                -- Check collisions between current cell and neighbor cell
+                                for i = 1, cellSize do
+                                    local idx1 = cell[i]
+                                    local p1 = particles[idx1]
+                                    local vars1 = p1.script:vars()  -- Cache vars
                                     
-                                    if checkParticleCollision(p1, p2, radiusSquared) then
-                                        resolveCollision(p1, p2, p1.script:vars(), p2.script:vars())
+                                    for j = 1, neighborSize do
+                                        local idx2 = neighborCell[j]
+                                        local p2 = particles[idx2]
+                                        
+                                        if checkParticleCollision(p1, p2, radiusSquared) then
+                                            resolveCollision(p1, p2, vars1, p2.script:vars())
+                                        end
                                     end
                                 end
                             end
                         end
                     end
                 end
-                
-                ::continue_cell::
             end
         else
             -- Fallback: brute force O(n²) collision detection
