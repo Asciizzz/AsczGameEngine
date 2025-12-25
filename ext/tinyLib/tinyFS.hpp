@@ -50,8 +50,9 @@ public:
         uint8_t     color[3] = {255, 255, 255};
         uint8_t     rmOrder = 0;    // Lower = erased first
 
-        std::function<void(tinyHandle fileHandle, tinyFS& fs)> onCreate;
-        std::function<void(tinyHandle fileHandle, tinyFS& fs)> onDelete;
+        std::function<void(tinyHandle fileHandle, tinyFS& fs, void* userData)> onCreate;
+        std::function<void(tinyHandle fileHandle, tinyFS& fs, void* userData)> onDelete;
+        std::function<void(tinyHandle fileHandle, tinyFS& fs, void* userData)> onReload;
 
         [[nodiscard]] const char* c_str() const noexcept { return ext.c_str(); }
     };
@@ -106,7 +107,7 @@ public:
 
     // Create file with data
     template<typename T>
-    tinyHandle createFile(std::string name, T&& data, tinyHandle parent = {}) {
+    tinyHandle createFile(std::string name, T&& data, tinyHandle parent = {}, void* userData = nullptr) {
         if (!parent) parent = rootHandle_;
         Node* p = node(parent);
         if (!p || p->isFile()) return {};
@@ -123,7 +124,7 @@ public:
         tinyHandle h = fnodes_.emplace(std::move(file));
         TypeInfo* tInfo = typeInfo(dataHandle.tID()); // Ensure TypeInfo exists
         if (tInfo && tInfo->onCreate) {
-            tInfo->onCreate(h, *this);
+            tInfo->onCreate(h, *this, userData);
         }
 
         p = node(parent);
@@ -186,7 +187,7 @@ public:
         return queue;
     }
 
-    void rm(tinyHandle nodeHandle) {
+    void rm(tinyHandle nodeHandle, void* userData = nullptr) {
         if (!nodeHandle) return;
 
         const Node* targetNode = fnodes_.get(nodeHandle);
@@ -222,7 +223,7 @@ public:
 
             TypeInfo* tInfo = typeInfo(dataHandle.tID());
             if (tInfo && tInfo->onDelete) {
-                tInfo->onDelete(h, *this);
+                tInfo->onDelete(h, *this, userData);
             }
             
             r().erase(dataHandle);
@@ -232,7 +233,7 @@ public:
     }
 
     // erase this node only
-    void rmRaw(tinyHandle nodeHandle) {
+    void rmRaw(tinyHandle nodeHandle, void* userData = nullptr) {
         if (!nodeHandle) return;
 
         const Node* node = fnodes_.get(nodeHandle);
@@ -255,11 +256,23 @@ public:
 
         TypeInfo* tInfo = typeInfo(node->data.tID());
         if (tInfo && tInfo->onDelete) {
-            tInfo->onDelete(nodeHandle, *this);
+            tInfo->onDelete(nodeHandle, *this, userData);
         }
         r().erase(node->data);
 
         fnodes_.erase(nodeHandle);
+    }
+
+    void reload(tinyHandle fileHandle, void* userData = nullptr) {
+        if (!fileHandle) return;
+
+        const Node* node = fnodes_.get(fileHandle);
+        if (!node || !node->isFile()) return;
+
+        TypeInfo* tInfo = typeInfo(node->data.tID());
+        if (tInfo && tInfo->onReload) {
+            tInfo->onReload(fileHandle, *this, userData);
+        }
     }
 
 // ------------------------------- File/folder info -------------------------------

@@ -217,7 +217,7 @@ void tinyProject::setupResources() {
     atex->ext = "atex"; atex->rmOrder = 1;
     atex->color[0] = 102; atex->color[1] = 102; atex->color[2] = 255;
 
-    atex->onCreate = [&](tinyHandle fileHandle, tinyFS& fs) {
+    atex->onCreate = [&](tinyHandle fileHandle, tinyFS& fs, void* userData) {
         tinyHandle dataHandle = fs.dataHandle(fileHandle);
         const tinyTexture* texture = fs.rGet<tinyTexture>(dataHandle);
         if (!texture) return;
@@ -228,7 +228,7 @@ void tinyProject::setupResources() {
         }
     };
 
-    atex->onDelete = [&](tinyHandle fileHandle, tinyFS& fs) {
+    atex->onDelete = [&](tinyHandle fileHandle, tinyFS& fs, void* userData) {
         tinyHandle dataHandle = fs.dataHandle(fileHandle);
 
         // Remove from tinyDrawable
