@@ -187,17 +187,17 @@ struct tinyMesh {
     }
 
     void setMrphTargetNames(std::vector<std::string>&& names) {
-        mrphTargetNames_.clear();
-        mrphTargetNames_.reserve(names.size());
+        mrphTargetInfos_.clear();
+        mrphTargetInfos_.reserve(names.size());
         for (auto& name : names) {
             MorphTargetInfo info;
             info.name = std::move(name);
-            mrphTargetNames_.push_back(std::move(info));
+            mrphTargetInfos_.push_back(std::move(info));
         }
     }
 
-    const std::vector<MorphTargetInfo>& mrphTargetNames() const { return mrphTargetNames_; }
-    size_t mrphTargetCount() const { return mrphTargetNames_.size(); }
+    const std::vector<MorphTargetInfo>& mrphTargetInfos() const { return mrphTargetInfos_; }
+    size_t mrphTargetCount() const { return mrphTargetInfos_.size(); }
 
     static constexpr uint32_t MAX_VERTEX_EXTENSIONS = 32768; // No chance in hell we reach this lmao
 
@@ -386,7 +386,7 @@ struct tinyMesh {
 
 private:
     std::vector<Submesh> submeshes_;
-    std::vector<MorphTargetInfo> mrphTargetNames_; // Mesh-level morph target definitions
+    std::vector<MorphTargetInfo> mrphTargetInfos_; // Mesh-level morph target definitions
 
     glm::vec3 ABmin_ = glm::vec3(std::numeric_limits<float>::max());
     glm::vec3 ABmax_ = glm::vec3(std::numeric_limits<float>::lowest());

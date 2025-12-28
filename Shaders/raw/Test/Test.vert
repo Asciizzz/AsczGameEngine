@@ -42,6 +42,8 @@ bool vHasSkin()  { return (pConst.data0.x & 1) != 0; }
 bool vHasMorph() { return (pConst.data0.x & 2) != 0; }
 bool vHasColor() { return (pConst.data0.x & 4) != 0; }
 
+uint vertexCount() { return pConst.data0.y; }
+
 uint staticOffset()   { return pConst.data1.x; }
 uint rigOffset()      { return pConst.data1.y; }
 uint colorOffset()    { return pConst.data1.z; }
@@ -104,7 +106,7 @@ Rig getRig() {
 
 Mrph getMrphDlt(uint targetIndex) {
     uint bufferOffset = mrphDltsOffset();
-    uint targetOffset = targetIndex * pConst.data0.y; // vertexCount
+    uint targetOffset = targetIndex * vertexCount();
 
     uint trueIndex = bufferOffset + targetOffset + relVrtxIndex();
 

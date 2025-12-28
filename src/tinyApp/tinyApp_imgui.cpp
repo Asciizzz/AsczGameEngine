@@ -1156,9 +1156,9 @@ static Editor::Tab CreateRtMorphTargetEditorTab(const std::string& title, tinyHa
         }
         
         std::vector<float>& mrphWeights = meshRD->mrphWeights();
-        const auto& morphTargetNames = mesh->mrphTargetNames();
+        const auto& morphTargetInfos = mesh->mrphTargetInfos();
         
-        if (morphTargetNames.empty()) {
+        if (morphTargetInfos.empty()) {
             ImGui::Text("This mesh has no morph targets");
             return;
         }
@@ -1239,7 +1239,7 @@ static Editor::Tab CreateRtMorphTargetEditorTab(const std::string& title, tinyHa
         
         // Show stats
         int visibleCount = 0;
-        for (size_t j = 0; j < morphTargetNames.size(); ++j) {
+        for (size_t j = 0; j < morphTargetInfos.size(); ++j) {
             if (j >= mrphWeights.size()) continue;
             
             float weight = mrphWeights[j];
@@ -1251,7 +1251,7 @@ static Editor::Tab CreateRtMorphTargetEditorTab(const std::string& title, tinyHa
             
             // Apply name filter
             if (!searchFilter->empty()) {
-                const auto& targetInfo = morphTargetNames[j];
+                const auto& targetInfo = morphTargetInfos[j];
                 if (targetInfo.name.find(*searchFilter) == std::string::npos) {
                     continue;
                 }
@@ -1260,7 +1260,7 @@ static Editor::Tab CreateRtMorphTargetEditorTab(const std::string& title, tinyHa
             visibleCount++;
         }
         
-        ImGui::Text("Showing: %d / %zu", visibleCount, morphTargetNames.size());
+        ImGui::Text("Showing: %d / %zu", visibleCount, morphTargetInfos.size());
         
         ImGui::EndChild();
         ImGui::PopStyleColor();
@@ -1277,7 +1277,7 @@ static Editor::Tab CreateRtMorphTargetEditorTab(const std::string& title, tinyHa
         ImGui::Separator();
         
         // Render filtered morph targets
-        for (size_t j = 0; j < morphTargetNames.size(); ++j) {
+        for (size_t j = 0; j < morphTargetInfos.size(); ++j) {
             if (j >= mrphWeights.size()) continue;
             
             float& weight = mrphWeights[j];
@@ -1288,7 +1288,7 @@ static Editor::Tab CreateRtMorphTargetEditorTab(const std::string& title, tinyHa
             }
             
             // Apply name filter
-            const auto& targetInfo = morphTargetNames[j];
+            const auto& targetInfo = morphTargetInfos[j];
             if (!searchFilter->empty()) {
                 if (targetInfo.name.find(*searchFilter) == std::string::npos) {
                     continue;
@@ -2335,7 +2335,7 @@ static void RenderMESHRD3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle)
     );
 
     // Morph target editor button
-    if (mesh && !mesh->mrphTargetNames().empty() && !meshRD->mrphWeights().empty()) {
+    if (mesh && !mesh->mrphTargetInfos().empty() && !meshRD->mrphWeights().empty()) {
         ImGui::Separator();
         
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.5f, 0.3f, 1.0f));

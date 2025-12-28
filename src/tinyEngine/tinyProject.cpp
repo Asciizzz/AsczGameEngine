@@ -219,12 +219,12 @@ void tinyProject::setupResources() {
 
     atex->onCreate = [&](tinyHandle fileHandle, tinyFS& fs, void* userData) {
         tinyHandle dataHandle = fs.dataHandle(fileHandle);
-        const tinyTexture* texture = fs.rGet<tinyTexture>(dataHandle);
+        tinyTexture* texture = fs.rGet<tinyTexture>(dataHandle);
         if (!texture) return;
 
-        // Add to tinyDrawable
+        // Add to tinyDrawable                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
         if (tinyDrawable* drawable = drawable_.get()) {
-            drawable->addTexture(dataHandle);
+            texture->setDrawableIndex(drawable->addTexture(dataHandle));
         }
     };
 

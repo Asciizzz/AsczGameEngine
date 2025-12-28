@@ -75,6 +75,9 @@ struct tinyTexture {
     VkImage image() const noexcept { return imageVk_.image(); }
     VkImageView view() const noexcept { return imageVk_.view(); }
 
+    uint32_t drawableIndex() const noexcept { return drawableIndex_; }
+    void setDrawableIndex(uint32_t index) noexcept { drawableIndex_ = index; }
+
     bool vkCreate(const tinyVk::Device* device) {
         using namespace tinyVk;
 
@@ -149,6 +152,8 @@ private:
     WrapMode wrapMode_ = WrapMode::Repeat;
 
     uint64_t hash_ = 0;
+
+    uint32_t drawableIndex_ = 0;
 
     // Vulkan parts
     const tinyVk::Device* dvk_ = nullptr;
