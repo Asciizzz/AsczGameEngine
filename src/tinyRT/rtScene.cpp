@@ -174,7 +174,7 @@ void Scene::update(FrameStart frameStart) noexcept {
 
         glm::mat4 currentWorld = parentMat;
 
-        // Process transform FIRST to ensure currentWorld is correct before other components
+        // 1. Transform (must be first to compute currentWorld)
         if (node->has<rtTRANFM3D>()) {
             rtTRANFM3D* tranfm3D = rt_.get<rtTRANFM3D>(node->get<rtTRANFM3D>());
             // Scale restriction: local cannot have 0 scale on any axis
@@ -186,20 +186,42 @@ void Scene::update(FrameStart frameStart) noexcept {
 
             tranfm3D->world = parentMat * tranfm3D->local;
             currentWorld = currentWorld * tranfm3D->local;
+
+            // Debug rotation
+            if (node->name == "Debug") {
+                tranfm3D->local = glm::rotate(tranfm3D->local, dt, glm::vec3(0.0f, 1.0f, 0.0f));
+            }
         }
 
-        // Update other components (transform already handled above)
-        for (auto& [_, compHandle] : node->comps) {
-            if (rtMESHRD3D* meshRD3D = rt_.get<rtMESHRD3D>(compHandle)) {
-                // Frustum culling
-                const tinyMesh* mesh = fsr().get<tinyMesh>(meshRD3D->meshHandle());
+        // 2. Skeleton
+        if (node->has<rtSKELE3D>()) {
+            rtSKELE3D* skel3D = rt_.get<rtSKELE3D>(node->get<rtSKELE3D>());
+            skel3D->update();
+        }
 
-                // Mesh culling
-                if (!mesh || !cam.collideAABB(mesh->ABmin(), mesh->ABmax(), currentWorld)) continue;
+        // 3. Script
+        if (node->has<rtSCRIPT>()) {
+            rtSCRIPT* scriptComp = rt_.get<rtSCRIPT>(node->get<rtSCRIPT>());
+            tinyHandle scriptHandle = scriptComp->scriptHandle;
 
+            if (tinyScript* scriptDef = fsr().get<tinyScript>(scriptHandle)) {
+                if (scriptDef->version() != scriptComp->cacheVersion) {
+                    scriptDef->initVars(scriptComp->vars);
+                    scriptDef->initLocals(scriptComp->locals);
+                    scriptComp->cacheVersion = scriptDef->version();
+                }
+                scriptDef->update(scriptComp, this, nHandle, dt);
+            }
+        }
+
+        // 4. Mesh Render (last, uses final currentWorld)
+        if (node->has<rtMESHRD3D>()) {
+            rtMESHRD3D* meshRD3D = rt_.get<rtMESHRD3D>(node->get<rtMESHRD3D>());
+            const tinyMesh* mesh = fsr().get<tinyMesh>(meshRD3D->meshHandle());
+
+            if (mesh && cam.collideAABB(mesh->ABmin(), mesh->ABmax(), currentWorld)) {
                 const Skeleton3D* skele3D = this->nGetComp<Skeleton3D>(meshRD3D->skeleNodeHandle());
 
-                // Submit draw entries
                 for (uint32_t subIdx = 0; subIdx < mesh->submeshes().size(); ++subIdx) {
                     const tinyMesh::Submesh* submesh = mesh->submesh(subIdx);
 
@@ -207,13 +229,11 @@ void Scene::update(FrameStart frameStart) noexcept {
                     if (!cam.collideAABB(submesh->ABmin, submesh->ABmax, currentWorld)) continue;
 
                     const std::vector<glm::mat4>* skinData = skele3D ? &skele3D->skinData() : nullptr;
-
                     const rtMESHRD3D::SubMorph* subMorph = meshRD3D->subMrph(subIdx);
 
                     tinyDrawable::Entry entry;
                     entry.mesh = meshRD3D->meshHandle();
                     entry.submesh = subIdx;
-
                     entry.model = currentWorld;
 
                     if (skinData) {
@@ -228,34 +248,6 @@ void Scene::update(FrameStart frameStart) noexcept {
 
                     draw.submit(entry);
                 }
-            }
-
-            else if (rtSKELE3D* skel3D = rt_.get<rtSKELE3D>(compHandle)) {
-                skel3D->update();
-            }
-
-            else if (rtSCRIPT* scriptComp = rt_.get<rtSCRIPT>(compHandle)) {
-                tinyHandle scriptHandle = scriptComp->scriptHandle; // Get script definition
-
-                if (tinyScript* scriptDef = fsr().get<tinyScript>(scriptHandle)) {
-
-                    if (scriptDef->version() != scriptComp->cacheVersion) {
-                        // Script updated, re-init vars and locals
-                        scriptDef->initVars(scriptComp->vars);
-                        scriptDef->initLocals(scriptComp->locals);
-                        scriptComp->cacheVersion = scriptDef->version();
-                    }
-
-                    scriptDef->update(scriptComp, this, nHandle, dt);
-                }
-            }
-        }
-
-        // Debug rotation (outside component loop since transform is processed first)
-        if (node->name == "Debug") {
-            if (node->has<rtTRANFM3D>()) {
-                rtTRANFM3D* tranfm3D = rt_.get<rtTRANFM3D>(node->get<rtTRANFM3D>());
-                tranfm3D->local = glm::rotate(tranfm3D->local, dt, glm::vec3(0.0f, 1.0f, 0.0f));
             }
         }
 
