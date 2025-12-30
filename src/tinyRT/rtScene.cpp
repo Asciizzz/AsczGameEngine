@@ -174,21 +174,23 @@ void Scene::update(FrameStart frameStart) noexcept {
 
         glm::mat4 currentWorld = parentMat;
 
-        // Update components
-        for (auto& [_, compHandle] : node->comps) {
-            if (rtTRANFM3D* tranfm3D = rt_.get<rtTRANFM3D>(compHandle)) {
-                // Scale restriction: local cannot have 0 scale on any axis
-                for (int i = 0; i < 3; ++i) {
-                    if (glm::length(glm::vec3(tranfm3D->local[i])) < 1e-6f) {
-                        tranfm3D->local[i][i] = 1e-6f * (tranfm3D->local[i][i] < 0.0f ? -1.0f : 1.0f);
-                    }
+        // Process transform FIRST to ensure currentWorld is correct before other components
+        if (node->has<rtTRANFM3D>()) {
+            rtTRANFM3D* tranfm3D = rt_.get<rtTRANFM3D>(node->get<rtTRANFM3D>());
+            // Scale restriction: local cannot have 0 scale on any axis
+            for (int i = 0; i < 3; ++i) {
+                if (glm::length(glm::vec3(tranfm3D->local[i])) < 1e-6f) {
+                    tranfm3D->local[i][i] = 1e-6f * (tranfm3D->local[i][i] < 0.0f ? -1.0f : 1.0f);
                 }
-
-                tranfm3D->world = parentMat * tranfm3D->local;
-                currentWorld = currentWorld * tranfm3D->local;
             }
 
-            else if (rtMESHRD3D* meshRD3D = rt_.get<rtMESHRD3D>(compHandle)) {
+            tranfm3D->world = parentMat * tranfm3D->local;
+            currentWorld = currentWorld * tranfm3D->local;
+        }
+
+        // Update other components (transform already handled above)
+        for (auto& [_, compHandle] : node->comps) {
+            if (rtMESHRD3D* meshRD3D = rt_.get<rtMESHRD3D>(compHandle)) {
                 // Frustum culling
                 const tinyMesh* mesh = fsr().get<tinyMesh>(meshRD3D->meshHandle());
 
@@ -247,12 +249,12 @@ void Scene::update(FrameStart frameStart) noexcept {
                     scriptDef->update(scriptComp, this, nHandle, dt);
                 }
             }
+        }
 
-
-            // Fund debug:
-            if (node->name != "Debug") continue;
-
-            if (rtTRANFM3D* tranfm3D = rt_.get<rtTRANFM3D>(compHandle)) {
+        // Debug rotation (outside component loop since transform is processed first)
+        if (node->name == "Debug") {
+            if (node->has<rtTRANFM3D>()) {
+                rtTRANFM3D* tranfm3D = rt_.get<rtTRANFM3D>(node->get<rtTRANFM3D>());
                 tranfm3D->local = glm::rotate(tranfm3D->local, dt, glm::vec3(0.0f, 1.0f, 0.0f));
             }
         }
