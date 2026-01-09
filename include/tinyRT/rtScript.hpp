@@ -6,7 +6,7 @@ namespace tinyRT {
 
 // Lightweight container containing nothing but script handle and variable storage
 struct Script {
-    tinyHandle scriptHandle;
+    Asc::Handle scriptHandle;
     uint16_t cacheVersion = 0;
 
     tinyVarsMap vars;

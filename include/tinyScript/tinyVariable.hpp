@@ -7,15 +7,15 @@
 
 // Other
 #include <glm/glm.hpp>
-#include "tinyType.hpp"
+#include "ascType.hpp"
 
 using tinyVar = std::variant<
     float, int, bool, 
     glm::vec2, glm::vec3, glm::vec4, 
-    std::string, tinyHandle,
+    std::string, Asc::Handle,
     std::vector<float>, std::vector<int>, std::vector<bool>,
     std::vector<glm::vec2>, std::vector<glm::vec3>, std::vector<glm::vec4>,
-    std::vector<std::string>, std::vector<tinyHandle>
+    std::vector<std::string>, std::vector<Asc::Handle>
 >;
 using tinyVarsMap = std::unordered_map<std::string, tinyVar>;
 

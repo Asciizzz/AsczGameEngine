@@ -7,7 +7,7 @@
 
 #include "Templates.hpp"
 
-#include "tinyPool.hpp"
+#include "ascPool.hpp"
 
 namespace tinyRT {
 
@@ -52,7 +52,7 @@ struct Anime3D {
         } target = Target::Node;
 
         // Will be remapped upon scene import
-        tinyHandle node;
+        Asc::Handle node;
         uint32_t index = 0;
     };
 
@@ -64,8 +64,8 @@ struct Anime3D {
         bool valid() const { return !channels.empty() && !samplers.empty(); }
     };
 
-    tinyHandle add(Clip&& clip) {
-        if (!clip.valid()) return tinyHandle();
+    Asc::Handle add(Clip&& clip) {
+        if (!clip.valid()) return Asc::Handle();
 
         std::string baseName = clip.name.empty() ? "Clip" : clip.name;
         std::string uniqueName = baseName;
@@ -90,13 +90,13 @@ struct Anime3D {
 
     bool isPlaying() const { return playing; }
     void play(const std::string& name, bool restart = true);
-    void play(const tinyHandle& handle, bool restart = true);
+    void play(const Asc::Handle& handle, bool restart = true);
     void pause() { playing = false; }
     void resume() { playing = true; }
     void stop() { time = 0.0f; playing = false; }
     
     // Set current animation without starting playback
-    void setCurrent(const tinyHandle& handle, bool resetTime = true) {
+    void setCurrent(const Asc::Handle& handle, bool resetTime = true) {
         const Clip* clip = clips.get(handle);
         if (!clip || !clip->valid()) return;
         currentHandle = handle;
@@ -112,7 +112,7 @@ struct Anime3D {
     void setLoop(bool shouldLoop) { loop = shouldLoop; }
     bool getLoop() const { return loop; }
 
-    float duration(tinyHandle handle) const {
+    float duration(Asc::Handle handle) const {
         const Clip* clip = clips.get(handle);
         return clip ? clip->duration : 0.0f;
     }
@@ -123,17 +123,17 @@ struct Anime3D {
     }
     
     // Apply animation at current time to the scene (for manual scrubbing)
-    void apply(Scene* scene, const tinyHandle& animeHandle);
+    void apply(Scene* scene, const Asc::Handle& animeHandle);
     
     void update(Scene* scene, float deltaTime);
 
     Clip* current() { return clips.get(currentHandle); }
     const Clip* current() const { return clips.get(currentHandle); }
 
-    tinyHandle curHandle() const { return currentHandle; }
+    Asc::Handle curHandle() const { return currentHandle; }
 
-    Clip* get(const tinyHandle& handle) { return clips.get(handle); }
-    const Clip* get(const tinyHandle& handle) const { return clips.get(handle); }
+    Clip* get(const Asc::Handle& handle) { return clips.get(handle); }
+    const Clip* get(const Asc::Handle& handle) const { return clips.get(handle); }
 
     Clip* get(const std::string& name) {
         auto it = nameToHandle.find(name);
@@ -146,9 +146,9 @@ struct Anime3D {
         return const_cast<Anime3D*>(this)->get(name);
     }
 
-    tinyHandle getHandle(const std::string& name) const {
+    Asc::Handle getHandle(const std::string& name) const {
         auto it = nameToHandle.find(name);
-        if (it == nameToHandle.end()) return tinyHandle();
+        if (it == nameToHandle.end()) return Asc::Handle();
         return it->second;
     }
 
@@ -157,14 +157,14 @@ struct Anime3D {
     // }
 
     // Retrieve the list
-    const UnorderedMap<std::string, tinyHandle>& MAL() const {
+    const UnorderedMap<std::string, Asc::Handle>& MAL() const {
         return nameToHandle;
     }
 
 private:
-    tinyPool<Clip> clips;
-    UnorderedMap<std::string, tinyHandle> nameToHandle;
-    tinyHandle currentHandle;
+    Asc::Pool<Clip> clips;
+    UnorderedMap<std::string, Asc::Handle> nameToHandle;
+    Asc::Handle currentHandle;
 
     bool playing = false;
     bool loop = true;

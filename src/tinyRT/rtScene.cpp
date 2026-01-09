@@ -21,7 +21,7 @@ void Scene::init(const SceneRes& res) noexcept {
 
 #include <stdexcept>
 
-std::string& Scene::nName(tinyHandle nHandle) noexcept {
+std::string& Scene::nName(Asc::Handle nHandle) noexcept {
     Node* node = nodes_.get(nHandle);
     return node->name;
 }
@@ -36,41 +36,41 @@ bool Scene::rootShift() noexcept {
     return true;
 }
 
-std::vector<tinyHandle> Scene::nQueue(tinyHandle start) noexcept {
-    std::vector<tinyHandle> queue; // A DFS queue
+std::vector<Asc::Handle> Scene::nQueue(Asc::Handle start) noexcept {
+    std::vector<Asc::Handle> queue; // A DFS queue
 
-    std::function<void(tinyHandle)> addToQueue = [&](tinyHandle h) {
+    std::function<void(Asc::Handle)> addToQueue = [&](Asc::Handle h) {
         Node* node = nodes_.get(h);
         if (!node) return;
 
         queue.push_back(h);
 
-        for (tinyHandle child : node->children) addToQueue(child);
+        for (Asc::Handle child : node->children) addToQueue(child);
     };
     addToQueue(start);
     return queue;
 }
 
-tinyHandle Scene::nAdd(const std::string& name, tinyHandle parent) noexcept {
+Asc::Handle Scene::nAdd(const std::string& name, Asc::Handle parent) noexcept {
     parent = parent ? parent : root_;
     Node* nParent = nodes_.get(parent);
-    if (!nParent) return tinyHandle();
+    if (!nParent) return Asc::Handle();
 
     Node newNode;
     newNode.name = name;
     newNode.parent = parent;
 
-    tinyHandle nHandle = nodes_.emplace(std::move(newNode));
+    Asc::Handle nHandle = nodes_.emplace(std::move(newNode));
     nodes_.get(parent)->addChild(nHandle);
 
     return nHandle;
 }
 
-void Scene::nErase(tinyHandle nHandle, bool recursive, size_t* count) noexcept {
+void Scene::nErase(Asc::Handle nHandle, bool recursive, size_t* count) noexcept {
     Node* node = nodes_.get(nHandle);
     if (!node) return;
 
-    tinyHandle parentHandle = node->parent;
+    Asc::Handle parentHandle = node->parent;
     Node* parentNode = nodes_.get(parentHandle);
     if (parentNode) parentNode->rmChild(nHandle);
 
@@ -78,7 +78,7 @@ void Scene::nErase(tinyHandle nHandle, bool recursive, size_t* count) noexcept {
         nEraseAllComps(nHandle);
 
         // Reparent children to rescue parent
-        for (tinyHandle childHandle : node->children) {
+        for (Asc::Handle childHandle : node->children) {
             if (Node* childNode = nodes_.get(childHandle)) {
                 childNode->parent = parentHandle;
 
@@ -92,17 +92,17 @@ void Scene::nErase(tinyHandle nHandle, bool recursive, size_t* count) noexcept {
     }
 
     size_t count_ = 0;
-    std::function<void(tinyHandle)> eraseRec = [&](tinyHandle h) {
+    std::function<void(Asc::Handle)> eraseRec = [&](Asc::Handle h) {
         Node* n = nodes_.get(h);
         if (!n) return;
 
-        std::vector<tinyHandle> childrenCopy = n->children;
+        std::vector<Asc::Handle> childrenCopy = n->children;
 
         nEraseAllComps(h);
         nodes_.erase(h);
         count_++;
 
-        for (tinyHandle childHandle : childrenCopy) {
+        for (Asc::Handle childHandle : childrenCopy) {
             eraseRec(childHandle);
         }
     };
@@ -111,17 +111,17 @@ void Scene::nErase(tinyHandle nHandle, bool recursive, size_t* count) noexcept {
     if (count) (*count) = count_;
 }
 
-tinyHandle Scene::nReparent(tinyHandle nHandle, tinyHandle nNewParent) noexcept {
+Asc::Handle Scene::nReparent(Asc::Handle nHandle, Asc::Handle nNewParent) noexcept {
     Node* node = nodes_.get(nHandle);
-    if (!node) return tinyHandle();
+    if (!node) return Asc::Handle();
 
     Node* newParent = nodes_.get(nNewParent);
-    if (!newParent) return tinyHandle();
+    if (!newParent) return Asc::Handle();
 
     // Check for cyclic parentage
-    tinyHandle checkHandle = nNewParent;
+    Asc::Handle checkHandle = nNewParent;
     while (checkHandle) {
-        if (checkHandle == nHandle) return tinyHandle(); // Cycle detected
+        if (checkHandle == nHandle) return Asc::Handle(); // Cycle detected
 
         Node* checkNode = nodes_.get(checkHandle);
         if (!checkNode) break;
@@ -141,7 +141,7 @@ tinyHandle Scene::nReparent(tinyHandle nHandle, tinyHandle nNewParent) noexcept 
 }
 
 
-void Scene::nEraseAllComps(tinyHandle nHandle) noexcept {
+void Scene::nEraseAllComps(Asc::Handle nHandle) noexcept {
     Node* node = nodes_.get(nHandle);
     if (!node) return;
 
@@ -168,7 +168,7 @@ void Scene::update(FrameStart frameStart) noexcept {
 
     draw.startFrame(frame);
 
-    std::function<void(tinyHandle, glm::mat4)> updateNode = [&](tinyHandle nHandle, glm::mat4 parentMat) {
+    std::function<void(Asc::Handle, glm::mat4)> updateNode = [&](Asc::Handle nHandle, glm::mat4 parentMat) {
         Node* node = nodes_.get(nHandle);
         if (!node) return;
 
@@ -202,7 +202,7 @@ void Scene::update(FrameStart frameStart) noexcept {
         // 3. Script
         if (node->has<rtSCRIPT>()) {
             rtSCRIPT* scriptComp = rt_.get<rtSCRIPT>(node->get<rtSCRIPT>());
-            tinyHandle scriptHandle = scriptComp->scriptHandle;
+            Asc::Handle scriptHandle = scriptComp->scriptHandle;
 
             if (tinyScript* scriptDef = fsr().get<tinyScript>(scriptHandle)) {
                 if (scriptDef->version() != scriptComp->cacheVersion) {
@@ -252,7 +252,7 @@ void Scene::update(FrameStart frameStart) noexcept {
         }
 
         // Recurse into children
-        for (tinyHandle childHandle : node->children) {
+        for (Asc::Handle childHandle : node->children) {
             updateNode(childHandle, currentWorld);
         }
     };
@@ -262,26 +262,26 @@ void Scene::update(FrameStart frameStart) noexcept {
 }
 
 
-tinyHandle Scene::instantiate(tinyHandle sceneHandle, tinyHandle parent) noexcept {
+Asc::Handle Scene::instantiate(Asc::Handle sceneHandle, Asc::Handle parent) noexcept {
     const Scene* fromScene = fsr().get<Scene>(sceneHandle);
-    if (!fromScene) return tinyHandle();
+    if (!fromScene) return Asc::Handle();
 
-    tinyHandle newRootHandle;
+    Asc::Handle newRootHandle;
 
     Node* parentNode = nodes_.get(parent);
     if (!parentNode) parent = root_;
 
-    UnorderedMap<tinyHandle, tinyHandle> from_to;
-    auto getToHandle = [&](tinyHandle fromHandle) -> tinyHandle {
+    UnorderedMap<Asc::Handle, Asc::Handle> from_to;
+    auto getToHandle = [&](Asc::Handle fromHandle) -> Asc::Handle {
         auto it = from_to.find(fromHandle);
-        return it != from_to.end() ? it->second : tinyHandle();
+        return it != from_to.end() ? it->second : Asc::Handle();
     };
 
-    std::function<void(tinyHandle, tinyHandle)> cloneRec = [&](tinyHandle fromHandle, tinyHandle toParent) {
+    std::function<void(Asc::Handle, Asc::Handle)> cloneRec = [&](Asc::Handle fromHandle, Asc::Handle toParent) {
         const Node* fromNode = fromScene->node(fromHandle);
         if (!fromNode) return;
 
-        tinyHandle toHandle = nAdd(fromNode->name, toParent);
+        Asc::Handle toHandle = nAdd(fromNode->name, toParent);
         Node* toNode = nodes_.get(toHandle);
         from_to[fromHandle] = toHandle;
 
@@ -315,7 +315,7 @@ tinyHandle Scene::instantiate(tinyHandle sceneHandle, tinyHandle parent) noexcep
         }
 
         // Recurse into children
-        for (tinyHandle fromChildHandle : fromNode->children) {
+        for (Asc::Handle fromChildHandle : fromNode->children) {
             cloneRec(fromChildHandle, toHandle);
         }
     };

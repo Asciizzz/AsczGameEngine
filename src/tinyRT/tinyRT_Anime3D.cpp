@@ -97,7 +97,7 @@ void Anime3D::play(const std::string& name, bool restart) {
     }
 }
 
-void Anime3D::play(const tinyHandle& handle, bool restart) {
+void Anime3D::play(const Asc::Handle& handle, bool restart) {
     const Clip* anim = clips.get(handle);
     if (!anim || !anim->valid()) return;
     
@@ -189,7 +189,7 @@ glm::mat4 recomposeTransform(
 }
 
 
-void Anime3D::apply(Scene* scene, const tinyHandle& animeHandle) {
+void Anime3D::apply(Scene* scene, const Asc::Handle& animeHandle) {
     if (scene == nullptr) return;
 
     const Clip* clip = clips.get(animeHandle);

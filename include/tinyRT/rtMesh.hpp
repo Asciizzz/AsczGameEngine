@@ -28,7 +28,7 @@ When assigning weights to MeshRender3D, user need to provide the full flat array
 
 struct MeshRender3D {
 
-    MeshRender3D& assignMesh(tinyHandle meshHandle, const tinyMesh* mesh = nullptr) noexcept {
+    MeshRender3D& assignMesh(Asc::Handle meshHandle, const tinyMesh* mesh = nullptr) noexcept {
         if (!mesh) return *this;
 
         meshHandle_ = meshHandle;
@@ -58,13 +58,13 @@ struct MeshRender3D {
         return *this;
     }
 
-    MeshRender3D& assignSkeleNode(tinyHandle skeleNodeHandle) noexcept {
+    MeshRender3D& assignSkeleNode(Asc::Handle skeleNodeHandle) noexcept {
         skeleNodeHandle_ = skeleNodeHandle;
         return *this;
     }
 
-    tinyHandle meshHandle() const noexcept { return meshHandle_; }
-    tinyHandle skeleNodeHandle() const noexcept { return skeleNodeHandle_; }
+    Asc::Handle meshHandle() const noexcept { return meshHandle_; }
+    Asc::Handle skeleNodeHandle() const noexcept { return skeleNodeHandle_; }
 
     struct SubMorph {
         uint32_t offset = 0;
@@ -81,8 +81,8 @@ struct MeshRender3D {
     }
 
 private:
-    tinyHandle meshHandle_;
-    tinyHandle skeleNodeHandle_;
+    Asc::Handle meshHandle_;
+    Asc::Handle skeleNodeHandle_;
 
     std::vector<float> mrphWs_; // Flat weights for morph targets
     std::vector<SubMorph> subMrphs_; // Submesh morph target info

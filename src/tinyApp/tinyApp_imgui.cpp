@@ -18,23 +18,23 @@ using namespace tinyVk;
 
 // State state tracking
 namespace State {
-    static tinyHandle sceneHandle;
-    static bool isActiveScene(tinyHandle h) { return sceneHandle == h; }
+    static Asc::Handle sceneHandle;
+    static bool isActiveScene(Asc::Handle h) { return sceneHandle == h; }
 
     static std::unordered_set<uint64_t> expanded;
 
-    static tinyHandle selected;
-    static tinyHandle dragged;
-    static tinyHandle renamed;
+    static Asc::Handle selected;
+    static Asc::Handle dragged;
+    static Asc::Handle renamed;
     static char renameBuffer[256];
 
-    // Note: tinyHandle is hashed by default
+    // Note: Asc::Handle is hashed by default
 
-    static bool isExpanded(tinyHandle th) {
+    static bool isExpanded(Asc::Handle th) {
         return expanded.find(th.raw()) != expanded.end();
     }
 
-    static void setExpanded(tinyHandle th, bool expand) {
+    static void setExpanded(Asc::Handle th, bool expand) {
         if (expand) expanded.insert(th.raw());
         else        expanded.erase(th.raw());
     }
@@ -128,7 +128,7 @@ namespace Editor {
 // Code editor state
 namespace CodeEditor {
     static TextEditor editor;
-    static tinyHandle currentScriptHandle;
+    static Asc::Handle currentScriptHandle;
 
     static void Init(TextEditor::LanguageDefinition langDef = TextEditor::LanguageDefinition::Lua()) {
         editor.SetLanguageDefinition(langDef);
@@ -281,7 +281,7 @@ static bool RenderMenuItemToggle(const char* labelPending, const char* labelFini
 
 struct Payload {
 
-    static Payload make(tinyHandle h, std::string name) {
+    static Payload make(Asc::Handle h, std::string name) {
         Payload payload;
         payload.handle = h;
         strncpy(payload.name, name.c_str(), 63);
@@ -294,7 +294,7 @@ struct Payload {
         return handle.is<T>();
     }
 
-    tinyHandle handle;
+    Asc::Handle handle;
     char name[64];
 };
 
@@ -444,28 +444,28 @@ struct Splitter {
 // TAB CREATION HELPERS
 // ============================================================================
 
-static Editor::Tab CreateScriptEditorTab(const std::string& title, tinyHandle fHandle) {
+static Editor::Tab CreateScriptEditorTab(const std::string& title, Asc::Handle fHandle) {
     Editor::Tab tab;
     tab.title = title;
     tab.color = ImVec4(0.4f, 0.6f, 0.3f, 0.4f); // Green color for scripts
 
     // Initialize tab-specific state
-    tab.setState<tinyHandle>("handle", fHandle);
-    tab.setState<tinyType::ID>("type", tinyType::TypeID<tinyScript>());
+    tab.setState<Asc::Handle>("handle", fHandle);
+    tab.setState<Asc::Type::ID>("type", Asc::Type::TypeID<tinyScript>());
     tab.setState<Splitter>("splitter", Splitter());
-    tab.setState<tinyHandle>("lastScriptHandle", tinyHandle());
+    tab.setState<Asc::Handle>("lastScriptHandle", Asc::Handle());
     
     // Define select function - called when tab becomes active
     tab.selectFunc = [](Editor::Tab& self) {
-        tinyHandle* fHandlePtr = self.getState<tinyHandle>("handle");
+        Asc::Handle* fHandlePtr = self.getState<Asc::Handle>("handle");
         if (!fHandlePtr) return;
-        tinyHandle fHandle = *fHandlePtr;
+        Asc::Handle fHandle = *fHandlePtr;
         
-        tinyFS& fs = projRef->fs();
-        const tinyFS::Node* node = fs.fNode(fHandle);
+        Asc::FS& fs = projRef->fs();
+        const Asc::FS::Node* node = fs.fNode(fHandle);
         if (!node) return;
         
-        tinyHandle dHandle = fs.dataHandle(fHandle);
+        Asc::Handle dHandle = fs.dataHandle(fHandle);
         if (!dHandle.is<tinyScript>()) return;
         
         tinyScript* script = fs.rGet<tinyScript>(dHandle);
@@ -476,14 +476,14 @@ static Editor::Tab CreateScriptEditorTab(const std::string& title, tinyHandle fH
     
     // Define context menu for script tab
     tab.contextMenuFunc = [](Editor::Tab& self) {
-        tinyHandle* fHandlePtr = self.getState<tinyHandle>("handle");
+        Asc::Handle* fHandlePtr = self.getState<Asc::Handle>("handle");
         if (!fHandlePtr) return;
-        tinyHandle fHandle = *fHandlePtr;
-        tinyFS& fs = projRef->fs();
-        const tinyFS::Node* node = fs.fNode(fHandle);
+        Asc::Handle fHandle = *fHandlePtr;
+        Asc::FS& fs = projRef->fs();
+        const Asc::FS::Node* node = fs.fNode(fHandle);
         if (!node) return;
         
-        tinyHandle dHandle = fs.dataHandle(fHandle);
+        Asc::Handle dHandle = fs.dataHandle(fHandle);
         tinyScript* script = fs.rGet<tinyScript>(dHandle);
         if (!script) return;
         
@@ -502,12 +502,12 @@ static Editor::Tab CreateScriptEditorTab(const std::string& title, tinyHandle fH
     
     // Define hover tooltip for script tab
     tab.hoverFunc = [](Editor::Tab& self) {
-        tinyHandle* fHandlePtr = self.getState<tinyHandle>("handle");
+        Asc::Handle* fHandlePtr = self.getState<Asc::Handle>("handle");
         if (!fHandlePtr) return;
-        tinyHandle fHandle = *fHandlePtr;
+        Asc::Handle fHandle = *fHandlePtr;
         
-        tinyFS& fs = projRef->fs();
-        const tinyFS::Node* node = fs.fNode(fHandle);
+        Asc::FS& fs = projRef->fs();
+        const Asc::FS::Node* node = fs.fNode(fHandle);
         if (!node) return;
         
         ImGui::BeginTooltip();
@@ -523,7 +523,7 @@ static Editor::Tab CreateScriptEditorTab(const std::string& title, tinyHandle fH
         
         ImGui::Separator();
         
-        tinyHandle dHandle = fs.dataHandle(fHandle);
+        Asc::Handle dHandle = fs.dataHandle(fHandle);
         tinyScript* script = fs.rGet<tinyScript>(dHandle);
         if (script) {
             if (script->valid()) {
@@ -539,15 +539,15 @@ static Editor::Tab CreateScriptEditorTab(const std::string& title, tinyHandle fH
     
     // Define the custom render function for script editing
     tab.renderFunc = [](Editor::Tab& self) {
-        tinyHandle* fHandlePtr = self.getState<tinyHandle>("handle");
+        Asc::Handle* fHandlePtr = self.getState<Asc::Handle>("handle");
         if (!fHandlePtr) return;
-        tinyHandle fHandle = *fHandlePtr;
+        Asc::Handle fHandle = *fHandlePtr;
         
-        tinyFS& fs = projRef->fs();
-        const tinyFS::Node* node = fs.fNode(fHandle);
+        Asc::FS& fs = projRef->fs();
+        const Asc::FS::Node* node = fs.fNode(fHandle);
         if (!node) return;
         
-        tinyHandle dHandle = fs.dataHandle(fHandle);
+        Asc::Handle dHandle = fs.dataHandle(fHandle);
         if (!dHandle.is<tinyScript>()) return;
         
         tinyScript* script = fs.rGet<tinyScript>(dHandle);
@@ -580,7 +580,7 @@ static Editor::Tab CreateScriptEditorTab(const std::string& title, tinyHandle fH
                 if constexpr (std::is_same_v<T, glm::vec3>) return 4;
                 if constexpr (std::is_same_v<T, glm::vec4>) return 5;
                 if constexpr (std::is_same_v<T, std::string>) return 6;
-                if constexpr (std::is_same_v<T, tinyHandle>) return 7;
+                if constexpr (std::is_same_v<T, Asc::Handle>) return 7;
                 // Array types
                 if constexpr (std::is_same_v<T, std::vector<bool>>) return 10;
                 if constexpr (std::is_same_v<T, std::vector<int>>) return 11;
@@ -589,7 +589,7 @@ static Editor::Tab CreateScriptEditorTab(const std::string& title, tinyHandle fH
                 if constexpr (std::is_same_v<T, std::vector<glm::vec3>>) return 14;
                 if constexpr (std::is_same_v<T, std::vector<glm::vec4>>) return 15;
                 if constexpr (std::is_same_v<T, std::vector<std::string>>) return 16;
-                if constexpr (std::is_same_v<T, std::vector<tinyHandle>>) return 17;
+                if constexpr (std::is_same_v<T, std::vector<Asc::Handle>>) return 17;
                 return 100;
             };
             int orderA = std::visit(getOrder, a.second);
@@ -712,7 +712,7 @@ static Editor::Tab CreateScriptEditorTab(const std::string& title, tinyHandle fH
                         if (ImGui::Button("Remove") && !val.empty()) { val.pop_back(); arrayBuffers[key].pop_back(); }
                         ImGui::TreePop();
                     }
-                } else if constexpr (std::is_same_v<T, std::vector<tinyHandle>>) {
+                } else if constexpr (std::is_same_v<T, std::vector<Asc::Handle>>) {
                     if (ImGui::TreeNode(name.c_str(), "%s [%zu handles]", name.c_str(), val.size())) {
                         for (size_t i = 0; i < val.size(); i++) {
                             ImGui::PushID(static_cast<int>(i));
@@ -721,7 +721,7 @@ static Editor::Tab CreateScriptEditorTab(const std::string& title, tinyHandle fH
                             ImGui::Text("[%zu] %s", i, info.c_str());
                             ImGui::PopID();
                         }
-                        if (ImGui::Button("Add")) val.push_back(tinyHandle());
+                        if (ImGui::Button("Add")) val.push_back(Asc::Handle());
                         ImGui::SameLine();
                         if (ImGui::Button("Remove") && !val.empty()) val.pop_back();
                         ImGui::TreePop();
@@ -737,7 +737,7 @@ static Editor::Tab CreateScriptEditorTab(const std::string& title, tinyHandle fH
                         buffers[name] = buf;
                         val = buf;
                     }
-                } else if constexpr (std::is_same_v<T, tinyHandle>) {
+                } else if constexpr (std::is_same_v<T, Asc::Handle>) {
                     ImGui::PushID(name.c_str());
                     static std::string labelBuffer;
 
@@ -822,29 +822,29 @@ static Editor::Tab CreateScriptEditorTab(const std::string& title, tinyHandle fH
     return tab;
 }
 
-static Editor::Tab CreateRtSkeletonEditorTab(const std::string& title, tinyHandle nHandle, tinyHandle sHandle) {
+static Editor::Tab CreateRtSkeletonEditorTab(const std::string& title, Asc::Handle nHandle, Asc::Handle sHandle) {
     Editor::Tab tab;
     tab.title = title;
     tab.color = ImVec4(0.6f, 0.3f, 0.7f, 0.4f); // Purple color for skeletons
     
     // Initialize tab-specific state
-    tab.setState<tinyHandle>("handle", nHandle);
-    tab.setState<tinyHandle>("sceneHandle", sHandle);
-    tab.setState<tinyType::ID>("type", tinyType::TypeID<rtSKELE3D>());
+    tab.setState<Asc::Handle>("handle", nHandle);
+    tab.setState<Asc::Handle>("sceneHandle", sHandle);
+    tab.setState<Asc::Type::ID>("type", Asc::Type::TypeID<rtSKELE3D>());
     tab.setState<Splitter>("splitter", Splitter());
     tab.setState<int>("selectedBoneIndex", -1);
-    tab.setState<tinyHandle>("lastSkeletonHandle", tinyHandle());
+    tab.setState<Asc::Handle>("lastSkeletonHandle", Asc::Handle());
     tab.setState<glm::quat>("initialRotation", glm::quat());
     tab.setState<bool>("isDraggingRotation", false);
     tab.setState<glm::vec3>("displayEuler", glm::vec3(0.0f));
     
     // Define context menu for skeleton tab
     tab.contextMenuFunc = [](Editor::Tab& self) {
-        tinyHandle* nHandlePtr = self.getState<tinyHandle>("handle");
-        tinyHandle* sHandlePtr = self.getState<tinyHandle>("sceneHandle");
+        Asc::Handle* nHandlePtr = self.getState<Asc::Handle>("handle");
+        Asc::Handle* sHandlePtr = self.getState<Asc::Handle>("sceneHandle");
         if (!nHandlePtr || !sHandlePtr) return;
-        tinyHandle nHandle = *nHandlePtr;
-        tinyHandle sHandle = *sHandlePtr;
+        Asc::Handle nHandle = *nHandlePtr;
+        Asc::Handle sHandle = *sHandlePtr;
         
         rtScene* scene = projRef->scene(sHandle);
         if (!scene) return;
@@ -873,11 +873,11 @@ static Editor::Tab CreateRtSkeletonEditorTab(const std::string& title, tinyHandl
     
     // Define hover tooltip for skeleton tab
     tab.hoverFunc = [](Editor::Tab& self) {
-        tinyHandle* nHandlePtr = self.getState<tinyHandle>("handle");
-        tinyHandle* sHandlePtr = self.getState<tinyHandle>("sceneHandle");
+        Asc::Handle* nHandlePtr = self.getState<Asc::Handle>("handle");
+        Asc::Handle* sHandlePtr = self.getState<Asc::Handle>("sceneHandle");
         if (!nHandlePtr || !sHandlePtr) return;
-        tinyHandle nHandle = *nHandlePtr;
-        tinyHandle sHandle = *sHandlePtr;
+        Asc::Handle nHandle = *nHandlePtr;
+        Asc::Handle sHandle = *sHandlePtr;
         
         rtScene* scene = projRef->scene(sHandle);
         if (!scene) return;
@@ -903,11 +903,11 @@ static Editor::Tab CreateRtSkeletonEditorTab(const std::string& title, tinyHandl
     
     // Define the custom render function for skeleton editing
     tab.renderFunc = [&](Editor::Tab& self) {
-        tinyHandle* nHandlePtr = self.getState<tinyHandle>("handle");
-        tinyHandle* sHandlePtr = self.getState<tinyHandle>("sceneHandle");
+        Asc::Handle* nHandlePtr = self.getState<Asc::Handle>("handle");
+        Asc::Handle* sHandlePtr = self.getState<Asc::Handle>("sceneHandle");
         if (!nHandlePtr || !sHandlePtr) return;
-        tinyHandle nHandle = *nHandlePtr;
-        tinyHandle sHandle = *sHandlePtr;
+        Asc::Handle nHandle = *nHandlePtr;
+        Asc::Handle sHandle = *sHandlePtr;
         
         rtScene* scene = projRef->scene(sHandle);
         if (!scene) {
@@ -918,14 +918,14 @@ static Editor::Tab CreateRtSkeletonEditorTab(const std::string& title, tinyHandl
         rtSKELE3D* skel3D = scene->nGetComp<rtSKELE3D>(nHandle);
         if (!skel3D) return;
         
-        const tinyFS& fs = projRef->fs();
+        const Asc::FS& fs = projRef->fs();
         
         const tinySkeleton* skeleton = skel3D->rSkeleton();
         if (!skeleton) return;
         
         // Get state from tab
         int* selectedBoneIndex = self.getState<int>("selectedBoneIndex");
-        tinyHandle* lastSkeletonHandle = self.getState<tinyHandle>("lastSkeletonHandle");
+        Asc::Handle* lastSkeletonHandle = self.getState<Asc::Handle>("lastSkeletonHandle");
         if (!selectedBoneIndex || !lastSkeletonHandle) return;
         
         // Reset selection if skeleton changed
@@ -1062,15 +1062,15 @@ static Editor::Tab CreateRtSkeletonEditorTab(const std::string& title, tinyHandl
     return tab;
 }
 
-static Editor::Tab CreateRtMorphTargetEditorTab(const std::string& title, tinyHandle nHandle, tinyHandle sHandle) {
+static Editor::Tab CreateRtMorphTargetEditorTab(const std::string& title, Asc::Handle nHandle, Asc::Handle sHandle) {
     Editor::Tab tab;
     tab.title = title;
     tab.color = ImVec4(0.8f, 0.5f, 0.3f, 0.4f); // Orange color for morph editor
     
     // Initialize tab-specific state
-    tab.setState<tinyHandle>("handle", nHandle);
-    tab.setState<tinyHandle>("sceneHandle", sHandle);
-    tab.setState<tinyType::ID>("type", tinyType::TypeID<rtMESHRD3D>());
+    tab.setState<Asc::Handle>("handle", nHandle);
+    tab.setState<Asc::Handle>("sceneHandle", sHandle);
+    tab.setState<Asc::Type::ID>("type", Asc::Type::TypeID<rtMESHRD3D>());
     tab.setState<Splitter>("splitter", Splitter());
     tab.setState<std::string>("searchFilter", std::string());
     tab.setState<float>("weightMin", -1.0f);
@@ -1084,11 +1084,11 @@ static Editor::Tab CreateRtMorphTargetEditorTab(const std::string& title, tinyHa
     
     // Define context menu
     tab.contextMenuFunc = [](Editor::Tab& self) {
-        tinyHandle* nHandlePtr = self.getState<tinyHandle>("handle");
-        tinyHandle* sHandlePtr = self.getState<tinyHandle>("sceneHandle");
+        Asc::Handle* nHandlePtr = self.getState<Asc::Handle>("handle");
+        Asc::Handle* sHandlePtr = self.getState<Asc::Handle>("sceneHandle");
         if (!nHandlePtr || !sHandlePtr) return;
-        tinyHandle nHandle = *nHandlePtr;
-        tinyHandle sHandle = *sHandlePtr;
+        Asc::Handle nHandle = *nHandlePtr;
+        Asc::Handle sHandle = *sHandlePtr;
         
         rtScene* scene = projRef->scene(sHandle);
         if (!scene) return;
@@ -1107,11 +1107,11 @@ static Editor::Tab CreateRtMorphTargetEditorTab(const std::string& title, tinyHa
     
     // Define hover tooltip
     tab.hoverFunc = [](Editor::Tab& self) {
-        tinyHandle* nHandlePtr = self.getState<tinyHandle>("handle");
-        tinyHandle* sHandlePtr = self.getState<tinyHandle>("sceneHandle");
+        Asc::Handle* nHandlePtr = self.getState<Asc::Handle>("handle");
+        Asc::Handle* sHandlePtr = self.getState<Asc::Handle>("sceneHandle");
         if (!nHandlePtr || !sHandlePtr) return;
-        tinyHandle nHandle = *nHandlePtr;
-        tinyHandle sHandle = *sHandlePtr;
+        Asc::Handle nHandle = *nHandlePtr;
+        Asc::Handle sHandle = *sHandlePtr;
         
         rtScene* scene = projRef->scene(sHandle);
         if (!scene) return;
@@ -1129,11 +1129,11 @@ static Editor::Tab CreateRtMorphTargetEditorTab(const std::string& title, tinyHa
     
     // Define render function
     tab.renderFunc = [](Editor::Tab& self) {
-        tinyHandle* nHandlePtr = self.getState<tinyHandle>("handle");
-        tinyHandle* sHandlePtr = self.getState<tinyHandle>("sceneHandle");
+        Asc::Handle* nHandlePtr = self.getState<Asc::Handle>("handle");
+        Asc::Handle* sHandlePtr = self.getState<Asc::Handle>("sceneHandle");
         if (!nHandlePtr || !sHandlePtr) return;
-        tinyHandle nHandle = *nHandlePtr;
-        tinyHandle sHandle = *sHandlePtr;
+        Asc::Handle nHandle = *nHandlePtr;
+        Asc::Handle sHandle = *sHandlePtr;
         
         rtScene* scene = projRef->scene(sHandle);
         if (!scene) {
@@ -1147,8 +1147,8 @@ static Editor::Tab CreateRtMorphTargetEditorTab(const std::string& title, tinyHa
             return;
         }
         
-        const tinyFS& fs = projRef->fs();
-        tinyHandle meshHandle = meshRD->meshHandle();
+        const Asc::FS& fs = projRef->fs();
+        Asc::Handle meshHandle = meshRD->meshHandle();
         const tinyMesh* mesh = fs.rGet<tinyMesh>(meshHandle);
         if (!mesh) {
             ImGui::Text("No mesh assigned");
@@ -1328,15 +1328,15 @@ static Editor::Tab CreateRtMorphTargetEditorTab(const std::string& title, tinyHa
     return tab;
 }
 
-static Editor::Tab CreateRtScriptEditorTab(const std::string& title, tinyHandle nHandle, tinyHandle sHandle) {
+static Editor::Tab CreateRtScriptEditorTab(const std::string& title, Asc::Handle nHandle, Asc::Handle sHandle) {
     Editor::Tab tab;
     tab.title = title;
     tab.color = ImVec4(0.3f, 0.5f, 0.8f, 0.4f); // Blue color for script components
     
     // Initialize tab-specific state
-    tab.setState<tinyHandle>("handle", nHandle);
-    tab.setState<tinyHandle>("sceneHandle", sHandle);
-    tab.setState<tinyType::ID>("type", tinyType::TypeID<rtSCRIPT>());
+    tab.setState<Asc::Handle>("handle", nHandle);
+    tab.setState<Asc::Handle>("sceneHandle", sHandle);
+    tab.setState<Asc::Type::ID>("type", Asc::Type::TypeID<rtSCRIPT>());
     tab.setState<Splitter>("splitter", Splitter());
 
     // Splitter start at 30 (variables) / 70 (runtime debug)
@@ -1345,15 +1345,15 @@ static Editor::Tab CreateRtScriptEditorTab(const std::string& title, tinyHandle 
     split->positions[0] = 0.3f;
     split->horizontal = false;
 
-    tinyFS& fs = projRef->fs();
+    Asc::FS& fs = projRef->fs();
 
     // Define context menu for script component tab
     tab.contextMenuFunc = [](Editor::Tab& self) {
-        tinyHandle* nHandlePtr = self.getState<tinyHandle>("handle");
-        tinyHandle* sHandlePtr = self.getState<tinyHandle>("sceneHandle");
+        Asc::Handle* nHandlePtr = self.getState<Asc::Handle>("handle");
+        Asc::Handle* sHandlePtr = self.getState<Asc::Handle>("sceneHandle");
         if (!nHandlePtr || !sHandlePtr) return;
-        tinyHandle nHandle = *nHandlePtr;
-        tinyHandle sHandle = *sHandlePtr;
+        Asc::Handle nHandle = *nHandlePtr;
+        Asc::Handle sHandle = *sHandlePtr;
 
         rtScene* scene = projRef->scene(sHandle);
         if (!scene) return;
@@ -1364,11 +1364,11 @@ static Editor::Tab CreateRtScriptEditorTab(const std::string& title, tinyHandle 
     
     // Define hover tooltip for script component tab
     tab.hoverFunc = [](Editor::Tab& self) {
-        tinyHandle* nHandlePtr = self.getState<tinyHandle>("handle");
-        tinyHandle* sHandlePtr = self.getState<tinyHandle>("sceneHandle");
+        Asc::Handle* nHandlePtr = self.getState<Asc::Handle>("handle");
+        Asc::Handle* sHandlePtr = self.getState<Asc::Handle>("sceneHandle");
         if (!nHandlePtr || !sHandlePtr) return;
-        tinyHandle nHandle = *nHandlePtr;
-        tinyHandle sHandle = *sHandlePtr;
+        Asc::Handle nHandle = *nHandlePtr;
+        Asc::Handle sHandle = *sHandlePtr;
 
         rtScene* scene = projRef->scene(sHandle);
         if (!scene) return;
@@ -1384,11 +1384,11 @@ static Editor::Tab CreateRtScriptEditorTab(const std::string& title, tinyHandle 
     
     // Define the custom render function for script component
     tab.renderFunc = [](Editor::Tab& self) {
-        tinyHandle* nHandlePtr = self.getState<tinyHandle>("handle");
-        tinyHandle* sHandlePtr = self.getState<tinyHandle>("sceneHandle");
+        Asc::Handle* nHandlePtr = self.getState<Asc::Handle>("handle");
+        Asc::Handle* sHandlePtr = self.getState<Asc::Handle>("sceneHandle");
         if (!nHandlePtr || !sHandlePtr) return;
-        tinyHandle nHandle = *nHandlePtr;
-        tinyHandle sHandle = *sHandlePtr;
+        Asc::Handle nHandle = *nHandlePtr;
+        Asc::Handle sHandle = *sHandlePtr;
         
         rtScene* scene = projRef->scene(sHandle);
         if (!scene) {
@@ -1429,7 +1429,7 @@ static Editor::Tab CreateRtScriptEditorTab(const std::string& title, tinyHandle 
                 if constexpr (std::is_same_v<T, glm::vec3>) return 4;
                 if constexpr (std::is_same_v<T, glm::vec4>) return 5;
                 if constexpr (std::is_same_v<T, std::string>) return 6;
-                if constexpr (std::is_same_v<T, tinyHandle>) return 7;
+                if constexpr (std::is_same_v<T, Asc::Handle>) return 7;
                 // Array types
                 if constexpr (std::is_same_v<T, std::vector<bool>>) return 10;
                 if constexpr (std::is_same_v<T, std::vector<int>>) return 11;
@@ -1438,7 +1438,7 @@ static Editor::Tab CreateRtScriptEditorTab(const std::string& title, tinyHandle 
                 if constexpr (std::is_same_v<T, std::vector<glm::vec3>>) return 14;
                 if constexpr (std::is_same_v<T, std::vector<glm::vec4>>) return 15;
                 if constexpr (std::is_same_v<T, std::vector<std::string>>) return 16;
-                if constexpr (std::is_same_v<T, std::vector<tinyHandle>>) return 17;
+                if constexpr (std::is_same_v<T, std::vector<Asc::Handle>>) return 17;
                 return 100;
             };
             int orderA = std::visit(getOrder, a.second);
@@ -1560,7 +1560,7 @@ static Editor::Tab CreateRtScriptEditorTab(const std::string& title, tinyHandle 
                         if (ImGui::Button("Remove") && !val.empty()) { val.pop_back(); arrayBuffers[key].pop_back(); }
                         ImGui::TreePop();
                     }
-                } else if constexpr (std::is_same_v<T, std::vector<tinyHandle>>) {
+                } else if constexpr (std::is_same_v<T, std::vector<Asc::Handle>>) {
                     if (ImGui::TreeNode(name.c_str(), "%s [%zu handles]", name.c_str(), val.size())) {
                         for (size_t i = 0; i < val.size(); i++) {
                             ImGui::PushID(static_cast<int>(i));
@@ -1569,7 +1569,7 @@ static Editor::Tab CreateRtScriptEditorTab(const std::string& title, tinyHandle 
                             ImGui::Text("[%zu] %s", i, info.c_str());
                             ImGui::PopID();
                         }
-                        if (ImGui::Button("Add")) val.push_back(tinyHandle());
+                        if (ImGui::Button("Add")) val.push_back(Asc::Handle());
                         ImGui::SameLine();
                         if (ImGui::Button("Remove") && !val.empty()) val.pop_back();
                         ImGui::TreePop();
@@ -1585,7 +1585,7 @@ static Editor::Tab CreateRtScriptEditorTab(const std::string& title, tinyHandle 
                         buffers[name] = buf;
                         val = buf;
                     }
-                } else if constexpr (std::is_same_v<T, tinyHandle>) {
+                } else if constexpr (std::is_same_v<T, Asc::Handle>) {
                     ImGui::PushID(name.c_str());
                     static std::string labelBuffer;
 
@@ -1674,7 +1674,7 @@ template<
     typename FxDrag, typename FxDrop
 >
 static void RenderGenericNodeHierarchy(
-    tinyHandle nodeHandle, int depth,
+    Asc::Handle nodeHandle, int depth,
 
     FxDiv&& fDiv, FxDivOpen&& fDivOpen, FxSelected&& fSelected, FxChildren&& fChildren, 
     FxLClick&& fLClick, FxRClick&& fRClick, FxDbClick&& fDbClick, FxHover&& fHover,
@@ -1729,7 +1729,7 @@ static void RenderGenericNodeHierarchy(
         ImGui::EndDragDropTarget();
     }
 
-    std::vector<tinyHandle> children = fChildren(nodeHandle);
+    std::vector<Asc::Handle> children = fChildren(nodeHandle);
     if (fDivOpen(nodeHandle) && !children.empty()) {
         ImGui::Indent();
         for (const auto& child : children) {
@@ -1750,12 +1750,12 @@ static void RenderGenericNodeHierarchy(
 
 static void RenderSceneNodeHierarchy() {
     rtScene* scene = sceneRef;
-    tinyFS& fs = projRef->fs();
+    Asc::FS& fs = projRef->fs();
 
     RenderGenericNodeHierarchy(
         scene->rootHandle(), 0,
         // Div
-        [scene](tinyHandle h, int depth) {
+        [scene](Asc::Handle h, int depth) {
             rtNode* node = scene->node(h);
             if (!node) {
                 ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "<Invalid>");
@@ -1784,7 +1784,7 @@ static void RenderSceneNodeHierarchy() {
                 bool enter = ImGui::InputText("##rename", State::renameBuffer, sizeof(State::renameBuffer), ImGuiInputTextFlags_EnterReturnsTrue);
                 if (enter || ImGui::IsItemDeactivatedAfterEdit()) {
                     node->name = std::string(State::renameBuffer);
-                    State::renamed = tinyHandle();
+                    State::renamed = Asc::Handle();
                 }
             } else {
                 // Node name in gray - white
@@ -1803,16 +1803,16 @@ static void RenderSceneNodeHierarchy() {
             }
         },
         // Div Open
-        [](tinyHandle h) -> bool { return State::isExpanded(h); },
+        [](Asc::Handle h) -> bool { return State::isExpanded(h); },
         // Selected
-        [](tinyHandle h) -> bool { return State::selected == h; },
+        [](Asc::Handle h) -> bool { return State::selected == h; },
         // Children
-        [](tinyHandle h) -> std::vector<tinyHandle> {
+        [](Asc::Handle h) -> std::vector<Asc::Handle> {
             const rtNode* node = sceneRef->node(h);
             if (!node) return {};
 
-            std::vector<tinyHandle> children = node->children;
-            std::sort(children.begin(), children.end(), [](tinyHandle a, tinyHandle b) {
+            std::vector<Asc::Handle> children = node->children;
+            std::sort(children.begin(), children.end(), [](Asc::Handle a, Asc::Handle b) {
                 const rtNode* nodeA = sceneRef->node(a);
                 const rtNode* nodeB = sceneRef->node(b);
 
@@ -1824,11 +1824,11 @@ static void RenderSceneNodeHierarchy() {
             return children;
         },
         // LClick
-        [](tinyHandle h) {
+        [](Asc::Handle h) {
             State::selected = h;
         },
         // RClick
-        [](tinyHandle h) {
+        [](Asc::Handle h) {
             rtNode* node = sceneRef->node(h);
             if (!node) {
                 ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid Node!");
@@ -1853,17 +1853,17 @@ static void RenderSceneNodeHierarchy() {
             bool canDelete = h != sceneRef->rootHandle();
             if (ImGui::MenuItem("Erase", nullptr, false, canDelete)) sceneRef->nErase(h);
             
-            std::vector<tinyHandle> children = node->children;
+            std::vector<Asc::Handle> children = node->children;
             if (ImGui::MenuItem("Clear", nullptr, false, !children.empty())) {
                 for (const auto& child : children) sceneRef->nErase(child);
             }
         },
         // DbClick - Do nothing for now
-        [scene](tinyHandle h) {
+        [scene](Asc::Handle h) {
 
         },
         // Hover
-        [scene](tinyHandle h) {
+        [scene](Asc::Handle h) {
             if (ImGui::BeginTooltip()) {
                 if (const rtNode* node = scene->node(h)) {
                     ImGui::Text("%s", node->cname());
@@ -1890,7 +1890,7 @@ static void RenderSceneNodeHierarchy() {
             ImGui::EndTooltip();
         },
         // Drag
-        [scene](tinyHandle h) {
+        [scene](Asc::Handle h) {
             const rtNode* node = scene->node(h);
             if (!node) return;
 
@@ -1899,7 +1899,7 @@ static void RenderSceneNodeHierarchy() {
             ImGui::Text("Dragging: %s", payload.name);
         },
         // Drop
-        [scene, &fs](tinyHandle h) {
+        [scene, &fs](Asc::Handle h) {
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PAYLOAD")) {
                 Payload* data = (Payload*)payload->Data;
 
@@ -1910,8 +1910,8 @@ static void RenderSceneNodeHierarchy() {
                 }
 
                 // File = further handling
-                if (data->is<tinyNodeFS>()) {
-                    tinyHandle dataHandle = fs.dataHandle(data->handle);
+                if (data->is<Asc::NodeFS>()) {
+                    Asc::Handle dataHandle = fs.dataHandle(data->handle);
 
                     // Scene File = instantiate
                     if (dataHandle.is<rtScene>() && dataHandle != State::sceneHandle) {
@@ -1921,29 +1921,29 @@ static void RenderSceneNodeHierarchy() {
 
                 }
 
-                State::dragged = tinyHandle();
+                State::dragged = Asc::Handle();
             }
         }
     );
 }
 
 static void RenderFileNodeHierarchy() {
-    tinyFS& fs = projRef->fs();
+    Asc::FS& fs = projRef->fs();
 
     RenderGenericNodeHierarchy(
         fs.rootHandle(), 0,
         // Div
-        [&fs](tinyHandle h, int depth) {
-            const tinyNodeFS* node = fs.fNode(h);
+        [&fs](Asc::Handle h, int depth) {
+            const Asc::NodeFS* node = fs.fNode(h);
             if (!node) { // Should not happen
                 ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "<Invalid>");
                 return;
             }
 
             std::string name = node->name;
-            tinyHandle dHandle = fs.dataHandle(h);
+            Asc::Handle dHandle = fs.dataHandle(h);
 
-            const tinyFS::TypeInfo* typeInfo = fs.typeInfo(dHandle.tID());
+            const Asc::FS::TypeInfo* typeInfo = fs.typeInfo(dHandle.tID());
 
             bool isFolder = node->isFolder();
             bool isExpanded = State::isExpanded(h) && isFolder;
@@ -1960,7 +1960,7 @@ static void RenderFileNodeHierarchy() {
                 bool enter = ImGui::InputText("##rename", State::renameBuffer, sizeof(State::renameBuffer), ImGuiInputTextFlags_EnterReturnsTrue);
                 if (enter || ImGui::IsItemDeactivatedAfterEdit()) {
                     fs.rename(h, State::renameBuffer);
-                    State::renamed = tinyHandle();
+                    State::renamed = Asc::Handle();
                 }
             } else {
                 ImVec4 nameColor = isFolder
@@ -1985,31 +1985,31 @@ static void RenderFileNodeHierarchy() {
             }
         },
         // Div Open
-        [](tinyHandle h) -> bool { return State::isExpanded(h); },
+        [](Asc::Handle h) -> bool { return State::isExpanded(h); },
         // Selected
-        [](tinyHandle h) -> bool { return State::selected == h; },
+        [](Asc::Handle h) -> bool { return State::selected == h; },
         // Children
-        [&](tinyHandle h) -> std::vector<tinyHandle> {
-            if (const tinyFS::Node* node = fs.fNode(h)) {
-                std::vector<tinyHandle> children = node->children;
-                std::sort(children.begin(), children.end(), [&](tinyHandle a, tinyHandle b) {
-                    tinyFS::TypeInfo* typeA = fs.typeInfo(fs.dataHandle(a).tID());
-                    tinyFS::TypeInfo* typeB = fs.typeInfo(fs.dataHandle(b).tID());
+        [&](Asc::Handle h) -> std::vector<Asc::Handle> {
+            if (const Asc::FS::Node* node = fs.fNode(h)) {
+                std::vector<Asc::Handle> children = node->children;
+                std::sort(children.begin(), children.end(), [&](Asc::Handle a, Asc::Handle b) {
+                    Asc::FS::TypeInfo* typeA = fs.typeInfo(fs.dataHandle(a).tID());
+                    Asc::FS::TypeInfo* typeB = fs.typeInfo(fs.dataHandle(b).tID());
                     if (typeA->ext != typeB->ext) return typeA->ext < typeB->ext;
                     return fs.fNode(a)->name < fs.fNode(b)->name;
                 });
                 return children;
             }
-            return std::vector<tinyHandle>();
+            return std::vector<Asc::Handle>();
         },
         // LClick
-        [&](tinyHandle h) { 
+        [&](Asc::Handle h) { 
             State::setExpanded(h, !State::isExpanded(h));
 
-            const tinyNodeFS* node = fs.fNode(h);
+            const Asc::NodeFS* node = fs.fNode(h);
             if (!node || node->isFolder()) return;
 
-            tinyHandle dHandle = fs.dataHandle(h);
+            Asc::Handle dHandle = fs.dataHandle(h);
 
             // Open a new script editor tab if not already open
             if (dHandle.is<tinyScript>()) {
@@ -2018,9 +2018,9 @@ static void RenderFileNodeHierarchy() {
                 // for (auto& tab : Editor::tabs) {
                 for (size_t i = 0; i < Editor::tabs.size(); ++i) {
                     Editor::Tab& tab = Editor::tabs[i];
-                    tinyHandle* tabHandle = tab.getState<tinyHandle>("handle");
-                    tinyType::ID* tabType = tab.getState<tinyType::ID>("type");
-                    if (tabHandle && tabType && *tabHandle == h && *tabType == tinyType::TypeID<tinyScript>()) {
+                    Asc::Handle* tabHandle = tab.getState<Asc::Handle>("handle");
+                    Asc::Type::ID* tabType = tab.getState<Asc::Type::ID>("type");
+                    if (tabHandle && tabType && *tabHandle == h && *tabType == Asc::Type::TypeID<tinyScript>()) {
                         openTabIndex = static_cast<int>(i);
                         break;
                     }
@@ -2037,8 +2037,8 @@ static void RenderFileNodeHierarchy() {
             }
         },
         // RClick
-        [&](tinyHandle h) {
-            const tinyFS::Node* node = fs.fNode(h);
+        [&](Asc::Handle h) {
+            const Asc::FS::Node* node = fs.fNode(h);
             if (!node) {
                 ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid Node!");
                 return;
@@ -2051,13 +2051,13 @@ static void RenderFileNodeHierarchy() {
 
             if (!node->isFolder()) { // Write colored extension
                 ImGui::SameLine();
-                tinyFS::TypeInfo* typeInfo = fs.typeInfo(fs.typeID(h));
+                Asc::FS::TypeInfo* typeInfo = fs.typeInfo(fs.typeID(h));
                 ImGui::TextColored(IMVEC4_COLOR3(typeInfo->color, 1.0f), ".%s", typeInfo->c_str());
             }
 
             ImGui::Separator();
 
-            tinyHandle dHandle = fs.dataHandle(h);
+            Asc::Handle dHandle = fs.dataHandle(h);
             if (dHandle.is<rtScene>()) {
                 rtScene* scene = fs.rGet<rtScene>(dHandle);
                 if (RenderMenuItemToggle("Make Active", "Active", State::isActiveScene(dHandle))) {
@@ -2080,7 +2080,7 @@ static void RenderFileNodeHierarchy() {
                 }
             }
             ImGui::Separator();
-            if (ImGui::MenuItem("Rename", nullptr, nullptr, State::renamed == tinyHandle())) {
+            if (ImGui::MenuItem("Rename", nullptr, nullptr, State::renamed == Asc::Handle())) {
                 strcpy(State::renameBuffer, node->cname());
                 State::renamed = h;
             }
@@ -2091,11 +2091,11 @@ static void RenderFileNodeHierarchy() {
             if (ImGui::MenuItem("Delete", nullptr, nullptr, canDelete)) projRef->fRemove(h);
         },
         // DbClick - Do nothing for now
-        [&fs](tinyHandle h) {
-            const tinyFS::Node* node = fs.fNode(h);
+        [&fs](Asc::Handle h) {
+            const Asc::FS::Node* node = fs.fNode(h);
             if (!node || node->isFolder()) return;
 
-            tinyHandle dHandle = fs.dataHandle(h);
+            Asc::Handle dHandle = fs.dataHandle(h);
             
             // Scene file -> make active
             if (dHandle.is<rtScene>()) {
@@ -2106,9 +2106,9 @@ static void RenderFileNodeHierarchy() {
             }
         },
         // Hover
-        [&fs](tinyHandle h) {
+        [&fs](Asc::Handle h) {
             if (ImGui::BeginTooltip()) {
-                const tinyFS::Node* node = fs.fNode(h);
+                const Asc::FS::Node* node = fs.fNode(h);
                 if (!node) {
                     ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Invalid Node!");
                     ImGui::EndTooltip();
@@ -2122,9 +2122,9 @@ static void RenderFileNodeHierarchy() {
                 } else {
                     ImGui::SameLine();
                     
-                    tinyHandle dHandle = fs.dataHandle(h);
+                    Asc::Handle dHandle = fs.dataHandle(h);
 
-                    tinyFS::TypeInfo* typeInfo = fs.typeInfo(dHandle.tID());
+                    Asc::FS::TypeInfo* typeInfo = fs.typeInfo(dHandle.tID());
                     ImGui::TextColored(IMVEC4_COLOR3(typeInfo->color, 1.0f), ".%s", typeInfo->c_str());
 
                     // If texture, show preview
@@ -2140,8 +2140,8 @@ static void RenderFileNodeHierarchy() {
             }
         },
         // Drag
-        [&fs](tinyHandle h) {
-            const tinyFS::Node* node = fs.fNode(h);
+        [&fs](Asc::Handle h) {
+            const Asc::FS::Node* node = fs.fNode(h);
             if (!node) return;
 
             State::dragged = h;
@@ -2151,18 +2151,18 @@ static void RenderFileNodeHierarchy() {
             ImGui::Text("Dragging: %s", node->cname());
             ImGui::Separator();
 
-            const tinyFS::TypeInfo* typeInfo = fs.typeInfo(fs.dataHandle(h).tID());
+            const Asc::FS::TypeInfo* typeInfo = fs.typeInfo(fs.dataHandle(h).tID());
             ImGui::TextColored(IMVEC4_COLOR3(typeInfo->color, 1.0f), "Type: .%s", typeInfo->c_str());
         },
         // Drop
-        [&fs](tinyHandle h) {
+        [&fs](Asc::Handle h) {
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PAYLOAD")) {
                 Payload* data = (Payload*)payload->Data;
-                if (data->is<tinyNodeFS>() && fs.move(data->handle, h)) {
+                if (data->is<Asc::NodeFS>() && fs.move(data->handle, h)) {
                     State::setExpanded(h, true);
                     State::selected = data->handle;
                 }
-                State::dragged = tinyHandle();
+                State::dragged = Asc::Handle();
             }
         }
     );
@@ -2174,7 +2174,7 @@ static void RenderFileNodeHierarchy() {
 
 
 // Scene node inspector
-static void RenderTRANFM3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle) {
+static void RenderTRANFM3D(const Asc::FS& fs, rtScene* scene, Asc::Handle nHandle) {
     rtTRANFM3D* trfm3D = scene->nGetComp<rtTRANFM3D>(nHandle);
     if (!trfm3D) return;
 
@@ -2239,14 +2239,14 @@ static void RenderTRANFM3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle)
     }
 }
 
-static void RenderMESHRD3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle) {
+static void RenderMESHRD3D(const Asc::FS& fs, rtScene* scene, Asc::Handle nHandle) {
     rtMESHRD3D* meshRD = scene->nGetComp<rtMESHRD3D>(nHandle);
     if (!meshRD) return;
 
-    tinyHandle meshHandle = meshRD->meshHandle();
+    Asc::Handle meshHandle = meshRD->meshHandle();
     const tinyMesh* mesh = fs.rGet<tinyMesh>(meshHandle);
 
-    tinyHandle meshFHandle = fs.rDataToFile(meshHandle);
+    Asc::Handle meshFHandle = fs.rDataToFile(meshHandle);
 
     RenderDragField(
         [&fs, meshFHandle]() { return fs.nameCStr(meshFHandle); },
@@ -2261,10 +2261,10 @@ static void RenderMESHRD3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle)
             if (ImGui::BeginDragDropTarget()) {
                 if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PAYLOAD")) {
                     Payload* data = (Payload*)payload->Data;
-                    if (!data->is<tinyNodeFS>()) { ImGui::EndDragDropTarget(); return; }
+                    if (!data->is<Asc::NodeFS>()) { ImGui::EndDragDropTarget(); return; }
 
-                    tinyHandle fHandle = data->handle;
-                    tinyHandle dHandle = fs.dataHandle(fHandle);
+                    Asc::Handle fHandle = data->handle;
+                    Asc::Handle dHandle = fs.dataHandle(fHandle);
 
                     const tinyMesh* rMesh = fs.rGet<tinyMesh>(dHandle);
                     if (!rMesh) { ImGui::EndDragDropTarget(); return; }
@@ -2289,7 +2289,7 @@ static void RenderMESHRD3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle)
         }
     );
 
-    tinyHandle skeleNodeHandle = meshRD->skeleNodeHandle();
+    Asc::Handle skeleNodeHandle = meshRD->skeleNodeHandle();
 
     // For skeleton node
     RenderDragField(
@@ -2308,7 +2308,7 @@ static void RenderMESHRD3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle)
                 Payload* data = (Payload*)payload->Data;
                 if (!data->is<rtNode>()) { ImGui::EndDragDropTarget(); return; }
 
-                tinyHandle nHandle = data->handle;
+                Asc::Handle nHandle = data->handle;
                 rtSKELE3D* skel3D = scene->nGetComp<rtSKELE3D>(nHandle);
                 if (!skel3D || !skel3D->rSkeleton()) { ImGui::EndDragDropTarget(); return; }
 
@@ -2357,17 +2357,17 @@ static void RenderMESHRD3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle)
 
 /*
 
-static void RenderBONE3D(const tinyFS& fs, rtScene* scene, rtScene::NWrap& wrap) {
+static void RenderBONE3D(const Asc::FS& fs, rtScene* scene, rtScene::NWrap& wrap) {
     tinyRT_BONE3D* bone3D = wrap.bone3D;
     if (!bone3D) return;
 
-    tinyHandle skeleNodeHandle = bone3D->skeleNodeHandle;
+    Asc::Handle skeleNodeHandle = bone3D->skeleNodeHandle;
 }
 
 */
 
 
-static void RenderSKEL3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle) {
+static void RenderSKEL3D(const Asc::FS& fs, rtScene* scene, Asc::Handle nHandle) {
     rtSKELE3D* skel3D = scene->nGetComp<rtSKELE3D>(nHandle);
     if (!skel3D) return;
 
@@ -2383,10 +2383,10 @@ static void RenderSKEL3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle) {
             if (ImGui::BeginDragDropTarget()) {
                 if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PAYLOAD")) {
                     Payload* data = (Payload*)payload->Data;
-                    if (!data->is<tinyNodeFS>()) { ImGui::EndDragDropTarget(); return; }
+                    if (!data->is<Asc::NodeFS>()) { ImGui::EndDragDropTarget(); return; }
 
-                    tinyHandle fHandle = data->handle;
-                    tinyHandle dHandle = fs.dataHandle(fHandle);
+                    Asc::Handle fHandle = data->handle;
+                    Asc::Handle dHandle = fs.dataHandle(fHandle);
                     if (!dHandle.is<tinySkeleton>()) { ImGui::EndDragDropTarget(); return; }
 
                     skel3D->init(&fs.r().view<tinySkeleton>(), dHandle);
@@ -2400,9 +2400,9 @@ static void RenderSKEL3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle) {
             ImGui::BeginTooltip();
 
             if (skel3D->rSkeleton()) {
-                tinyHandle skeleHandle = skel3D->skeleHandle();
+                Asc::Handle skeleHandle = skel3D->skeleHandle();
 
-                tinyHandle fHandle = fs.rDataToFile(skeleHandle);
+                Asc::Handle fHandle = fs.rDataToFile(skeleHandle);
                 const char* fullPath = fs.path(fHandle);
                 fullPath = fullPath ? fullPath : "<Invalid Skeleton>";
 
@@ -2424,14 +2424,14 @@ static void RenderSKEL3D(const tinyFS& fs, rtScene* scene, tinyHandle nHandle) {
     }
 }
 
-static void RenderSCRIPT(const tinyFS& fs, rtScene* scene, tinyHandle nHandle) {
+static void RenderSCRIPT(const Asc::FS& fs, rtScene* scene, Asc::Handle nHandle) {
     rtSCRIPT* scriptComp = scene->nGetComp<rtSCRIPT>(nHandle);
     if (!scriptComp) return;
 
     rtNode* node = scene->node(nHandle);
 
-    tinyHandle scriptHandle = scriptComp->scriptHandle;
-    tinyHandle scriptFHandle = fs.rDataToFile(scriptHandle);
+    Asc::Handle scriptHandle = scriptComp->scriptHandle;
+    Asc::Handle scriptFHandle = fs.rDataToFile(scriptHandle);
 
     const tinyScript* scriptPtr = fs.rGet<tinyScript>(scriptHandle);
 
@@ -2446,10 +2446,10 @@ static void RenderSCRIPT(const tinyFS& fs, rtScene* scene, tinyHandle nHandle) {
             if (ImGui::BeginDragDropTarget()) {
                 if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PAYLOAD")) {
                     Payload* data = (Payload*)payload->Data;
-                    if (!data->is<tinyNodeFS>()) { ImGui::EndDragDropTarget(); return; }
+                    if (!data->is<Asc::NodeFS>()) { ImGui::EndDragDropTarget(); return; }
                     
-                    tinyHandle fHandle = data->handle;
-                    tinyHandle dHandle = fs.dataHandle(fHandle);
+                    Asc::Handle fHandle = data->handle;
+                    Asc::Handle dHandle = fs.dataHandle(fHandle);
                     if (!dHandle.is<tinyScript>()) { ImGui::EndDragDropTarget(); return; }
 
                     scriptPtr = fs.rGet<tinyScript>(dHandle);
@@ -2535,7 +2535,7 @@ static void RenderSceneNodeInspector(tinyProject* project) {
     rtScene* scene = project->scene(State::sceneHandle);
     if (!scene) return;
 
-    tinyHandle handle = State::selected;
+    Asc::Handle handle = State::selected;
     if (!handle.is<rtNode>()) return;
 
     // rtScene::NWrap wrap = scene->nWrap(handle);
@@ -2551,7 +2551,7 @@ static void RenderSceneNodeInspector(tinyProject* project) {
     ImGui::SameLine();
     ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.9f, 1.0f), "[HDL: %zu, %zu]", handle.index, handle.version);
 
-    const tinyFS& fs = project->fs();
+    const Asc::FS& fs = project->fs();
 
     // Collect components
     std::vector<CompInfo> components;
@@ -2599,24 +2599,24 @@ static void RenderSceneNodeInspector(tinyProject* project) {
 
 // File inspector
 static void RenderFileInspector(tinyProject* project) {
-    tinyFS& fs = project->fs();
+    Asc::FS& fs = project->fs();
 
-    tinyHandle handle = State::selected;
-    if (!handle.is<tinyNodeFS>()) return;
+    Asc::Handle handle = State::selected;
+    if (!handle.is<Asc::NodeFS>()) return;
 
-    const tinyFS::Node* node = fs.fNode(handle);
+    const Asc::FS::Node* node = fs.fNode(handle);
     if (!node) {
         ImGui::Text("Invalid file.");
         return;
     }
 
     // typeHandle typeHdl = fs.fTypeHandle(fHandle);
-    tinyHandle dHandle = fs.dataHandle(handle);
+    Asc::Handle dHandle = fs.dataHandle(handle);
 
     ImGui::BeginGroup();
     ImGui::Text("%s", node->cname());
 
-    const tinyFS::TypeInfo* typeInfo = fs.typeInfo(handle);
+    const Asc::FS::TypeInfo* typeInfo = fs.typeInfo(handle);
     if (!typeInfo->ext.empty()) {
         ImGui::SameLine();
         ImGui::TextColored(IMVEC4_COLOR3(typeInfo->color, 1.0), ".%s", typeInfo->c_str());
@@ -2628,7 +2628,7 @@ static void RenderFileInspector(tinyProject* project) {
 
         // ".root" + path + ".ext"
         ImGui::Text("%s", fs.path(handle)); ImGui::SameLine();
-        // tinyFS::TypeExt typeExt = fs.fTypeExt(handle); 
+        // Asc::FS::TypeExt typeExt = fs.fTypeExt(handle); 
         const auto* typeInfo = fs.typeInfo(handle);
         ImGui::TextColored(IMVEC4_COLOR3(typeInfo->color, 1.0), ".%s", typeInfo->c_str());
 
@@ -2644,9 +2644,9 @@ static void RenderFileInspector(tinyProject* project) {
         ImGui::Indent();
 
         // Display all types of children in the format Type (with color): count
-        std::map<tinyType::ID, int> typeCounts;
+        std::map<Asc::Type::ID, int> typeCounts;
         for (const auto& childHdl : node->children) {
-            tinyHandle childDataHandle = fs.dataHandle(childHdl);
+            Asc::Handle childDataHandle = fs.dataHandle(childHdl);
             typeCounts[childDataHandle.typeID]++;
         }
         for (const auto& [typeID, count] : typeCounts) {
@@ -2688,10 +2688,10 @@ static void RenderFileInspector(tinyProject* project) {
         glm::vec4& baseColor = material->baseColor;
         ImGui::ColorEdit4("Base Color", &baseColor.x);
 
-        auto texDragField = [&](const char* label, tinyHandle& texHandle, ImVec4 activeColor = ImVec4(0.8f, 0.8f, 0.8f, 1.0f)) {
+        auto texDragField = [&](const char* label, Asc::Handle& texHandle, ImVec4 activeColor = ImVec4(0.8f, 0.8f, 0.8f, 1.0f)) {
             const tinyTexture* tex = fs.rGet<tinyTexture>(texHandle);
 
-            tinyHandle fHandle = fs.rDataToFile(texHandle);
+            Asc::Handle fHandle = fs.rDataToFile(texHandle);
             const char* fullPath = fs.path(fHandle);
             fullPath = fullPath ? fullPath : "<Invalid Path>";
 
@@ -2711,10 +2711,10 @@ static void RenderFileInspector(tinyProject* project) {
 
                     if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("PAYLOAD")) {
                         Payload* data = (Payload*)payload->Data;
-                        if (!data->is<tinyNodeFS>()) { ImGui::EndDragDropTarget(); return; }
+                        if (!data->is<Asc::NodeFS>()) { ImGui::EndDragDropTarget(); return; }
 
-                        tinyHandle fHandle = data->handle;
-                        tinyHandle dHandle = fs.dataHandle(fHandle);
+                        Asc::Handle fHandle = data->handle;
+                        Asc::Handle dHandle = fs.dataHandle(fHandle);
                         const tinyTexture* tex = fs.rGet<tinyTexture>(dHandle);
                         if (!tex) { ImGui::EndDragDropTarget(); return; }
 
@@ -2731,7 +2731,7 @@ static void RenderFileInspector(tinyProject* project) {
                         ImGui::TextColored(ImVec4(0.2f, 0.8f, 0.2f, 1.0f), label);
                         ImGui::Separator();
 
-                        tinyHandle fHandle = fs.rDataToFile(texHandle);
+                        Asc::Handle fHandle = fs.rDataToFile(texHandle);
                         const char* fullPath = fs.path(fHandle);
                         fullPath = fullPath ? fullPath : "<Invalid Path>";
 
@@ -2753,7 +2753,7 @@ static void RenderFileInspector(tinyProject* project) {
             // Right click for context menu
             if (ImGui::BeginPopupContextItem(label)) {
                 if (ImGui::MenuItem("Remove")) {
-                    texHandle = tinyHandle();
+                    texHandle = Asc::Handle();
                 }
                 ImGui::EndPopup();
             }
@@ -2789,7 +2789,7 @@ void tinyApp::renderUI() {
 
     float deltaTime = fpsRef.deltaTime;
 
-    tinyFS& fs = project->fs();
+    Asc::FS& fs = project->fs();
 
 
     // ===== THEME EDITOR WINDOW =====
@@ -2841,7 +2841,7 @@ void tinyApp::renderUI() {
     // ===== HIERARCHY WINDOW - Scene & File System =====
 
     if (tinyUI::Begin("Hierarchy", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse)) {
-        tinyHandle sceneHandle = State::sceneHandle;
+        Asc::Handle sceneHandle = State::sceneHandle;
 
         if (!curScene) {
             ImGui::Text("No active scene");
@@ -3033,15 +3033,15 @@ void tinyApp::renderUI() {
 
     // Fun debug: Hold space to instantiate the currently selected scene file to the root of the current scene
     if (ImGui::IsKeyDown(ImGuiKey_Space)) {
-        tinyHandle fHandle = State::selected;
-        if (fHandle.is<tinyNodeFS>()) {
-            tinyFS& fs = project->fs();
-            tinyHandle dHandle = fs.dataHandle(fHandle);
+        Asc::Handle fHandle = State::selected;
+        if (fHandle.is<Asc::NodeFS>()) {
+            Asc::FS& fs = project->fs();
+            Asc::Handle dHandle = fs.dataHandle(fHandle);
             if (dHandle.is<rtScene>()) {
                 rtScene* srcScene = fs.rGet<rtScene>(dHandle);
                 rtScene* curScene = project->scene(State::sceneHandle);
                 if (srcScene && curScene) {
-                    tinyHandle nodeHdl = curScene->instantiate(dHandle);
+                    Asc::Handle nodeHdl = curScene->instantiate(dHandle);
 
                     // Spawn them at completely random position
                     glm::vec3 randPos = glm::vec3(

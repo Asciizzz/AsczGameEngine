@@ -5,7 +5,7 @@ using namespace tinyVk;
 
 // A quick function for range validation
 template<typename T>
-bool validHandle(tinyHandle handle, const std::vector<T>& vec) {
+bool validHandle(Asc::Handle handle, const std::vector<T>& vec) {
     return static_cast<bool>(handle) && handle.index < vec.size();
 }
 
@@ -14,9 +14,9 @@ bool validIndex(int index, const std::vector<T>& vec) {
     return index >= 0 && static_cast<size_t>(index) < vec.size();
 }
 
-tinyHandle linkHandle(int index, const std::vector<tinyHandle>& vec) {
+Asc::Handle linkHandle(int index, const std::vector<Asc::Handle>& vec) {
     if (index < 0 || static_cast<size_t>(index) >= vec.size()) {
-        return tinyHandle();
+        return Asc::Handle();
     }
     return vec[index];
 }
@@ -42,27 +42,27 @@ tinyProject::~tinyProject() {
 #include "tinyRT/rtMesh.hpp"
 #include "tinyRT/rtSkeleton.hpp"
 
-tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
+Asc::Handle tinyProject::addModel(tinyModel& model, Asc::Handle parentFolder) {
     parentFolder = parentFolder ? parentFolder : fs_->rootHandle();
 
-    tinyHandle fnModelFolder = fs_->createFolder(model.name, parentFolder);
+    Asc::Handle fnModelFolder = fs_->createFolder(model.name, parentFolder);
 
     // Import textures to registry
-    std::vector<tinyHandle> glbTexRHandle;
+    std::vector<Asc::Handle> glbTexRHandle;
     if (!model.textures.empty()) {
-        tinyHandle fnTexFolder = fs_->createFolder("Textures", fnModelFolder);
+        Asc::Handle fnTexFolder = fs_->createFolder("Textures", fnModelFolder);
         for (auto& mTexture : model.textures) {
             mTexture.texture.vkCreate(dvk_);
 
-            tinyHandle fnHandle = fs_->createFile(mTexture.name, std::move(mTexture.texture), fnTexFolder);
-            tinyHandle dataHandle = fs_->dataHandle(fnHandle);
+            Asc::Handle fnHandle = fs_->createFile(mTexture.name, std::move(mTexture.texture), fnTexFolder);
+            Asc::Handle dataHandle = fs_->dataHandle(fnHandle);
             glbTexRHandle.push_back(dataHandle);
         }
     }
 
-    std::vector<tinyHandle> glmMatRHandle;
+    std::vector<Asc::Handle> glmMatRHandle;
     if (!model.materials.empty()) {
-        tinyHandle fnMatFolder = fs_->createFolder("Materials", fnModelFolder);
+        Asc::Handle fnMatFolder = fs_->createFolder("Materials", fnModelFolder);
 
         for (const auto& mMaterial : model.materials) {
             tinyMaterial material;
@@ -70,24 +70,24 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
             // Set material base color from model
             material.baseColor = mMaterial.baseColor;
 
-            tinyHandle albHandle = linkHandle(mMaterial.albIndx, glbTexRHandle);
+            Asc::Handle albHandle = linkHandle(mMaterial.albIndx, glbTexRHandle);
             material.albTexture = albHandle;
 
-            tinyHandle nrmlHandle = linkHandle(mMaterial.nrmlIndx, glbTexRHandle);
+            Asc::Handle nrmlHandle = linkHandle(mMaterial.nrmlIndx, glbTexRHandle);
             material.nrmlTexture = nrmlHandle;
 
-            tinyHandle emissHandle = linkHandle(mMaterial.emisIndx, glbTexRHandle);
+            Asc::Handle emissHandle = linkHandle(mMaterial.emisIndx, glbTexRHandle);
             material.emissTexture = emissHandle;
 
-            tinyHandle fnHandle = fs_->createFile(mMaterial.name, std::move(material), fnMatFolder);
-            tinyHandle dataHandle = fs_->dataHandle(fnHandle);
+            Asc::Handle fnHandle = fs_->createFile(mMaterial.name, std::move(material), fnMatFolder);
+            Asc::Handle dataHandle = fs_->dataHandle(fnHandle);
             glmMatRHandle.push_back(dataHandle);
         }
     }
 
-    std::vector<tinyHandle> glbMeshRHandle;
+    std::vector<Asc::Handle> glbMeshRHandle;
     if (!model.meshes.empty()) {
-        tinyHandle fnMeshFolder = fs_->createFolder("Meshes", fnModelFolder);
+        Asc::Handle fnMeshFolder = fs_->createFolder("Meshes", fnModelFolder);
 
         for (auto& mMesh : model.meshes) {
             mMesh.mesh.vkCreate(dvk_, drawable_->vrtxExtLayout(), drawable_->vrtxExtPool());
@@ -98,39 +98,39 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
                 }
             }
 
-            tinyHandle fnHandle = fs_->createFile(mMesh.name, std::move(mMesh.mesh), fnMeshFolder);
-            tinyHandle dataHandle = fs_->dataHandle(fnHandle);
+            Asc::Handle fnHandle = fs_->createFile(mMesh.name, std::move(mMesh.mesh), fnMeshFolder);
+            Asc::Handle dataHandle = fs_->dataHandle(fnHandle);
             glbMeshRHandle.push_back(dataHandle);
         }
     }
 
     // Import skeletons to registry
-    std::vector<tinyHandle> glbSkeleRHandle;
+    std::vector<Asc::Handle> glbSkeleRHandle;
     if (!model.skeletons.empty()) {
-        tinyHandle fnSkeleFolder = fs_->createFolder("Skeletons", fnModelFolder);
+        Asc::Handle fnSkeleFolder = fs_->createFolder("Skeletons", fnModelFolder);
         for (auto& mSkeleton : model.skeletons) {
 
-            tinyHandle fnHandle = fs_->createFile(mSkeleton.name, std::move(mSkeleton.skeleton), fnSkeleFolder);
-            tinyHandle dataHandle = fs_->dataHandle(fnHandle);
+            Asc::Handle fnHandle = fs_->createFile(mSkeleton.name, std::move(mSkeleton.skeleton), fnSkeleFolder);
+            Asc::Handle dataHandle = fs_->dataHandle(fnHandle);
             glbSkeleRHandle.push_back(dataHandle);
         }
     }
 
     // If scene has no nodes, return early
-    if (model.nodes.empty()) return tinyHandle();
+    if (model.nodes.empty()) return Asc::Handle();
 
     // Create scene with nodes - preserve hierarchy but remap resource references
     rtScene scene;
     scene.init(sharedRes_);
 
     // Recursively add nodes
-    std::unordered_map<int, tinyHandle> nodeMap; // Original index to new handle
+    std::unordered_map<int, Asc::Handle> nodeMap; // Original index to new handle
 
-    std::function<void(int, tinyHandle)> addNodeRecursive = [&](int nodeIndex, tinyHandle parentHandle) {
+    std::function<void(int, Asc::Handle)> addNodeRecursive = [&](int nodeIndex, Asc::Handle parentHandle) {
         const tinyModel::Node& ogNode = model.nodes[nodeIndex];
 
         // Ignore the root node for naming purposes
-        tinyHandle nodeHandle = nodeIndex ? scene.nAdd(ogNode.name, parentHandle) : scene.rootHandle();
+        Asc::Handle nodeHandle = nodeIndex ? scene.nAdd(ogNode.name, parentHandle) : scene.rootHandle();
         nodeMap[nodeIndex] = nodeHandle;
 
         if (ogNode.hasTRFM3D()) {
@@ -141,11 +141,11 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
         if (ogNode.hasMESHR()) {
             rtMESHRD3D* meshrd = scene.nWriteComp<rtMESHRD3D>(nodeHandle);
 
-            tinyHandle meshHandle = linkHandle(ogNode.MESHRD_meshIndx, glbMeshRHandle);
+            Asc::Handle meshHandle = linkHandle(ogNode.MESHRD_meshIndx, glbMeshRHandle);
             if (const tinyMesh* meshPtr = fs().rGet<tinyMesh>(meshHandle)) {
-                tinyHandle skeleNodeHandle =
+                Asc::Handle skeleNodeHandle =
                     nodeMap.count(ogNode.MESHRD_skeleNodeIndx) ?
-                    nodeMap[ogNode.MESHRD_skeleNodeIndx] : tinyHandle();
+                    nodeMap[ogNode.MESHRD_skeleNodeIndx] : Asc::Handle();
 
                 meshrd->
                     assignMesh(meshHandle, meshPtr).
@@ -165,17 +165,17 @@ tinyHandle tinyProject::addModel(tinyModel& model, tinyHandle parentFolder) {
             addNodeRecursive(childIndex, nodeHandle);
         }
     };
-    addNodeRecursive(0, tinyHandle());
+    addNodeRecursive(0, Asc::Handle());
 
     // Rename the root node to the model's name
     scene.root()->name = model.name;
 
     // Add scene to registry
-    tinyHandle fnHandle = fs_->createFile(model.name, std::move(scene), fnModelFolder);
+    Asc::Handle fnHandle = fs_->createFile(model.name, std::move(scene), fnModelFolder);
     return fs_->dataHandle(fnHandle); // Return the scene's registry handle
 }
 
-void tinyProject::addSceneInstance(tinyHandle fromHandle, tinyHandle toHandle, tinyHandle parentHandle) {
+void tinyProject::addSceneInstance(Asc::Handle fromHandle, Asc::Handle toHandle, Asc::Handle parentHandle) {
     if (fromHandle == toHandle) return; // Prevent self-copy
 
     if (rtScene* toScene = r().get<rtScene>(toHandle)) {
@@ -186,7 +186,7 @@ void tinyProject::addSceneInstance(tinyHandle fromHandle, tinyHandle toHandle, t
 // ------------------- Filesystem Setup -------------------
 
 void tinyProject::setupResources() {
-    fs_ = MakeUnique<tinyFS>();
+    fs_ = MakeUnique<Asc::FS>();
     drawable_ = MakeUnique<tinyDrawable>();
     drawable_->init({
         2, // max frames in flight 
@@ -205,20 +205,20 @@ void tinyProject::setupResources() {
 
     // ------------------ Standard files ------------------
 
-    tinyFS::TypeInfo* ascn = fs_->typeInfo<rtScene>();
+    Asc::FS::TypeInfo* ascn = fs_->typeInfo<rtScene>();
     ascn->ext = "ascn"; ascn->rmOrder = 10;
     ascn->color[0] = 102; ascn->color[1] = 255; ascn->color[2] = 102;
 
-    tinyFS::TypeInfo* amat = fs_->typeInfo<tinyMaterial>();
+    Asc::FS::TypeInfo* amat = fs_->typeInfo<tinyMaterial>();
     amat->ext = "amat";
     amat->color[0] = 255; amat->color[1] = 102; amat->color[2] = 255;
 
-    tinyFS::TypeInfo* atex = fs_->typeInfo<tinyTexture>();
+    Asc::FS::TypeInfo* atex = fs_->typeInfo<tinyTexture>();
     atex->ext = "atex"; atex->rmOrder = 1;
     atex->color[0] = 102; atex->color[1] = 102; atex->color[2] = 255;
 
-    atex->onCreate = [&](tinyHandle fileHandle, tinyFS& fs, void* userData) {
-        tinyHandle dataHandle = fs.dataHandle(fileHandle);
+    atex->onCreate = [&](Asc::Handle fileHandle, Asc::FS& fs, void* userData) {
+        Asc::Handle dataHandle = fs.dataHandle(fileHandle);
         tinyTexture* texture = fs.rGet<tinyTexture>(dataHandle);
         if (!texture) return;
 
@@ -228,8 +228,8 @@ void tinyProject::setupResources() {
         }
     };
 
-    atex->onDelete = [&](tinyHandle fileHandle, tinyFS& fs, void* userData) {
-        tinyHandle dataHandle = fs.dataHandle(fileHandle);
+    atex->onDelete = [&](Asc::Handle fileHandle, Asc::FS& fs, void* userData) {
+        Asc::Handle dataHandle = fs.dataHandle(fileHandle);
 
         // Remove from tinyDrawable
         if (tinyDrawable* drawable = drawable_.get()) {
@@ -237,15 +237,15 @@ void tinyProject::setupResources() {
         }
     };
 
-    tinyFS::TypeInfo* amsh = fs_->typeInfo<tinyMesh>();
+    Asc::FS::TypeInfo* amsh = fs_->typeInfo<tinyMesh>();
     amsh->ext = "amsh";
     amsh->color[0] = 255; amsh->color[1] = 255; amsh->color[2] = 102;
 
-    tinyFS::TypeInfo* askl = fs_->typeInfo<tinySkeleton>();
+    Asc::FS::TypeInfo* askl = fs_->typeInfo<tinySkeleton>();
     askl->ext = "askl";
     askl->color[0] = 102; askl->color[1] = 255; askl->color[2] = 255;
 
-    tinyFS::TypeInfo* ascr = fs_->typeInfo<tinyScript>();
+    Asc::FS::TypeInfo* ascr = fs_->typeInfo<tinyScript>();
     ascr->ext = "ascr"; ascr->rmOrder = 2;
     ascr->color[0] = 204; ascr->color[1] = 204; ascr->color[2] = 51;
 
@@ -254,20 +254,20 @@ void tinyProject::setupResources() {
     // Resources that lives in the registry but not registered (pun intended)
     // as files in the filesystem
 
-    tinyFS::TypeInfo* descPool = fs_->typeInfo<tinyVk::DescPool>();
+    Asc::FS::TypeInfo* descPool = fs_->typeInfo<tinyVk::DescPool>();
     descPool->rmOrder = UINT8_MAX;
 
-    tinyFS::TypeInfo* descLayout = fs_->typeInfo<tinyVk::DescSLayout>();
+    Asc::FS::TypeInfo* descLayout = fs_->typeInfo<tinyVk::DescSLayout>();
     descLayout->rmOrder = UINT8_MAX;
 
-    tinyFS::TypeInfo* descSet = fs_->typeInfo<tinyVk::DescSet>();
+    Asc::FS::TypeInfo* descSet = fs_->typeInfo<tinyVk::DescSet>();
     descSet->rmOrder = UINT8_MAX - 1; // Delete before desc pools
 
-    tinyFS::TypeInfo* dataBuffer = fs_->typeInfo<tinyVk::DataBuffer>();
+    Asc::FS::TypeInfo* dataBuffer = fs_->typeInfo<tinyVk::DataBuffer>();
     dataBuffer->rmOrder = UINT8_MAX - 2; // Delete before desc sets
 
     // ------------------ Other useful files ------------------
-    tinyFS::TypeInfo* atxt = fs_->typeInfo<tinyText>();
+    Asc::FS::TypeInfo* atxt = fs_->typeInfo<tinyText>();
     atxt->ext = "txt";
     atxt->color[0] = 153; atxt->color[1] = 153; atxt->color[2] = 153;
 
@@ -276,29 +276,29 @@ void tinyProject::setupResources() {
     rtScene mainScene;
     mainScene.init(sharedRes_);
 
-    tinyHandle mainSceneFileHandle = fs_->createFile("Main Scene", std::move(mainScene));
+    Asc::Handle mainSceneFileHandle = fs_->createFile("Main Scene", std::move(mainScene));
 
     mainSceneHandle = fs_->dataHandle(mainSceneFileHandle);
 }
 
 // ------------------ Pending Removals ------------------
 
-void tinyProject::fRemove(tinyHandle fileHandle) {
-    const tinyNodeFS* node = fs_->fNode(fileHandle);
+void tinyProject::fRemove(Asc::Handle fileHandle) {
+    const Asc::NodeFS* node = fs_->fNode(fileHandle);
     if (!node) return;
 
-    std::vector<tinyHandle> rmQueue = fs_->fQueue(fileHandle);
-    std::sort(rmQueue.begin(), rmQueue.end(), [&](tinyHandle a, tinyHandle b) {
-        const tinyFS::TypeInfo* tInfoA = fs().typeInfo(a);
-        const tinyFS::TypeInfo* tInfoB = fs().typeInfo(b);
+    std::vector<Asc::Handle> rmQueue = fs_->fQueue(fileHandle);
+    std::sort(rmQueue.begin(), rmQueue.end(), [&](Asc::Handle a, Asc::Handle b) {
+        const Asc::FS::TypeInfo* tInfoA = fs().typeInfo(a);
+        const Asc::FS::TypeInfo* tInfoB = fs().typeInfo(b);
         uint8_t orderA = tInfoA ? tInfoA->rmOrder : 255;
         uint8_t orderB = tInfoB ? tInfoB->rmOrder : 255;
 
         return orderA < orderB;
     });
 
-    for (tinyHandle h : rmQueue) {
-        tinyHandle dHandle = fs_->dataHandle(h);
+    for (Asc::Handle h : rmQueue) {
+        Asc::Handle dHandle = fs_->dataHandle(h);
 
         if (dHandle.is<tinyMesh>() ||
             dHandle.is<tinyMaterial>() ||
@@ -316,7 +316,7 @@ void tinyProject::execDeferredRms(DeferRmType type) {
     auto it = deferredRms_.find(type);
     if (it == deferredRms_.end()) return;
 
-    for (tinyHandle h : it->second) fs_->rmRaw(h);
+    for (Asc::Handle h : it->second) fs_->rmRaw(h);
 
     it->second.clear();
 }

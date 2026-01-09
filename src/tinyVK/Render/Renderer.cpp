@@ -256,7 +256,7 @@ void Renderer::drawTest(const tinyProject* project, const rtScene* scene, const 
 
     for (const auto& shaderGroup : shaderGroups) { // For each shader groups:
         // In the future you will change this to a r.get<tinyShader>(shaderHandle)
-        tinyHandle shaderHandle = shaderGroup.shader;
+        Asc::Handle shaderHandle = shaderGroup.shader;
         const PLineRaster* pipeline = testPipeline;
 
         pipeline->bindCmd(currentCmd);

@@ -147,7 +147,7 @@ void tinyDrawable::init(const CreateInfo& info) {
 
     // Add default empty texture at index 0
     writeImg(dvk_->device, texDescSet_, 0, 0, texSamplers_[0].sampler(), dummy_.texture.view(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-    texIdxMap_[tinyHandle()] = 0; // Map empty handle to index 0
+    texIdxMap_[Asc::Handle()] = 0; // Map empty handle to index 0
 
 // ------------------ Setup skin data ------------------
 
@@ -187,7 +187,7 @@ void tinyDrawable::init(const CreateInfo& info) {
     dummy_.mesh.vkCreate(dvk_, vrtxExtLayout_, vrtxExtPool_);
 }
 
-uint32_t tinyDrawable::addTexture(tinyHandle texHandle) noexcept {
+uint32_t tinyDrawable::addTexture(Asc::Handle texHandle) noexcept {
     auto it = texIdxMap_.find(texHandle);
     if (it != texIdxMap_.end()) return it->second;
 
@@ -215,8 +215,8 @@ uint32_t tinyDrawable::addTexture(tinyHandle texHandle) noexcept {
     return texIndex;
 }
 
-bool tinyDrawable::removeTexture(tinyHandle texHandle) noexcept {
-    if (texHandle == tinyHandle()) return false; // Cannot remove default empty texture
+bool tinyDrawable::removeTexture(Asc::Handle texHandle) noexcept {
+    if (texHandle == Asc::Handle()) return false; // Cannot remove default empty texture
 
     auto it = texIdxMap_.find(texHandle);
     if (it == texIdxMap_.end()) return false;
@@ -265,11 +265,11 @@ void tinyDrawable::startFrame(uint32_t frameIndex) noexcept {
 }
 
 void tinyDrawable::submit(const Entry& entry) noexcept {
-    tinyHandle meshHandle = entry.mesh;
+    Asc::Handle meshHandle = entry.mesh;
     size_t submeshIndex = entry.submesh;
 
     // Get or create SubmeshGroup
-    tinyHandle hash = entry.hash();
+    Asc::Handle hash = entry.hash();
     auto subIt = batchMap_.find(hash); // Entry hash -> SubmeshGroup index
 
     if (subIt == batchMap_.end()) {
@@ -279,12 +279,12 @@ void tinyDrawable::submit(const Entry& entry) noexcept {
         const tinyMesh::Submesh* submesh = rMesh->submesh(submeshIndex);
         if (!submesh) return;
 
-        tinyHandle materialHandle = submesh->material;
+        Asc::Handle materialHandle = submesh->material;
 
         // Check for material existence as well as getting/creating ShaderGroup
         auto shaderIt = batchMap_.find(materialHandle); // Material handle -> ShaderGroup index
         if (shaderIt == batchMap_.end()) {
-            tinyHandle shaderHandle;
+            Asc::Handle shaderHandle;
 
             // Retrieve submesh's material's shader
             if (const tinyMaterial* rMat = fsr_->get<tinyMaterial>(materialHandle)) {
@@ -369,7 +369,7 @@ void tinyDrawable::submit(const Entry& entry) noexcept {
     // If mesh entry uses a skeleton from a skeleton node
     const Entry::SkeleData& skeleData = entry.skeleData;
     if (skeleData.skinData && !skeleData.skinData->empty()) {
-        tinyHandle skeleNode = skeleData.skeleNode;
+        Asc::Handle skeleNode = skeleData.skeleNode;
 
         // If this skeleton node already registered, use existing range
         auto skinRangeIt = dataMap_.find(skeleNode);
@@ -402,7 +402,7 @@ void tinyDrawable::submit(const Entry& entry) noexcept {
     // If mesh has morph targets (node-level, each node has its own morph weights)
     const Entry::MorphData& morphData = entry.morphData;
     if (morphData.weights && !morphData.weights->empty()) {
-        tinyHandle nodeHandle = entry.morphData.node;
+        Asc::Handle nodeHandle = entry.morphData.node;
 
         // Check if we've already copied this node's morph weights
         auto mrphIt = dataMap_.find(nodeHandle);

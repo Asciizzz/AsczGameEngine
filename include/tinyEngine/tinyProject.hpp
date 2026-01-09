@@ -6,7 +6,7 @@
 #include "tinyCamera.hpp"
 #include "tinyGlobal.hpp"
 
-#include "tinyFS.hpp"
+#include "ascFS.hpp"
 
 #include "tinyRT/rtScene.hpp"
 #include "tinyDrawable.hpp"
@@ -21,9 +21,9 @@ public:
     // No move semantics, where tf would you even want to move it to?
 
     // Return the scene handle in the registry
-    tinyHandle addModel(tinyModel& model, tinyHandle parentFolder = tinyHandle()); // Returns scene handle - much simpler now!
+    Asc::Handle addModel(tinyModel& model, Asc::Handle parentFolder = Asc::Handle()); // Returns scene handle - much simpler now!
 
-    void addSceneInstance(tinyHandle fromHandle, tinyHandle toHandle, tinyHandle parentHandle = tinyHandle());
+    void addSceneInstance(Asc::Handle fromHandle, Asc::Handle toHandle, Asc::Handle parentHandle = Asc::Handle());
 
     // Descriptor accessors
 
@@ -38,11 +38,11 @@ public:
 
 
     // Filesystem and registry accessors
-    tinyFS& fs() { return *fs_; }
-    const tinyFS& fs() const { return *fs_; }
+    Asc::FS& fs() { return *fs_; }
+    const Asc::FS& fs() const { return *fs_; }
 
-    tinyRegistry& r() { return fs_->r(); }
-    const tinyRegistry& r() const { return fs_->r(); }
+    Asc::Reg& r() { return fs_->r(); }
+    const Asc::Reg& r() const { return fs_->r(); }
 
     tinyDrawable& drawable() { return *drawable_; }
 
@@ -52,9 +52,9 @@ public:
     tinyCamera* camera() const { return camera_.get(); }
     tinyGlobal* global() const { return global_.get(); }
 
-    tinyHandle mainSceneHandle;
+    Asc::Handle mainSceneHandle;
 
-    rtScene* scene(tinyHandle& sceneHandle = tinyHandle()) {
+    rtScene* scene(Asc::Handle& sceneHandle = Asc::Handle()) {
         sceneHandle = sceneHandle ? sceneHandle : mainSceneHandle;
         return r().get<rtScene>(sceneHandle);
     }
@@ -64,7 +64,7 @@ public:
         Vulkan, Audio
     };
 
-    void fRemove(tinyHandle fileHandle);
+    void fRemove(Asc::Handle fileHandle);
     void execDeferredRms(DeferRmType type);
     bool hasDeferredRms(DeferRmType type) const;
 
@@ -72,12 +72,12 @@ private:
     const tinyVk::Device* dvk_;
 
     // File removals that need special handling
-    UnorderedMap<DeferRmType, std::vector<tinyHandle>> deferredRms_;
+    UnorderedMap<DeferRmType, std::vector<Asc::Handle>> deferredRms_;
 
     UniquePtr<tinyGlobal> global_;
     UniquePtr<tinyCamera> camera_;
 
-    UniquePtr<tinyFS> fs_;
+    UniquePtr<Asc::FS> fs_;
     UniquePtr<tinyDrawable> drawable_;
     rtSceneRes sharedRes_;
 
@@ -87,7 +87,7 @@ private:
     void setupResources();
 
     template<typename T>
-    tinyHandle rAdd(T&& resource) {
+    Asc::Handle rAdd(T&& resource) {
         return r().emplace<T>(std::forward<T>(resource));
     }
 };

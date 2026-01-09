@@ -1,7 +1,7 @@
 #pragma once
 
 #include <glm/glm.hpp>
-#include "tinyType.hpp"
+#include "ascType.hpp"
 
 struct  tinyMaterial {
     struct alignas(16) Data { // Pure data, shader determines context
@@ -13,11 +13,11 @@ struct  tinyMaterial {
         glm::uvec4 uint2 = glm::uvec4(0);
     } data; // Total size: 96 bytes
 
-    tinyHandle shader;
+    Asc::Handle shader;
 
     // These all we need for now
     glm::vec4 baseColor;
-    tinyHandle albTexture;
-    tinyHandle nrmlTexture;
-    tinyHandle emissTexture;
+    Asc::Handle albTexture;
+    Asc::Handle nrmlTexture;
+    Asc::Handle emissTexture;
 }; 

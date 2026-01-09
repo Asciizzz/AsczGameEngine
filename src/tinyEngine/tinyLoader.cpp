@@ -676,7 +676,7 @@ void loadMesh(tinyMesh& mesh, const tinygltf::Model& gltfModel, const tinygltf::
         if (!vcolor.empty()) submesh.setVrtxColor(vcolor);
 
         // material
-        submesh.material = tinyHandle(primitive.material);
+        submesh.material = Asc::Handle(primitive.material);
 
 
         // --- 6) Morph targets: read per-primitive deltas ---
@@ -1096,7 +1096,7 @@ void loadAnimations(tinyModel& tinyModel, const tinygltf::Model& model, const st
                     tinyRT_ANIM3D::Channel morphChannel;
                     morphChannel.path = AnimePath::W;
                     morphChannel.target = tinyRT_ANIM3D::Channel::Target::Morph;
-                    morphChannel.node = tinyHandle(modelNodeIndex);
+                    morphChannel.node = Asc::Handle(modelNodeIndex);
                     morphChannel.index = static_cast<uint32_t>(morphIdx);
                     
                     // Create a dedicated sampler for this morph target
@@ -1161,11 +1161,11 @@ void loadAnimations(tinyModel& tinyModel, const tinygltf::Model& model, const st
                     int skeleNodeModelIndex = skeleNodeIt->second;
 
                     channel.target = tinyRT_ANIM3D::Channel::Target::Bone;
-                    channel.node = tinyHandle(skeleNodeModelIndex);
+                    channel.node = Asc::Handle(skeleNodeModelIndex);
                     channel.index = boneIndex;
                 }
             } else {
-                channel.node = tinyHandle(modelNodeIndex);
+                channel.node = Asc::Handle(modelNodeIndex);
             }
 
             // Set path for non-morph animations
@@ -1462,7 +1462,7 @@ tinyModel tinyLoader::loadModelFromOBJ(const std::string& filePath) {
         tinyMesh::Submesh submesh;
         submesh.setVrtxStatic(vertices);
         submesh.setIndxs(indices);
-        submesh.material = (materialId >= 0) ? tinyHandle(materialId) : tinyHandle();
+        submesh.material = (materialId >= 0) ? Asc::Handle(materialId) : Asc::Handle();
         submesh.ABmin = ABmin;
         submesh.ABmax = ABmax;
 

@@ -18,7 +18,7 @@ struct tinyScript {
 
     bool compile();
 
-    void update(void* rtScript, void* scene, tinyHandle nodeHandle, float deltaTime);
+    void update(void* rtScript, void* scene, Asc::Handle nodeHandle, float deltaTime);
 
     // Get internal Lua state for advanced operations (use with caution!)
     lua_State* luaState() const { return luaInstance_.state(); }

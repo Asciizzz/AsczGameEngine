@@ -2,7 +2,7 @@
 
 #include <unordered_set>
 
-#include "tinyRegistry.hpp"
+#include "ascReg.hpp"
 
 #include "tinyData/tinyMesh.hpp"
 #include "tinyData/tinyMaterial.hpp"
@@ -35,7 +35,7 @@ public:
 
     struct CreateInfo {
         uint32_t maxFramesInFlight = 2;
-        tinyRegistry* fsr = nullptr;
+        Asc::Reg* fsr = nullptr;
         const tinyVk::Device* dvk = nullptr;
     };
 
@@ -50,11 +50,11 @@ public:
     };
 
     struct Entry {
-        tinyHandle mesh;
+        Asc::Handle mesh;
         size_t submesh;
 
-        inline tinyHandle hash() const {
-            tinyHandle h{};
+        inline Asc::Handle hash() const {
+            Asc::Handle h{};
             uint64_t x = mesh.raw();
 
             // A simple 64-bit mixing function (very cheap, very good)
@@ -69,12 +69,12 @@ public:
         // Additional data
 
         struct SkeleData {
-            tinyHandle skeleNode; // For skin grouping
+            Asc::Handle skeleNode; // For skin grouping
             const std::vector<glm::mat4>* skinData = nullptr;
         } skeleData;
 
         struct MorphData {
-            tinyHandle node; // For morph grouping
+            Asc::Handle node; // For morph grouping
             const std::vector<float>* weights = nullptr;
         } morphData;
     };
@@ -98,15 +98,15 @@ public:
     };
 
     struct MeshGroup {
-        tinyHandle mesh;
+        Asc::Handle mesh;
         std::vector<size_t> submeshGroupIndices;
         std::unordered_map<size_t, size_t> submeshGroupMap; // Submesh index -> SubmeshGroup index
     };
 
     struct ShaderGroup {
-        tinyHandle shader;
+        Asc::Handle shader;
         std::vector<size_t> meshGroupIndices;
-        std::unordered_map<tinyHandle, size_t> meshGroupMap; // Mesh handle -> MeshGroup index
+        std::unordered_map<Asc::Handle, size_t> meshGroupMap; // Mesh handle -> MeshGroup index
     };
 
     struct SkinRange {
@@ -130,8 +130,8 @@ public:
     uint32_t maxFramesInFlight() const noexcept { return maxFramesInFlight_; }
     uint32_t frameIndex() const noexcept { return frameIndex_; }
 
-    tinyRegistry& fsr() noexcept { return *fsr_; }
-    const tinyRegistry& fsr() const noexcept { return *fsr_; }
+    Asc::Reg& fsr() noexcept { return *fsr_; }
+    const Asc::Reg& fsr() const noexcept { return *fsr_; }
 
     // Vulkan resources
 
@@ -149,7 +149,7 @@ public:
     VkDescriptorSet mrphWsDescSet() const noexcept { return mrphWsDescSet_; } // Set 5
     VkDescriptorSetLayout mrphWsDescLayout() const noexcept { return mrphWsDescLayout_; }
 
-    uint32_t matIndex(tinyHandle matHandle) const noexcept {
+    uint32_t matIndex(Asc::Handle matHandle) const noexcept {
         auto it = dataMap_.find(matHandle);
         return (it != dataMap_.end()) ? it->second : 0;
     }
@@ -180,10 +180,10 @@ public:
 
 // --------------------------- Other --------------------------
 
-    uint32_t addTexture(tinyHandle texHandle) noexcept;
-    bool removeTexture(tinyHandle texHandle) noexcept;
+    uint32_t addTexture(Asc::Handle texHandle) noexcept;
+    bool removeTexture(Asc::Handle texHandle) noexcept;
 
-    inline uint32_t getTextureIndex(tinyHandle texHandle) const noexcept {
+    inline uint32_t getTextureIndex(Asc::Handle texHandle) const noexcept {
         auto it = texIdxMap_.find(texHandle);
         return it == texIdxMap_.end() ? 0 : it->second;
     }
@@ -200,7 +200,7 @@ private:
     uint32_t maxFramesInFlight_ = 2;
     uint32_t frameIndex_ = 0;
 
-    tinyRegistry* fsr_ = nullptr;
+    Asc::Reg* fsr_ = nullptr;
     const tinyVk::Device* dvk_ = nullptr;
 
     // Batching data (reset each frame)
@@ -215,8 +215,8 @@ private:
     std::vector<tinyMaterial::Data> matData_;
     std::vector<SkinRange> skinRanges_;
 
-    std::unordered_map<tinyHandle, size_t> batchMap_;
-    std::unordered_map<tinyHandle, size_t> dataMap_;
+    std::unordered_map<Asc::Handle, size_t> batchMap_;
+    std::unordered_map<Asc::Handle, size_t> dataMap_;
 
     // Instances (runtime)
     tinyVk::DataBuffer instaBuffer_;
@@ -233,7 +233,7 @@ private:
     tinyVk::DescSLayout texDescLayout_;
     tinyVk::DescPool    texDescPool_;
     tinyVk::DescSet     texDescSet_; // Dynamic descriptor set for textures
-    std::unordered_map<tinyHandle, uint32_t> texIdxMap_;
+    std::unordered_map<Asc::Handle, uint32_t> texIdxMap_;
     std::vector<uint32_t> texFreeIndices_; // For when removing textures
 
     std::vector<tinyVk::SamplerVk> texSamplers_; // Collection of pre-created samplers

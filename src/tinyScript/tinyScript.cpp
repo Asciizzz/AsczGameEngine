@@ -87,13 +87,13 @@ namespace {
     }
 
     template<>
-    bool readLuaValue<tinyHandle>(lua_State* L, int idx, tinyHandle& out) {
+    bool readLuaValue<Asc::Handle>(lua_State* L, int idx, Asc::Handle& out) {
         if (lua_isuserdata(L, idx) && lua_getmetatable(L, idx)) {
             luaL_getmetatable(L, "Handle");
             bool eq = lua_rawequal(L, -1, -2);
             lua_pop(L, 2);
             if (eq) {
-                if (auto* h = static_cast<tinyHandle*>(lua_touserdata(L, idx))) {
+                if (auto* h = static_cast<Asc::Handle*>(lua_touserdata(L, idx))) {
                     out = *h;
                     return true;
                 }
@@ -178,7 +178,7 @@ namespace {
     }
 
     template<>
-    bool readLuaValue<std::vector<tinyHandle>>(lua_State* L, int idx, std::vector<tinyHandle>& out) {
+    bool readLuaValue<std::vector<Asc::Handle>>(lua_State* L, int idx, std::vector<Asc::Handle>& out) {
         return readLuaArray(L, idx, out, "handle");
     }
 
@@ -342,7 +342,7 @@ void tinyScript::cacheDefaultTable(const char* tableName, tinyVarsMap& outMap) {
             glm::vec2 vec2Val;
             glm::vec3 vec3Val;
             glm::vec4 vec4Val;
-            tinyHandle handleVal;
+            Asc::Handle handleVal;
             std::vector<int> intArrVal;
             std::vector<float> floatArrVal;
             std::vector<bool> boolArrVal;
@@ -350,7 +350,7 @@ void tinyScript::cacheDefaultTable(const char* tableName, tinyVarsMap& outMap) {
             std::vector<glm::vec3> vec3ArrVal;
             std::vector<glm::vec4> vec4ArrVal;
             std::vector<std::string> strArrVal;
-            std::vector<tinyHandle> handleArrVal;
+            std::vector<Asc::Handle> handleArrVal;
             
             if (readLuaValue(L, -1, intVal)) {
                 outMap[key] = intVal;
@@ -431,7 +431,7 @@ void tinyScript::cacheGlobals() {
     cacheDefaultTable("GLOBALS", globals_);
 }
 
-void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, float deltaTime) {
+void tinyScript::update(void* rtScript, void* scene, Asc::Handle nodeHandle, float deltaTime) {
     if (!valid()) return;
 
     auto* rt = static_cast<rtSCRIPT*>(rtScript);
@@ -481,7 +481,7 @@ void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, floa
                     lua_pushstring(L, val.c_str());
                     lua_setfield(L, -2, key.c_str());
                 }
-                else if constexpr (std::is_same_v<T, tinyHandle>) {
+                else if constexpr (std::is_same_v<T, Asc::Handle>) {
                     pushHandle(L, val);
                     lua_setfield(L, -2, key.c_str());
                 }
@@ -570,7 +570,7 @@ void tinyScript::update(void* rtScript, void* scene, tinyHandle nodeHandle, floa
                     }
                     lua_setfield(L, -2, key.c_str());
                 }
-                else if constexpr (std::is_same_v<T, std::vector<tinyHandle>>) {
+                else if constexpr (std::is_same_v<T, std::vector<Asc::Handle>>) {
                     lua_newtable(L);
                     luaL_getmetatable(L, "Array");
                     lua_setmetatable(L, -2);

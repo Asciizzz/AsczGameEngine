@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tinyType.hpp"
+#include "ascType.hpp"
 
 #include "tinyVk/Resource/DataBuffer.hpp"
 #include "tinyVk/Resource/Descriptor.hpp"
@@ -153,7 +153,7 @@ struct tinyMesh {
 
         uint32_t mrphTargetCount = 0; // Number of morph targets this submesh has deltas for
 
-        tinyHandle material;
+        Asc::Handle material;
 
         uint32_t vrtxCount = 0;
         uint32_t indxCount = 0;

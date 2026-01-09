@@ -135,7 +135,7 @@ target_include_directories(AsczGame PRIVATE
     ${CMAKE_SOURCE_DIR}/ext/tinyUI/imgui
     ${CMAKE_SOURCE_DIR}/ext/tinyLua
     ${CMAKE_SOURCE_DIR}/ext/tinyLua/luacpp
-    ${CMAKE_SOURCE_DIR}/ext/tinyLib
+    ${CMAKE_SOURCE_DIR}/ext/asclib
 
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/include/tinyVk

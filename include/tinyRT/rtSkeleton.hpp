@@ -1,12 +1,12 @@
 #pragma once
 
 #include "tinySkeleton.hpp"
-#include "tinyPool.hpp"
+#include "ascPool.hpp"
 
 namespace tinyRT {
 
 struct Skeleton3D {
-    void init(const tinyPool<tinySkeleton>* pool, tinyHandle handle) {
+    void init(const Asc::Pool<tinySkeleton>* pool, Asc::Handle handle) {
         pool_ = pool;
         handle_ = handle;
 
@@ -78,7 +78,7 @@ struct Skeleton3D {
         return pool_ && handle_ ? pool_->get(handle_) : nullptr;
     }
 
-    inline tinyHandle skeleHandle() const noexcept {
+    inline Asc::Handle skeleHandle() const noexcept {
         return handle_;
     }
 
@@ -108,8 +108,8 @@ struct Skeleton3D {
     }
 
 private:
-    const tinyPool<tinySkeleton>* pool_ = nullptr;
-    tinyHandle handle_;
+    const Asc::Pool<tinySkeleton>* pool_ = nullptr;
+    Asc::Handle handle_;
 
     std::vector<glm::mat4> localPose_;
     std::vector<glm::mat4> finalPose_;

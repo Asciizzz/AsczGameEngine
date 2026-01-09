@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tinyType.hpp"
+#include "ascType.hpp"
 
 #include <new>
 #include <deque>
@@ -21,11 +21,13 @@
     #define TINY_PREFETCH(addr) ((void)0)
 #endif
 
-template<typename T>
-struct tinyPool {
-    inline static const tinyType::ID TYPE_ID = tinyType::TypeID<T>();
+namespace Asc {
 
-    tinyPool() noexcept = default;
+template<typename T>
+struct Pool {
+    inline static const Type::ID TYPE_ID = Type::TypeID<T>();
+
+    Pool() noexcept = default;
 
     [[nodiscard]] TINY_FORCE_INLINE uint32_t count() const noexcept { return static_cast<uint32_t>(denseData_.size()); }
     [[nodiscard]] TINY_FORCE_INLINE uint32_t capacity() const noexcept { return static_cast<uint32_t>(denseData_.capacity()); }
@@ -39,7 +41,7 @@ struct tinyPool {
 
     // -------------------------- Emplace --------------------------
     template<typename... Args>
-    tinyHandle emplace(Args&&... args) {
+    Handle emplace(Args&&... args) {
         uint32_t index;
         uint16_t ver = 0;
 
@@ -64,11 +66,11 @@ struct tinyPool {
         // map handle index -> dense position
         sparse_[index] = densePos;
 
-        return tinyHandle(index, ver, TYPE_ID);
+        return Handle(index, ver, TYPE_ID);
     }
 
     // -------------------------- Get --------------------------
-    T* get(tinyHandle h) noexcept {
+    T* get(Handle h) noexcept {
         if (TINY_UNLIKELY(!h || h.typeID != TYPE_ID)) return nullptr;
         uint32_t idx = h.index;
         if (idx >= sparse_.size()) return nullptr;
@@ -79,10 +81,10 @@ struct tinyPool {
         return &denseData_[densePos];
     }
 
-    const T* get(tinyHandle h) const noexcept { return const_cast<tinyPool*>(this)->get(h); }
+    const T* get(Handle h) const noexcept { return const_cast<Pool*>(this)->get(h); }
 
     // -------------------------- Erase --------------------------
-    void erase(tinyHandle h) noexcept {
+    void erase(Handle h) noexcept {
         if (TINY_UNLIKELY(!h || h.typeID != TYPE_ID)) return;
         uint32_t idx = h.index;
 
@@ -147,3 +149,5 @@ private:
     std::vector<uint16_t> versions_;    // version per handle index
     std::vector<uint32_t> freeList_;    // recycled indices
 };
+
+} // namespace Asc

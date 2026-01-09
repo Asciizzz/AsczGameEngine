@@ -3,7 +3,9 @@
 #include <cstdint>
 #include <functional>
 
-namespace tinyType {
+namespace Asc {
+
+namespace Type {
     /*
     There is no chance in hell you are using over 65k types
     Just >50 is already hard enough to manage
@@ -31,29 +33,29 @@ namespace tinyType {
     }
 };
 
-// -------------------- tinyHandle --------------------
+// -------------------- Handle --------------------
 
-union tinyHandle {
+union Handle {
     uint64_t value;
 
     struct {
         uint32_t index;
         uint16_t version;
-        tinyType::ID typeID;
+        Type::ID typeID;
     };
 
     static constexpr uint64_t INVALID_VAL = UINT64_MAX;
 
-    constexpr tinyHandle() noexcept : value(INVALID_VAL) {}
-    constexpr tinyHandle(uint32_t index, uint16_t version = 0, tinyType::ID typeID = 0) noexcept : index(index), version(version), typeID(typeID) {}
+    constexpr Handle() noexcept : value(INVALID_VAL) {}
+    constexpr Handle(uint32_t index, uint16_t version = 0, Type::ID typeID = 0) noexcept : index(index), version(version), typeID(typeID) {}
 
     template<typename T>
-    static constexpr tinyHandle make(uint32_t index, uint16_t version = 0) noexcept {
-        return tinyHandle(index, version, tinyType::TypeID<T>());
+    static constexpr Handle make(uint32_t index, uint16_t version = 0) noexcept {
+        return Handle(index, version, Type::TypeID<T>());
     }
 
-    constexpr bool operator==(tinyHandle o) const noexcept { return value == o.value; }
-    constexpr bool operator!=(tinyHandle o) const noexcept { return value != o.value; } 
+    constexpr bool operator==(Handle o) const noexcept { return value == o.value; }
+    constexpr bool operator!=(Handle o) const noexcept { return value != o.value; } 
     // I dont see a reason for comparison lol
 
     [[nodiscard]] bool valid() const noexcept { return value != INVALID_VAL; }
@@ -61,18 +63,20 @@ union tinyHandle {
     constexpr void invalidate() noexcept { value = INVALID_VAL; }
 
     template<typename T>
-    [[nodiscard]] constexpr bool is() const noexcept { return typeID == tinyType::TypeID<T>(); }
-    [[nodiscard]] constexpr bool is(tinyType::ID tID) const noexcept { return typeID == tID; }
+    [[nodiscard]] constexpr bool is() const noexcept { return typeID == Asc::Type::TypeID<T>(); }
+    [[nodiscard]] constexpr bool is(Type::ID tID) const noexcept { return typeID == tID; }
 
-    [[nodiscard]] constexpr tinyType::ID tID() const noexcept { return typeID; }
+    [[nodiscard]] constexpr Type::ID tID() const noexcept { return typeID; }
     [[nodiscard]] constexpr uint32_t idx() const noexcept { return index; }
     [[nodiscard]] constexpr uint16_t ver() const noexcept { return version; }
     [[nodiscard]] constexpr uint64_t raw() const noexcept { return value; }
 };
 
+}
+
 namespace std {
-    template<> struct hash<tinyHandle> {
-        size_t operator()(const tinyHandle& h) const noexcept {
+    template<> struct hash<Asc::Handle> {
+        size_t operator()(const Asc::Handle& h) const noexcept {
             return std::hash<uint64_t>()(h.value);
         }
     };

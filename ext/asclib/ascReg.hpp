@@ -1,27 +1,30 @@
 #pragma once
 
-#include "tinyPool.hpp"
+#include "ascType.hpp"
+#include "ascPool.hpp"
 
 #include <unordered_map>
 #include <memory>
 #include <cassert>
 
-class tinyRegistry {
+namespace Asc {
+
+class Reg {
     struct IPool {
         virtual ~IPool() noexcept = default;
-        virtual void* get(tinyHandle h) noexcept = 0;
-        virtual void erase(tinyHandle h) noexcept = 0;
+        virtual void* get(Handle h) noexcept = 0;
+        virtual void erase(Handle h) noexcept = 0;
         virtual void clear() noexcept = 0;
     };
 
     template<typename T>
     struct PoolWrapper : IPool {
-        tinyPool<T> pool;
+        Pool<T> pool;
 
-        void* get(tinyHandle h) noexcept override {
+        void* get(Handle h) noexcept override {
             return pool.get(h);
         }
-        void erase(tinyHandle h) noexcept override {
+        void erase(Handle h) noexcept override {
             pool.erase(h);
         }
         void clear() noexcept override {
@@ -29,17 +32,17 @@ class tinyRegistry {
         }
     };
 
-    std::unordered_map<tinyType::ID, std::unique_ptr<IPool>> pools_;
+    std::unordered_map<Type::ID, std::unique_ptr<IPool>> pools_;
 
     template<typename T>
     TINY_FORCE_INLINE PoolWrapper<T>* getPool() noexcept {
-        auto it = pools_.find(tinyType::TypeID<T>());
+        auto it = pools_.find(Type::TypeID<T>());
         return it != pools_.end() ? static_cast<PoolWrapper<T>*>(it->second.get()) : nullptr;
     }
 
     template<typename T>
     PoolWrapper<T>& ensurePool() {
-        auto id = tinyType::TypeID<T>();
+        auto id = Type::TypeID<T>();
         auto [it, inserted] = pools_.try_emplace(id);
         if (inserted) {
             it->second = std::make_unique<PoolWrapper<T>>();
@@ -48,10 +51,10 @@ class tinyRegistry {
     }
 
 public:
-    tinyRegistry() noexcept = default;
+    Reg() noexcept = default;
 
     template<typename T, typename... Args>
-    [[nodiscard]] tinyHandle emplace(Args&&... args) {
+    [[nodiscard]] Handle emplace(Args&&... args) {
         return ensurePool<T>().pool.emplace(std::forward<Args>(args)...);
     }
 
@@ -61,23 +64,23 @@ public:
     }
 
     template<typename T>
-    [[nodiscard]] TINY_FORCE_INLINE T* get(tinyHandle h) noexcept {
+    [[nodiscard]] TINY_FORCE_INLINE T* get(Handle h) noexcept {
         auto* pool = getPool<T>();
         return pool ? pool->pool.get(h) : nullptr;
     }
 
     template<typename T>
-    [[nodiscard]] TINY_FORCE_INLINE const T* get(tinyHandle h) const noexcept {
-        return const_cast<tinyRegistry*>(this)->get<T>(h);
+    [[nodiscard]] TINY_FORCE_INLINE const T* get(Handle h) const noexcept {
+        return const_cast<Reg*>(this)->get<T>(h);
     }
 
-    [[nodiscard]] TINY_FORCE_INLINE void* get(tinyHandle h) noexcept {
+    [[nodiscard]] TINY_FORCE_INLINE void* get(Handle h) noexcept {
         if (!h) return nullptr;
         auto it = pools_.find(h.typeID);
         return it != pools_.end() ? it->second->get(h) : nullptr;
     }
 
-    void erase(tinyHandle h) noexcept {
+    void erase(Handle h) noexcept {
         if (!h) return;
         auto it = pools_.find(h.typeID);
         if (it != pools_.end()) it->second->erase(h);
@@ -85,14 +88,14 @@ public:
 
     // View raw pools
     template<typename T>
-    [[nodiscard]] tinyPool<T>& view() {
+    [[nodiscard]] Pool<T>& view() {
         return ensurePool<T>().pool;
     }
 
     template<typename T>
-    [[nodiscard]] const tinyPool<T>& view() const {
-        static tinyPool<T> empty;
-        auto it = pools_.find(tinyType::TypeID<T>());
+    [[nodiscard]] const Pool<T>& view() const {
+        static Pool<T> empty;
+        auto it = pools_.find(Type::TypeID<T>());
         return it != pools_.end()
             ? static_cast<PoolWrapper<T>*>(it->second.get())->pool
             : empty;
@@ -116,15 +119,17 @@ public:
         pools_.clear();
     }
 
-    void clear(tinyType::ID typeID) noexcept {
+    void clear(Type::ID typeID) noexcept {
         pools_.erase(typeID);
     }
 
     template<typename T>
     void clear() noexcept {
-        clear(tinyType::TypeID<T>());
+        clear(Type::TypeID<T>());
     }
 
     [[nodiscard]] bool empty() const noexcept { return pools_.empty(); }
     [[nodiscard]] size_t size() const noexcept { return pools_.size(); }
 };
+
+} // namespace Asc
