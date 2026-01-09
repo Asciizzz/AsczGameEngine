@@ -8,6 +8,14 @@
 #include <algorithm>
 #include <cstdint>
 
+/* Virtual File System (FS), Important:
+
+Does NOT have any real file I/O capabilities!
+
+Only exists as abstraction layer to manage hierarchical data storage
+
+*/
+
 namespace Asc {
 
 class FS {
@@ -53,8 +61,8 @@ public:
         uint8_t     rmOrder = 0;    // Lower = erased first
 
         std::function<void(Handle fileHandle, FS& fs, void* userData)> onCreate;
-        std::function<void(Handle fileHandle, FS& fs, void* userData)> onDelete;
         std::function<void(Handle fileHandle, FS& fs, void* userData)> onReload;
+        std::function<bool(Handle fileHandle, FS& fs, void* userData)> onDelete; // only delete file if returns true
 
         [[nodiscard]] const char* c_str() const noexcept { return ext.c_str(); }
     };
@@ -225,7 +233,9 @@ public:
 
             TypeInfo* tInfo = typeInfo(dataHandle.tID());
             if (tInfo && tInfo->onDelete) {
-                tInfo->onDelete(h, *this, userData);
+                if (!tInfo->onDelete(h, *this, userData)) {
+                    continue; // Skip deletion
+                }
             }
             
             r().erase(dataHandle);
@@ -258,10 +268,12 @@ public:
 
         TypeInfo* tInfo = typeInfo(node->data.tID());
         if (tInfo && tInfo->onDelete) {
-            tInfo->onDelete(nodeHandle, *this, userData);
+            if (!tInfo->onDelete(nodeHandle, *this, userData)) {
+                return; // Skip deletion
+            }
         }
-        r().erase(node->data);
 
+        r().erase(node->data);
         fnodes_.erase(nodeHandle);
     }
 

@@ -235,6 +235,8 @@ void tinyProject::setupResources() {
         if (tinyDrawable* drawable = drawable_.get()) {
             drawable->removeTexture(dataHandle);
         }
+
+        return true;
     };
 
     Asc::FS::TypeInfo* amsh = fs_->typeInfo<tinyMesh>();
