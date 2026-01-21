@@ -95,8 +95,12 @@ void PLineRaster::create() {
     lci.pPushConstantRanges    = cfg.pushConstantRanges.data();
     
     VkPipelineLayout layout;
-    if (vkCreatePipelineLayout(core.getDevice(), &lci, nullptr, &layout) != VK_SUCCESS)
+    if (vkCreatePipelineLayout(core.getDevice(), &lci, nullptr, &layout) != VK_SUCCESS) {
+        // Clean up shader modules before throwing
+        vkDestroyShaderModule(core.getDevice(), frag, nullptr);
+        vkDestroyShaderModule(core.getDevice(), vert, nullptr);
         throw std::runtime_error("failed to create pipeline layout (graphics)");
+    }
     core.setLayout(layout);
 
     // 4. Graphics pipeline
@@ -116,8 +120,12 @@ void PLineRaster::create() {
     pci.subpass    = 0;
 
     VkPipeline pipeline;
-    if (vkCreateGraphicsPipelines(core.getDevice(), VK_NULL_HANDLE, 1, &pci, nullptr, &pipeline) != VK_SUCCESS)
+    if (vkCreateGraphicsPipelines(core.getDevice(), VK_NULL_HANDLE, 1, &pci, nullptr, &pipeline) != VK_SUCCESS) {
+        // Clean up shader modules before throwing
+        vkDestroyShaderModule(core.getDevice(), frag, nullptr);
+        vkDestroyShaderModule(core.getDevice(), vert, nullptr);
         throw std::runtime_error("failed to create graphics pipeline");
+    }
     core.setPipeline(pipeline);
 
     vkDestroyShaderModule(core.getDevice(), frag, nullptr);

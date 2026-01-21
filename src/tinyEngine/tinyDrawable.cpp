@@ -1,4 +1,5 @@
 #include "tinyEngine/tinyDrawable.hpp"
+#include <algorithm>
 
 using namespace tinyVk;
 
@@ -64,6 +65,22 @@ void tinyDrawable::init(const CreateInfo& info) {
     VkDevice device = dvk_->device;
     VkPhysicalDevice pDevice = dvk_->pDevice;
 
+    // Query device limits to determine safe MAX_TEXTURES value
+    const auto& limits = dvk_->pProps.limits;
+    // Use the most restrictive limit to ensure compatibility
+    // We need to respect: maxPerStageDescriptorSamplers, maxPerStageDescriptorSampledImages,
+    // maxDescriptorSetSamplers, and maxDescriptorSetSampledImages
+    uint32_t maxSamplers = std::min({
+        limits.maxPerStageDescriptorSamplers,
+        limits.maxPerStageDescriptorSampledImages,
+        limits.maxDescriptorSetSamplers,
+        limits.maxDescriptorSetSampledImages
+    });
+    // Leave some room for other descriptors (use 80% of the limit)
+    maxTextures_ = static_cast<uint32_t>(maxSamplers * 0.8f);
+    // Ensure at least a reasonable minimum
+    if (maxTextures_ < 64) maxTextures_ = 64;
+
     auto writeDescSetDynamicBuffer = [&](VkDescriptorSet dstSet, VkBuffer buffer, VkDeviceSize size) {
         DescWrite()
             .setDstSet(dstSet)
@@ -122,7 +139,7 @@ void tinyDrawable::init(const CreateInfo& info) {
     VkDescriptorSetLayoutBinding binding{};
     binding.binding = 0;
     binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    binding.descriptorCount = MAX_TEXTURES;
+    binding.descriptorCount = maxTextures_;
     binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
     binding.pImmutableSamplers = nullptr;
 
@@ -136,9 +153,9 @@ void tinyDrawable::init(const CreateInfo& info) {
 
     texDescLayout_.create(device, { binding }, 0, &bindingFlags);
 
-    texDescPool_.create(device, { {DescType::CombinedImageSampler, MAX_TEXTURES} }, 1, true);
+    texDescPool_.create(device, { {DescType::CombinedImageSampler, maxTextures_} }, 1, true);
 
-    uint32_t varDescriptorCount = MAX_TEXTURES;
+    uint32_t varDescriptorCount = maxTextures_;
     texDescSet_.allocate(device, texDescPool_, texDescLayout_, &varDescriptorCount);
 
     // Create empty texture
@@ -196,6 +213,13 @@ uint32_t tinyDrawable::addTexture(Asc::Handle texHandle) noexcept {
 
     bool useFreeIndex = !texFreeIndices_.empty();
     uint32_t texIndex = useFreeIndex ? texFreeIndices_.back() : static_cast<uint32_t>(texIdxMap_.size());
+    
+    // Check if we're exceeding the device limit
+    if (texIndex >= maxTextures_) {
+        // Cannot add more textures - return default empty texture
+        return 0;
+    }
+    
     if (useFreeIndex) { texFreeIndices_.pop_back(); }
 
     texIdxMap_[texHandle] = texIndex;

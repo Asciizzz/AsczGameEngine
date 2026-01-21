@@ -26,7 +26,6 @@ class tinyDrawable {
 public:
     static constexpr size_t MAX_INSTANCES = 100000; // 8mb - more than enough
     static constexpr size_t MAX_MATERIALS = 10000;  // 0.96mb - more than enough
-    static constexpr size_t MAX_TEXTURES  = 65536;  // Hopefully not needing this many
     static constexpr size_t MAX_BONES     = 102400; // 6.5mb ~ 400 model x 256 bones x 64 bytes (mat4) - plenty
     static constexpr size_t MAX_MORPH_WS  = 65536;  // Morph WEIGHTS, not Delta, 65536 x 4 bytes = 256kb, literally invisible
 
@@ -199,6 +198,7 @@ private:
 // Basic info
     uint32_t maxFramesInFlight_ = 2;
     uint32_t frameIndex_ = 0;
+    uint32_t maxTextures_ = 0; // Determined at runtime based on device limits
 
     Asc::Reg* fsr_ = nullptr;
     const tinyVk::Device* dvk_ = nullptr;
